@@ -79,6 +79,20 @@ export function useSupabaseCoach() {
     }
   }, [loadConsultations, user?.id, authLoading]);
 
+  // Supabase Auth状態変化を直接監視（リロード時のセッション復元を確実にキャッチ）
+  useEffect(() => {
+    if (!useDB) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        // セッション確立後に少し待ってからデータ取得（内部伝播を待つ）
+        setTimeout(() => {
+          loadConsultations();
+        }, 100);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [useDB, loadConsultations]);
+
   const applyCoachApplication = async (fullName: string, nickname: string, extra?: { yearsExperience?: string; certification?: string; selfIntro?: string }) => {
      if (!useDB || !user) return { error: 'Not configured' };
      const { error } = await supabase.from('coach_applications').upsert({
