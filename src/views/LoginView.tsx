@@ -1,11 +1,20 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { AlertTriangle, ExternalLink } from 'lucide-react';
 
 
 
 export const LoginView: React.FC = () => {
   const { loginWithOAuth } = useAuth();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+
+  // アプリ内ブラウザ（WebView）の検出
+  const isInAppBrowser = useMemo(() => {
+    const ua = navigator.userAgent || '';
+    return /Line|FBAV|FBAN|Instagram|Twitter|Snapchat|MicroMessenger|KAKAOTALK|Notion|Discord/i.test(ua)
+      || (/iPhone|iPad|iPod|Android/i.test(ua) && /wv|WebView/i.test(ua));
+  }, []);
+
   const handleSocialClick = async (provider: 'google' | 'apple') => {
     try {
       setIsLoggingIn(true);
@@ -13,6 +22,16 @@ export const LoginView: React.FC = () => {
     } catch (error) {
       console.error('OAuth Login Error:', error);
       setIsLoggingIn(false);
+    }
+  };
+
+  const handleOpenInBrowser = () => {
+    const url = window.location.href;
+    // iOSの場合はSafari、Androidの場合はChromeで開く
+    window.open(url, '_system');
+    // Androidのintent URLフォールバック
+    if (/Android/i.test(navigator.userAgent)) {
+      window.location.href = `intent://${window.location.host}${window.location.pathname}#Intent;scheme=https;end`;
     }
   };
 
@@ -29,6 +48,29 @@ export const LoginView: React.FC = () => {
         </div>
 
           <div className="bg-white rounded-3xl shadow-lg border border-slate-100 p-8 space-y-5 animate-in fade-in duration-300">
+            {/* アプリ内ブラウザ警告 */}
+            {isInAppBrowser && (
+              <div className="bg-amber-50 border border-amber-200 rounded-2xl p-4 space-y-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle size={18} className="text-amber-600 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-bold text-amber-800">アプリ内ブラウザではログインできません</p>
+                    <p className="text-xs text-amber-700 mt-1">Googleのセキュリティポリシーにより、アプリ内ブラウザからのログインがブロックされます。下のボタンから標準ブラウザで開いてください。</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleOpenInBrowser}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-amber-600 text-white rounded-xl font-bold text-sm hover:bg-amber-700 transition-colors"
+                >
+                  <ExternalLink size={16} />
+                  標準ブラウザで開く
+                </button>
+                <p className="text-[10px] text-amber-600 text-center">
+                  上のボタンが動作しない場合は、URLをコピーしてSafariまたはChromeに貼り付けてください。
+                </p>
+              </div>
+            )}
+
             <div className="text-center mb-2">
               <h2 className="text-lg font-bold text-slate-800">ログイン / 新規登録</h2>
               <p className="text-xs text-slate-500 mt-1">アカウントを作成してメニュー投稿やコーチ相談を利用しよう</p>
