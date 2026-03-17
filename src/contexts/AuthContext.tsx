@@ -152,6 +152,29 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => subscription.unsubscribe();
   }, []);
 
+  // ページ読み込み時にDBからsystem_roleを再取得（キャッシュとDBの差分をマージ）
+  useEffect(() => {
+    if (!user || user.id.startsWith('user_')) return;
+    const refreshRole = async () => {
+      try {
+        const { data } = await supabase
+          .from('profiles')
+          .select('system_role, coach_rank')
+          .eq('id', user.id)
+          .single();
+        if (data) {
+          const d = data as Record<string, any>;
+          const newRole = d.system_role || 'user';
+          const newRank = d.coach_rank || 'bronze';
+          if (newRole !== user.systemRole || newRank !== user.coachRank) {
+            setUser(prev => prev ? { ...prev, systemRole: newRole, coachRank: newRank } : null);
+          }
+        }
+      } catch { /* ignore */ }
+    };
+    refreshRole();
+  }, [user?.id]);
+
   // ── OAuth ログイン（Supabase Auth経由）──
   const loginWithOAuth = async (provider: 'google' | 'apple') => {
     const { error } = await supabase.auth.signInWithOAuth({

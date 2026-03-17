@@ -75,6 +75,7 @@ export const ProDashboardView: React.FC = () => {
   const [adviceText, setAdviceText] = useState('');
   
   const [applications, setApplications] = useState<any[]>([]);
+  const isAdmin = user?.systemRole === 'admin';
 
   // Fetch Public Notes
   React.useEffect(() => {
@@ -112,6 +113,7 @@ export const ProDashboardView: React.FC = () => {
     };
 
     const fetchApps = async () => {
+      if (!isAdmin) return;
       const { data, error } = await supabase.from('coach_applications').select('*').eq('status', 'pending').order('created_at', { ascending: false });
       if (data && !error) setApplications(data);
     };
@@ -317,15 +319,17 @@ export const ProDashboardView: React.FC = () => {
         >
           対応済 <span className="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full">{inbox.filter(n => n.status === 'reviewed').length}</span>
         </button>
-        <button 
-          onClick={() => setActiveTab('applications')}
-          className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all ${
-            activeTab === 'applications' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-50'
-          }`}
-        >
-          <UserPlus size={16} />
-          審査 <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{applications.length}</span>
-        </button>
+        {isAdmin && (
+          <button 
+            onClick={() => setActiveTab('applications')}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all ${
+              activeTab === 'applications' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-50'
+            }`}
+          >
+            <UserPlus size={16} />
+            審査 <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{applications.length}</span>
+          </button>
+        )}
       </div>
 
       {/* List */}

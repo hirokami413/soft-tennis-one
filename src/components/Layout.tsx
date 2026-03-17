@@ -20,6 +20,7 @@ const notifTypeConfig: Record<Notification['type'] | 'team', { emoji: string; co
 
 export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
   const { user, logout } = useAuth();
+  const isProCoach = user?.systemRole === 'coach' || user?.systemRole === 'admin';
   const { isDark, toggleDark } = useTheme();
   const { notifications, unreadCount, notificationsEnabled, markRead, markAllRead, clearAll, toggleNotifications } = useNotifications();
   const [showUserMenu, setShowUserMenu] = useState(false);
@@ -30,7 +31,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
     { id: 'menu', label: '練習メニュー', icon: Home },
     { id: 'note', label: 'テニスノート', icon: BookOpen },
     { id: 'coach', label: 'コーチ相談', icon: ShieldCheck },
-    { id: 'pro-dashboard', label: 'プロ管理', icon: ShieldCheck },
+    ...(isProCoach ? [{ id: 'pro-dashboard', label: 'プロ管理', icon: ShieldCheck }] : []),
     { id: 'about', label: 'Nexus One', icon: Info },
   ];
 
