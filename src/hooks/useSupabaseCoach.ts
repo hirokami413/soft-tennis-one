@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -23,24 +23,13 @@ export function useSupabaseCoach() {
   const [consultations, setConsultations] = useState<CoachConsultation[]>([]);
   const [loading, setLoading] = useState(true);
   const useDB = isSupabaseConfigured();
-  const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadConsultations = useCallback(async (isRetry = false) => {
-    if (!useDB) {
+  const loadConsultations = useCallback(async () => {
+    if (!useDB || !user) {
       setLoading(false);
       return;
     }
-    
-    // セッションを明示的にリフレッシュ（期限切れトークンを更新し、内部authヘッダーも更新される）
-    const { data: refreshData } = await supabase.auth.refreshSession();
-    const currentUserId = refreshData?.user?.id || user?.id;
-    
-    if (!currentUserId) {
-      setLoading(false);
-      return;
-    }
-    
-    if (!isRetry) setLoading(true);
+    setLoading(true);
 
     const { data, error } = await supabase
       .from('coach_questions')
@@ -65,7 +54,7 @@ export function useSupabaseCoach() {
         userRating: row.user_rating,
         questionType: row.question_type,
         category: row.category,
-        isMine: row.user_id === currentUserId,
+        isMine: row.user_id === user.id,
         userNickname: row.profiles?.nickname,
         userAvatar: row.profiles?.avatar_emoji,
         coach: row.coach ? {
@@ -74,27 +63,35 @@ export function useSupabaseCoach() {
           rank: row.coach.coach_rank,
           answerCount: row.coach.coach_answer_count,
           rating: row.coach.coach_avg_rating,
-          specialty: ['全般']
+          specialty: ['全般'] // Currently not stored in DB, fallback
         } : undefined
       }));
       setConsultations(parsed);
-      
-      // 結果が0件で初回の場合、1秒後にリトライ（トークンリフレッシュ待ち）
-      if (parsed.length === 0 && !isRetry) {
-        retryRef.current = setTimeout(() => loadConsultations(true), 1000);
-      }
     }
     setLoading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [useDB, user?.id]);
 
-  // セッション初期化完了後にデータを取得
+  // セッション初期化完了後にデータを取得（authLoading=falseを待つ）
   useEffect(() => {
     if (!authLoading && user?.id) {
       loadConsultations();
     }
-    return () => { if (retryRef.current) clearTimeout(retryRef.current); };
   }, [loadConsultations, user?.id, authLoading]);
+
+  // Supabase Auth状態変化を直接監視（リロード時のセッション復元を確実にキャッチ）
+  useEffect(() => {
+    if (!useDB) return;
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        // セッション確立後に少し待ってからデータ取得（内部伝播を待つ）
+        setTimeout(() => {
+          loadConsultations();
+        }, 100);
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, [useDB, loadConsultations]);
 
   const applyCoachApplication = async (fullName: string, nickname: string, extra?: { yearsExperience?: string; certification?: string; selfIntro?: string }) => {
      if (!useDB || !user) return { error: 'Not configured' };
