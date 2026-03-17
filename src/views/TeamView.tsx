@@ -384,26 +384,22 @@ export const TeamView: React.FC = () => {
 
   const handleJoinTeam = () => {
     if (!joinCodeInput.trim()) return;
-    // For demo, if code starts with 'JOIN-', create a mock team
-    if (joinCodeInput.startsWith('JOIN-')) {
-      const newTeam: Team = {
-        id: `t-${Date.now()}`,
-        name: `新チーム (${joinCodeInput})`,
-        inviteCode: joinCodeInput,
-        members: [{ name: '自分（加入者）', role: 'member', avatar: '自', message: 'よろしくお願いします。' }],
-        events: [],
-        chats: [],
-        groups: [],
-        boardPosts: []
-      };
-      setTeams(prev => [...prev, newTeam]);
-      setCurrentTeamId(newTeam.id);
-      setIsJoinTeamMode(false);
-      setJoinCodeInput('');
-      showToast('チームに参加しました！');
-    } else {
-      showToast('無効な招待コードです。JOIN- で始まるコードを入力してください');
-    }
+    // デモ用: どのようなコードでもモックチームを生成して参加状態にする
+    const newTeam: Team = {
+      id: `t-${Date.now()}`,
+      name: `参加チーム (${joinCodeInput})`,
+      inviteCode: joinCodeInput,
+      members: [{ name: '自分（加入者）', role: 'member', avatar: '自', message: 'よろしくお願いします。' }],
+      events: [],
+      chats: [],
+      groups: [],
+      boardPosts: []
+    };
+    setTeams(prev => [...prev, newTeam]);
+    setCurrentTeamId(newTeam.id);
+    setIsJoinTeamMode(false);
+    setJoinCodeInput('');
+    showToast('チームに参加しました！');
   };
 
   const handleAddComment = (evId: string) => {
