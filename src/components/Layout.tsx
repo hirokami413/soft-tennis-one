@@ -135,37 +135,39 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
                 <span className="text-lg">{user.avatarEmoji}</span>
                 <span className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{user.nickname}</span>
               </button>
-              {showUserMenu && (
-                <>
-                  <div className="fixed inset-0 z-[60]" onClick={() => setShowUserMenu(false)} />
-                  <div className={`fixed right-4 top-16 md:absolute md:right-0 md:top-full md:mt-2 w-48 rounded-xl shadow-lg border py-2 z-[70] animate-in fade-in zoom-in-95 duration-200 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
-                    <div className={`px-4 py-2 border-b ${isDark ? 'border-slate-700' : 'border-slate-100'}`}>
-                      <p className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{user.avatarEmoji} {user.nickname}</p>
-                      <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
-                        {user.provider === 'google' ? 'Google' : user.provider === 'line' ? 'LINE' : 'Apple'} でログイン中
-                      </p>
-                    </div>
-                    <button
-                      onClick={() => { setShowProfileEdit(true); setShowUserMenu(false); }}
-                      className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm transition-colors ${isDark ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-600 hover:bg-slate-50'}`}
-                    >
-                      <Edit3 size={14} />
-                      プロフィール編集
-                    </button>
-                    <button
-                      onClick={() => { logout(); setShowUserMenu(false); }}
-                      className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
-                    >
-                      <LogOut size={14} />
-                      ログアウト
-                    </button>
-                  </div>
-                </>
-              )}
             </div>
           )}
         </div>
       </header>
+
+      {/* User Menu Dropdown (shared between Desktop & Mobile) */}
+      {showUserMenu && user && (
+        <>
+          <div className="fixed inset-0 z-[60]" onClick={() => setShowUserMenu(false)} />
+          <div className={`fixed right-4 top-14 w-48 rounded-xl shadow-lg border py-2 z-[70] animate-in fade-in zoom-in-95 duration-200 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
+            <div className={`px-4 py-2 border-b ${isDark ? 'border-slate-700' : 'border-slate-100'}`}>
+              <p className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{user.avatarEmoji} {user.nickname}</p>
+              <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
+                {user.provider === 'google' ? 'Google' : user.provider === 'line' ? 'LINE' : 'Apple'} でログイン中
+              </p>
+            </div>
+            <button
+              onClick={() => { setShowProfileEdit(true); setShowUserMenu(false); }}
+              className={`w-full flex items-center gap-2 px-4 py-2.5 text-sm transition-colors ${isDark ? 'text-slate-300 hover:bg-slate-700' : 'text-slate-600 hover:bg-slate-50'}`}
+            >
+              <Edit3 size={14} />
+              プロフィール編集
+            </button>
+            <button
+              onClick={() => { logout(); setShowUserMenu(false); }}
+              className="w-full flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors"
+            >
+              <LogOut size={14} />
+              ログアウト
+            </button>
+          </div>
+        </>
+      )}
 
       {/* Main Content Area */}
       <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-6 md:py-8">
