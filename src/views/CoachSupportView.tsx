@@ -159,6 +159,14 @@ export const CoachSupportView: React.FC = () => {
 
   // Report → 別のコーチに回答を再振分
   const handleReport = (id: string) => {
+    const confirmed = window.confirm(
+      '⚠️ 回答を報告する前にご確認ください\n\n' +
+      '• 報告すると、この回答は取り消され、別のコーチに再振分されます\n' +
+      '• 報告は不適切・不正確な回答に対してのみ使用してください\n' +
+      '• 虚偽の報告を繰り返すとアカウントが制限される場合があります\n\n' +
+      '本当にこの回答を報告しますか？'
+    );
+    if (!confirmed) return;
     updateQuestionStatus(id, 'waiting');
     alert('回答を報告しました。別のコーチに再振分され、新しい回答をお待ちいただけます。');
   };
