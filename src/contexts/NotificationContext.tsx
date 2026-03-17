@@ -91,7 +91,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
     // Supabase DB にも保存
     if (useDB && user) {
-      supabase.from('notifications').insert({
+      (supabase.from('notifications') as any).insert({
         user_id: user.id, type: n.type, title: n.title, message: n.message,
       }).then();
     }
@@ -99,13 +99,13 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
 
   const markRead = useCallback((id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-    if (useDB) { supabase.from('notifications').update({ read: true }).eq('id', id).then(); }
+    if (useDB) { (supabase.from('notifications') as any).update({ read: true }).eq('id', id).then(); }
   }, [useDB]);
 
   const markAllRead = useCallback(() => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     if (useDB && user) {
-      supabase.from('notifications').update({ read: true }).eq('user_id', user.id).then();
+      (supabase.from('notifications') as any).update({ read: true }).eq('user_id', user.id).then();
     }
   }, [useDB, user]);
 

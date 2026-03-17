@@ -54,10 +54,10 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
       // Supabase DB にも反映
       if (useDB && user) {
         if (isFav) {
-          supabase.from('favorites').delete()
+          (supabase.from('favorites') as any).delete()
             .eq('user_id', user.id).eq('menu_id', id).then();
         } else {
-          supabase.from('favorites').insert({
+          (supabase.from('favorites') as any).insert({
             user_id: user.id, menu_id: id,
           }).then();
         }
