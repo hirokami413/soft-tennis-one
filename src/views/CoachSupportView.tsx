@@ -207,8 +207,51 @@ export const CoachSupportView: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 py-2">
-      
-
+      {/* Coach Application Banner */}
+      {!isCoach && (
+        <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+          {coachAppStatus === 'none' && (
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-bold text-slate-800 text-sm">🎓 コーチとして活動しませんか？</p>
+                <p className="text-xs text-slate-500 mt-0.5">認定コーチになって、相談に答えてコインを獲得しましょう。</p>
+              </div>
+              <button
+                onClick={() => setShowCoachApplication(true)}
+                className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-indigo-700 transition-colors whitespace-nowrap"
+              >
+                コーチに応募
+              </button>
+            </div>
+          )}
+          {coachAppStatus === 'pending' && (
+            <div className="flex items-center gap-3">
+              <Clock size={20} className="text-amber-500" />
+              <div>
+                <p className="font-bold text-slate-800 text-sm">コーチ応募を審査中です</p>
+                <p className="text-xs text-slate-500">承認されるまでしばらくお待ちください。</p>
+              </div>
+            </div>
+          )}
+          {coachAppStatus === 'rejected' && (
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertTriangle size={20} className="text-red-500" />
+                <div>
+                  <p className="font-bold text-slate-800 text-sm">応募が承認されませんでした</p>
+                  <p className="text-xs text-slate-500">条件を確認して再度お申し込みください。</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { setCoachAppStatus('none'); setShowCoachApplication(true); }}
+                className="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors"
+              >
+                再応募
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Hero Header */}
       <div className="bg-gradient-to-br from-brand-blue to-blue-900 text-white p-6 rounded-3xl shadow-sm relative overflow-hidden">
@@ -1263,6 +1306,77 @@ export const CoachSupportView: React.FC = () => {
             </div>
             <div className="p-4 bg-slate-50 border-t border-slate-100">
               <p className="text-[10px] text-slate-400 text-center">※ モック実装です。実際の決済は発生しません。</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Coach Application Modal */}
+      {showCoachApplication && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center p-4" onClick={() => setShowCoachApplication(false)}>
+          <div className="bg-white rounded-t-3xl sm:rounded-3xl w-full max-w-md max-h-[85vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white rounded-t-3xl z-10">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <ShieldCheck size={18} className="text-indigo-600" />
+                コーチ応募フォーム
+              </h3>
+              <button onClick={() => setShowCoachApplication(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div className="bg-indigo-50 p-3 rounded-xl text-xs text-indigo-700">
+                <p className="font-bold mb-1">🎓 Nexus One認定コーチとは？</p>
+                <p>審査を通過すると、ユーザーの相談に回答してコインを獲得できます。獲得コインは現金化も可能です。</p>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">氏名（本名）</label>
+                  <input type="text" value={coachAppForm.fullName} onChange={e => setCoachAppForm(f => ({ ...f, fullName: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-brand-blue" placeholder="山田 太郎" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">ニックネーム（表示名）</label>
+                  <input type="text" value={coachAppForm.nickname} onChange={e => setCoachAppForm(f => ({ ...f, nickname: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-brand-blue" placeholder="テニスコーチ太郎" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">指導経験年数</label>
+                  <input type="text" value={coachAppForm.yearsExperience} onChange={e => setCoachAppForm(f => ({ ...f, yearsExperience: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-brand-blue" placeholder="5年" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">資格・実績</label>
+                  <input type="text" value={coachAppForm.certification} onChange={e => setCoachAppForm(f => ({ ...f, certification: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-brand-blue" placeholder="日本ソフトテニス連盟公認指導員" />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1">自己PR</label>
+                  <textarea value={coachAppForm.selfIntro} onChange={e => setCoachAppForm(f => ({ ...f, selfIntro: e.target.value }))} className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-brand-blue h-24 resize-none" placeholder="ソフトテニスの指導に関する経験やスキルをアピールしてください" />
+                </div>
+                <div className="flex gap-2">
+                  <button onClick={() => setCoachAppForm(f => ({ ...f, idUploaded: true }))} className={`flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors ${coachAppForm.idUploaded ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'}`}>
+                    <Upload size={14} />
+                    {coachAppForm.idUploaded ? '身分証 ✓' : '身分証アップロード'}
+                  </button>
+                  <button onClick={() => setCoachAppForm(f => ({ ...f, resumeUploaded: true }))} className={`flex-1 py-2.5 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5 transition-colors ${coachAppForm.resumeUploaded ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'}`}>
+                    <FileText size={14} />
+                    {coachAppForm.resumeUploaded ? '履歴書 ✓' : '履歴書アップロード'}
+                  </button>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  if (!coachAppForm.fullName.trim() || !coachAppForm.nickname.trim()) {
+                    alert('氏名とニックネームは必須です。');
+                    return;
+                  }
+                  applyCoachApplication(coachAppForm.fullName, coachAppForm.nickname);
+                  setCoachAppStatus('pending');
+                  setShowCoachApplication(false);
+                }}
+                disabled={!coachAppForm.fullName.trim() || !coachAppForm.nickname.trim()}
+                className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm disabled:opacity-40 hover:bg-indigo-700 transition-all flex items-center justify-center gap-2"
+              >
+                <ShieldCheck size={16} />
+                応募を提出する
+              </button>
             </div>
           </div>
         </div>
