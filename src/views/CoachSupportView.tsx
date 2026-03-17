@@ -112,7 +112,7 @@ export const CoachSupportView: React.FC = () => {
       setShowCoinPurchaseModal(true);
       return;
     }
-    await addCoins(-questionCost);
+    // 質問を先に送信し、コイン差引はバックグラウンドで実行
     askQuestion({
       question: newQuestion.trim(),
       questionType,
@@ -120,6 +120,8 @@ export const CoachSupportView: React.FC = () => {
     });
     setNewQuestion('');
     setActiveTab('list');
+    // コイン差引（非ブロッキング）
+    addCoins(-questionCost);
   };
 
   // Resolve → コーチにコインを付与（DB処理はuseSupabaseCoachで実行）
