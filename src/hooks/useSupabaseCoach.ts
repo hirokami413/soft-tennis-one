@@ -69,12 +69,15 @@ export function useSupabaseCoach() {
     loadConsultations();
   }, [loadConsultations]);
 
-  const applyCoachApplication = async (fullName: string, nickname: string) => {
+  const applyCoachApplication = async (fullName: string, nickname: string, extra?: { yearsExperience?: string; certification?: string; selfIntro?: string }) => {
      if (!useDB || !user) return { error: 'Not configured' };
      const { error } = await supabase.from('coach_applications').upsert({
        user_id: user.id,
        full_name: fullName,
        nickname: nickname,
+       years_experience: extra?.yearsExperience || '',
+       certification: extra?.certification || '',
+       self_intro: extra?.selfIntro || '',
        status: 'pending'
      }, { onConflict: 'user_id' });
      return { error };

@@ -342,15 +342,40 @@ export const ProDashboardView: React.FC = () => {
             </div>
           ) : (
             applications.map(app => (
-              <div key={app.id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-3">
-                <div className="flex items-center justify-between border-b border-slate-50 pb-2">
+              <div key={app.id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-4">
+                {/* Header */}
+                <div className="flex items-center justify-between border-b border-slate-50 pb-3">
                   <h4 className="font-bold text-slate-800 text-lg flex items-center gap-2">
                     <UserPlus size={18} className="text-indigo-600"/>
-                    {app.full_name} <span className="font-normal text-sm text-slate-500">({app.nickname})</span>
+                    {app.full_name}
                   </h4>
-                  <span className="text-xs text-slate-400 flex items-center gap-1"><Clock size={12}/>{new Date(app.created_at).toLocaleDateString()}</span>
+                  <span className="text-xs text-slate-400 flex items-center gap-1"><Clock size={12}/>{new Date(app.created_at).toLocaleDateString('ja-JP')}</span>
                 </div>
-                <div className="flex gap-2 pt-2">
+
+                {/* Details */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-slate-50 rounded-xl p-3">
+                    <p className="text-[10px] text-slate-400 font-medium">ニックネーム</p>
+                    <p className="text-sm font-bold text-slate-700 mt-0.5">{app.nickname}</p>
+                  </div>
+                  <div className="bg-slate-50 rounded-xl p-3">
+                    <p className="text-[10px] text-slate-400 font-medium">指導経験</p>
+                    <p className="text-sm font-bold text-slate-700 mt-0.5">{app.years_experience || '未記入'}</p>
+                  </div>
+                  <div className="col-span-2 bg-slate-50 rounded-xl p-3">
+                    <p className="text-[10px] text-slate-400 font-medium">資格・実績</p>
+                    <p className="text-sm text-slate-700 mt-0.5">{app.certification || '未記入'}</p>
+                  </div>
+                  {app.self_intro && (
+                    <div className="col-span-2 bg-indigo-50 rounded-xl p-3 border border-indigo-100">
+                      <p className="text-[10px] text-indigo-500 font-medium">自己PR</p>
+                      <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap leading-relaxed">{app.self_intro}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 pt-1">
                   <button onClick={() => handleApproveApp(app.id, app.user_id)} className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-sm flex justify-center items-center gap-2 shadow-sm transition-transform hover:scale-[1.02]">
                     <CheckCircle2 size={16} /> 承認する
                   </button>

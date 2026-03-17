@@ -1140,7 +1140,11 @@ export const CoachSupportView: React.FC = () => {
 
               <button
                 onClick={async () => {
-                  await applyCoachApplication(coachAppForm.fullName, coachAppForm.nickname);
+                  await applyCoachApplication(coachAppForm.fullName, coachAppForm.nickname, {
+                    yearsExperience: coachAppForm.yearsExperience,
+                    certification: coachAppForm.certification,
+                    selfIntro: coachAppForm.selfIntro
+                  });
                   setCoachAppStatus('pending');
                   setShowCoachApplication(false);
                 }}
