@@ -5,10 +5,11 @@ import {
   AlertTriangle, Clock, ChevronDown, ChevronUp,
   Award, Zap, Crown, Gem, Flag, ThumbsUp, X, Search, Video,
   Image as ImageIcon, Link, ArrowRightLeft, ShoppingCart, Banknote,
-  Upload, FileText
+  Upload, FileText, Trash2
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSupabaseCoach } from '../hooks/useSupabaseCoach';
+import { supabase } from '../lib/supabase';
 
 // ── Types ──
 interface Coach {
@@ -62,6 +63,7 @@ export const CoachSupportView: React.FC = () => {
 
   // Role State
   const isCoach = user?.systemRole === 'coach' || user?.systemRole === 'admin';
+  const isAdmin = user?.systemRole === 'admin';
 
   // Coach Mode States — DBのuser profileから読み取り
   const coachCoins = user?.coins || 0;
@@ -143,6 +145,18 @@ export const CoachSupportView: React.FC = () => {
     updateQuestionStatus(id, 'reask');
     setShowReaskInput(null);
     setReaskText('');
+  };
+
+  // Admin: 相談を削除
+  const handleAdminDelete = async (id: string) => {
+    if (!window.confirm('この相談を削除しますか？')) return;
+    const { error } = await supabase.from('coach_questions').update({ status: 'deleted', question: '[削除済み]', answer: null }).eq('id', id);
+    if (!error) {
+      alert('相談を削除しました。');
+      window.location.reload();
+    } else {
+      alert('削除に失敗しました: ' + error.message);
+    }
   };
 
   // Report → 報告理由を入力してDBに保存
@@ -662,6 +676,16 @@ export const CoachSupportView: React.FC = () => {
                     </div>
                   )}
                 </div>
+              )}
+              {/* Admin: 削除ボタン */}
+              {isAdmin && (
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); handleAdminDelete(c.id); }}
+                  className="w-full mt-2 py-2 bg-red-50 text-red-500 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-1 cursor-pointer"
+                >
+                  <Trash2 size={14} /> この相談を削除
+                </button>
               )}
             </div>
           );
