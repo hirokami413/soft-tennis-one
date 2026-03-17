@@ -284,17 +284,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // ── コイン加算 ──
   const addCoins = async (amount: number) => {
-    // 楽観的にローカル更新
-    setUser(prev => prev ? { ...prev, coins: (prev.coins || 0) + amount } : null);
-
-    // Supabase DBに反映し、戻り値（新しいコイン数）で上書き
-    if (user) {
-      const { data: newCoins, error } = await supabase.rpc('add_coins', { p_user_id: user.id, p_amount: amount });
-      if (!error && typeof newCoins === 'number') {
-        setUser(prev => prev ? { ...prev, coins: newCoins } : null);
-      } else if (error) {
-        console.error('コイン加算エラー:', error);
-      }
+    if (!user) return;
+    // DBのRPCで加算し、戻り値（新しいコイン数）でstateを更新
+    const { data: newCoins, error } = await supabase.rpc('add_coins', { p_user_id: user.id, p_amount: amount });
+    if (!error && typeof newCoins === 'number') {
+      setUser(prev => prev ? { ...prev, coins: newCoins } : null);
+    } else if (error) {
+      console.error('コイン加算エラー:', error);
+      alert('コインの更新に失敗しました。通信環境を確認してください。');
     }
   };
 
