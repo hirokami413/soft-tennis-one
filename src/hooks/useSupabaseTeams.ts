@@ -26,7 +26,7 @@ function isSupabaseUser(userId?: string): boolean {
 // useSupabaseTeams — チーム管理
 // =============================================
 export function useSupabaseTeams() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const useDB = isSupabaseUser(user?.id);
 
   const [teams, setTeams] = useState<TeamInfo[]>([]);
@@ -35,18 +35,22 @@ export function useSupabaseTeams() {
 
   // ── チーム一覧取得 ──
   useEffect(() => {
-    if (!useDB || !user) return;
+    if (isLoading || !useDB || !user) return;
     loadTeams();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [useDB, user?.id]);
+  }, [useDB, user?.id, isLoading]);
 
   const loadTeams = async () => {
     if (!user) return;
     setLoading(true);
-    const { data } = await supabase
+    const { data, error } = await supabase
       .from('team_members')
       .select('team_id')
       .eq('user_id', user.id);
+
+    if (error) {
+      console.error('Failed to load team_members:', error);
+    }
 
     if (data && data.length > 0) {
       const teamIds = data.map(d => d.team_id);
@@ -95,34 +99,24 @@ export function useSupabaseTeams() {
   const joinTeam = useCallback(async (inviteCode: string) => {
     if (!useDB || !user) return null;
 
-    const { data: team } = await supabase
-      .from('teams')
-      .select('*')
-      .eq('code', inviteCode)
-      .single();
-
-    if (!team) return null;
-
-    // 既に参加してるか確認
-    const { data: existing } = await supabase
-      .from('team_members')
-      .select('user_id')
-      .eq('team_id', team.id)
-      .eq('user_id', user.id);
-
-    if (existing && existing.length > 0) {
-      // 既に参加済み
-      return { id: team.id, name: team.name, code: team.code, createdBy: team.created_by } as TeamInfo;
-    }
-
-    await (supabase.from('team_members') as any).insert({
-      team_id: team.id,
-      user_id: user.id,
-      role: 'member',
+    const { data, error } = await supabase.rpc('join_team_by_code', {
+      p_code: inviteCode
     });
 
-    const newTeam: TeamInfo = { id: team.id, name: team.name, code: team.code, createdBy: team.created_by };
-    setTeams(prev => [...prev, newTeam]);
+    if (error || !data) {
+      console.error('Failed to join team:', error);
+      return null;
+    }
+
+    const result = data as any;
+    const newTeam: TeamInfo = {
+      id: result.id,
+      name: result.name,
+      code: result.code,
+      createdBy: result.createdBy
+    };
+
+    setTeams(prev => prev.some(t => t.id === newTeam.id) ? prev : [...prev, newTeam]);
     return newTeam;
   }, [useDB, user]);
 
