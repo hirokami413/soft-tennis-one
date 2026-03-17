@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-blue: #0052CC;
+  --color-brand-blue-hover: #0040A8;
+  --color-brand-white: #FFFFFF;
+  --color-brand-surface: #F8FAFC; /* Slate-50 */
+}
+
+/* Base styles for mobile-first feel */
+@layer base {
+  body {
+    @apply bg-brand-surface text-slate-800 font-sans antialiased;
+    /* iOS Safari prevent bounce */
+    overscroll-behavior-y: none;
+  }
+
+  /* Dark mode body */
+  .dark body {
+    @apply bg-slate-900 text-slate-100;
+  }
+
+  /* Dark mode auto-style for common elements */
+  .dark .bg-white {
+    background-color: rgb(30 41 59) !important; /* slate-800 */
+  }
+  .dark .bg-brand-surface {
+    background-color: rgb(15 23 42) !important; /* slate-900 */
+  }
+  .dark .text-slate-800 {
+    color: rgb(226 232 240) !important; /* slate-200 */
+  }
+  .dark .text-slate-900 {
+    color: rgb(241 245 249) !important; /* slate-100 */
+  }
+  .dark .text-slate-700 {
+    color: rgb(203 213 225) !important; /* slate-300 */
+  }
+  .dark .text-slate-600 {
+    color: rgb(148 163 184) !important; /* slate-400 */
+  }
+  .dark .text-slate-500 {
+    color: rgb(100 116 139) !important;
+  }
+  .dark .border-slate-200 {
+    border-color: rgb(51 65 85) !important; /* slate-700 */
+  }
+  .dark .border-slate-100 {
+    border-color: rgb(51 65 85) !important;
+  }
+  .dark .bg-slate-50 {
+    background-color: rgb(51 65 85) !important; /* slate-700 */
+  }
+  .dark .bg-slate-100 {
+    background-color: rgb(51 65 85) !important;
+  }
+}
+
+/* Custom utilities */
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+}
+
+/* Skeleton shimmer animation */
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 1.5s infinite;
+}

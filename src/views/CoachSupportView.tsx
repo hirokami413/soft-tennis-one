@@ -1,0 +1,1437 @@
+import React, { useState, useEffect } from 'react';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { 
+  ShieldCheck, Send, Star, MessageCircle, CheckCircle2, 
+  AlertTriangle, Clock, ChevronDown, ChevronUp,
+  Award, Zap, Crown, Gem, Flag, ThumbsUp, X, Search, Video,
+  Image as ImageIcon, Link, ArrowRightLeft, ShoppingCart, Banknote,
+  Upload, FileText
+} from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+
+// ── Types ──
+interface Coach {
+  name: string;
+  rank: 'bronze' | 'silver' | 'gold' | 'platinum';
+  specialty: string[];
+  avatar: string;
+  answerCount: number;
+  rating: number;
+}
+
+interface Consultation {
+  id: string;
+  question: string;
+  status: 'waiting' | 'answered' | 'resolved' | 'reask';
+  createdAt: string;
+  coach?: Coach;
+  answer?: string;
+  answeredAt?: string;
+  userRating?: number;
+  isMine?: boolean;
+  userNickname?: string;
+  userAvatar?: string;
+  questionType?: 'text' | 'video';
+  category?: string;
+}
+
+// ── Helpers ──
+const rankConfig = {
+  bronze:   { label: 'ブロンズ', color: 'text-amber-700 bg-amber-100 border-amber-200', icon: Award, multiplier: 1.0, rankUpBonus: 0 },
+  silver:   { label: 'シルバー', color: 'text-slate-500 bg-slate-100 border-slate-200', icon: Zap, multiplier: 1.2, rankUpBonus: 5000 },
+  gold:     { label: 'ゴールド', color: 'text-yellow-600 bg-yellow-50 border-yellow-200', icon: Crown, multiplier: 1.3, rankUpBonus: 15000 },
+  platinum: { label: 'プラチナ', color: 'text-indigo-600 bg-indigo-50 border-indigo-200', icon: Gem, multiplier: 1.5, rankUpBonus: 50000 },
+};
+
+// ランクアップ条件: { 必要回答数, 必要平均評価 }
+const rankUpConditions: Record<string, { answers: number; rating: number; next: Coach['rank'] | null }> = {
+  bronze:   { answers: 30, rating: 4.0, next: 'silver' },
+  silver:   { answers: 100, rating: 4.3, next: 'gold' },
+  gold:     { answers: 250, rating: 4.6, next: 'platinum' },
+  platinum: { answers: Infinity, rating: 5.0, next: null },
+};
+
+// ── Dummy Data ──
+const dummyCoaches: Coach[] = [
+  {
+    name: '上見 宏彰',
+    rank: 'platinum',
+    specialty: ['前衛指導', '戦術', 'メンタル'],
+    avatar: 'N',
+    answerCount: 312,
+    rating: 4.9,
+  },
+  {
+    name: '山田 コーチ',
+    rank: 'gold',
+    specialty: ['後衛指導', 'フットワーク'],
+    avatar: '山',
+    answerCount: 145,
+    rating: 4.7,
+  },
+];
+
+const initialConsultations: Consultation[] = [
+  {
+    id: 'c-1',
+    question: '前衛でポーチに出るタイミングが分かりません。特にクロス展開の時にいつ出ればいいか教えてください。',
+    status: 'answered',
+    createdAt: '2026-03-12',
+    coach: dummyCoaches[0],
+    answer: 'ポーチのタイミングは「相手後衛のテイクバック完了時」が基本です。具体的には、相手がラケットを引き切った瞬間に1歩目を出しましょう。\n\nクロス展開では、以下の3つのサインを見てください：\n1. 相手後衛の体が外向き（クロスに打つ構え）\n2. ボールがベースラインより浅い位置\n3. 味方後衛のボールが相手のバック側に入った時\n\nまずは3番目のシチュエーションだけに絞って練習してみてください。成功体験を積むことで、徐々にタイミング感覚が身につきます。',
+    isMine: true,
+    userNickname: 'ソフテニ花子',
+    userAvatar: '🌸',
+  },
+  {
+    id: 'c-2',
+    question: 'サーブのトスが安定しません。毎回高さが変わってしまいます。',
+    status: 'waiting',
+    createdAt: '2026-03-13',
+    userNickname: 'テニス次郎',
+    userAvatar: '🔥',
+  },
+  {
+    id: 'c-3',
+    question: '試合になると緊張して普段の力が出せません。メンタルの整え方を教えてください。',
+    status: 'resolved',
+    createdAt: '2026-03-10',
+    coach: dummyCoaches[0],
+    answer: '試合前のルーティンを決めることが最も効果的です。具体的には...',
+    userRating: 5,
+    userNickname: 'メンタル強化中',
+    userAvatar: '💪',
+  },
+];
+
+// ── Coin Purchase Packages ──
+const coinPackages = [
+  { coins: 5000, price: 500, label: '5,000コイン', popular: false },
+  { coins: 10000, price: 1000, label: '10,000コイン', popular: true },
+  { coins: 30000, price: 2800, label: '30,000コイン', popular: false, bonus: 'お得！' },
+];
+
+// ── Main Component ──
+export const CoachSupportView: React.FC = () => {
+  const { user } = useAuth();
+  const [consultations, setConsultations] = useLocalStorage<Consultation[]>('coach_support_consultations', initialConsultations);
+  const [newQuestion, setNewQuestion] = useLocalStorage('coach_support_new_question', '');
+  const [expandedId, setExpandedId] = useState<string | null>('c-1');
+  const [reaskText, setReaskText] = useState('');
+  const [showReaskInput, setShowReaskInput] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useLocalStorage<'list' | 'new' | 'coach'>('coach_support_active_tab', 'list');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Role State (Mock)
+  const [isCoach, setIsCoach] = useState(false);
+
+  // Coach Mode States
+  const [coachCoins, setCoachCoins] = useLocalStorage('coach_support_coins', 1000);
+  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [coachAnswerText, setCoachAnswerText] = useState('');
+  const [showCoachAnswerInput, setShowCoachAnswerInput] = useState(false);
+  const [coachAnswerUrl, setCoachAnswerUrl] = useState('');
+  const [coachRank, setCoachRank] = useLocalStorage<Coach['rank']>('coach_rank', 'silver');
+  const [coachAnswerCount, setCoachAnswerCount] = useLocalStorage('coach_answer_count', 45);
+  const [coachAvgRating, setCoachAvgRating] = useLocalStorage('coach_avg_rating', 4.2);
+  const [rankUpNotification, setRankUpNotification] = useState<string | null>(null);
+
+  // Rank-based reward calculation (fixed base: 700 = 70% of text question cost)
+  const getReward = () => {
+    return Math.floor(700 * rankConfig[coachRank].multiplier);
+  };
+
+  // Student Coin & Question Type States
+  const [studentCoins, setStudentCoins] = useLocalStorage('student_coins', 1000);
+  const [questionType, setQuestionType] = useState<'text' | 'video'>('text');
+  const [questionCategory, setQuestionCategory] = useState('');
+  const [showCoinPurchaseModal, setShowCoinPurchaseModal] = useState(false);
+  const [showCoinExchangeModal, setShowCoinExchangeModal] = useState(false);
+  const [exchangeAmount, setExchangeAmount] = useState(1000);
+  const [exchangeDirection, setExchangeDirection] = useState<'toCash' | 'toCoins'>('toCash');
+
+  // Coach Application States
+  const [showCoachApplication, setShowCoachApplication] = useState(false);
+  const [coachAppStatus, setCoachAppStatus] = useLocalStorage<'none' | 'pending' | 'approved' | 'rejected'>('coach_app_status', 'none');
+  const [coachNickname, setCoachNickname] = useLocalStorage<string>('coach_nickname', '');
+  const [coachAppForm, setCoachAppForm] = useState({
+    fullName: '',
+    nickname: '',
+    yearsExperience: '',
+    tournamentResults: '',
+    certification: '' as string,
+    selfIntro: '',
+    idUploaded: false,
+    resumeUploaded: false,
+  });
+
+  const questionCost = questionType === 'text' ? 1000 : 2000;
+
+  // Submit new question
+  const handleSubmitQuestion = () => {
+    if (!newQuestion.trim()) return;
+    if (studentCoins < questionCost) {
+      setShowCoinPurchaseModal(true);
+      return;
+    }
+    const newConsultation: Consultation = {
+      id: `c-${Date.now()}`,
+      question: newQuestion.trim(),
+      status: 'waiting',
+      createdAt: new Date().toISOString().split('T')[0],
+      isMine: true,
+      userNickname: user?.nickname || '匿名',
+      userAvatar: user?.avatarEmoji || '🏐',
+      questionType,
+      category: questionCategory || undefined,
+    };
+    setStudentCoins(prev => prev - questionCost);
+    setConsultations(prev => [newConsultation, ...prev]);
+    setNewQuestion('');
+    setActiveTab('list');
+  };
+
+  // Resolve → コーチにコインを付与
+  const handleResolve = (id: string) => {
+    setConsultations(prev => prev.map(c => c.id === id ? { ...c, status: 'resolved' as const } : c));
+    // コーチにコインを付与
+    const reward = getReward();
+    setCoachCoins(prev => prev + reward);
+    setCoachAnswerCount(prev => {
+      const newCount = prev + 1;
+      const condition = rankUpConditions[coachRank];
+      if (condition.next && newCount >= condition.answers && coachAvgRating >= condition.rating) {
+        const newRank = condition.next;
+        const bonus = rankConfig[newRank].rankUpBonus;
+        setCoachRank(newRank);
+        setCoachCoins(c => c + bonus);
+        setRankUpNotification(`🎉 ${rankConfig[newRank].label}にランクアップ！ボーナス +${bonus}🪙`);
+        setTimeout(() => setRankUpNotification(null), 5000);
+      }
+      return newCount;
+    });
+    setCoachAvgRating(prev => Math.min(5.0, +(prev + 0.01).toFixed(2)));
+  };
+
+  // Rate
+  const handleRate = (id: string, rating: number) => {
+    setConsultations(prev => prev.map(c => c.id === id ? { ...c, userRating: rating } : c));
+  };
+
+  // Re-ask → 同じコーチに再質問が戻る
+  const handleReask = (id: string) => {
+    if (!reaskText.trim()) return;
+    setConsultations(prev => prev.map(c => c.id === id ? { ...c, status: 'reask' as const } : c));
+    setShowReaskInput(null);
+    setReaskText('');
+  };
+
+  // Report → 別のコーチに回答を再振分
+  const handleReport = (id: string) => {
+    setConsultations(prev => prev.map(c =>
+      c.id === id
+        ? { ...c, status: 'waiting' as const, answer: undefined, coach: undefined }
+        : c
+    ));
+    alert('回答を報告しました。別のコーチに再振分され、新しい回答をお待ちいただけます。');
+  };
+
+  // Coach Handlers
+  const waitingConsultations = consultations.filter(c => c.status === 'waiting');
+
+  const goToNextQuestion = () => {
+    setCurrentQuestionIndex(prev => prev + 1);
+    setCoachAnswerText('');
+    setShowCoachAnswerInput(false);
+  };
+
+  const handleSkipQuestion = () => {
+    if (coachCoins >= 50) {
+      setCoachCoins(prev => prev - 50);
+      goToNextQuestion();
+    } else {
+      alert('コインが不足しています。');
+    }
+  };
+
+  const handleCoachAnswerSubmit = (consultationId: string) => {
+    if (!coachAnswerText.trim()) return;
+    
+    setConsultations(prev => prev.map(c => 
+      c.id === consultationId 
+        ? { 
+            ...c, 
+            status: 'answered', 
+            answer: coachAnswerText,
+            answeredAt: new Date().toISOString(),
+            coach: dummyCoaches[0]
+          } 
+        : c
+    ));
+    // コインは生徒が「解決した」を押した時に付与（24時間無操作なら自動付与）
+    goToNextQuestion();
+  };
+
+  // 24時間経過で自動解決（コーチにコイン自動付与）
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setConsultations(prev => {
+        let changed = false;
+        const updated = prev.map(c => {
+          if (c.status === 'answered' && c.answeredAt) {
+            const elapsed = now - new Date(c.answeredAt).getTime();
+            if (elapsed >= 24 * 60 * 60 * 1000) {
+              changed = true;
+              return { ...c, status: 'resolved' as const };
+            }
+          }
+          return c;
+        });
+        if (changed) {
+          // 自動解決時にコーチにコイン付与
+          const reward = getReward();
+          setCoachCoins(p => p + reward);
+        }
+        return changed ? updated : prev;
+      });
+    }, 30000); // 30秒ごとにチェック
+    return () => clearInterval(interval);
+  }, [getReward]);
+
+  const statusConfig = {
+    waiting: { label: '回答待ち', cls: 'bg-slate-100 text-slate-600 border-slate-200' },
+    answered: { label: '回答あり', cls: 'bg-brand-blue text-white border-blue-600' },
+    resolved: { label: '解決済み', cls: 'bg-green-100 text-green-700 border-green-200' },
+    reask: { label: '再質問中', cls: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
+  };
+
+  // Filtered list for display
+  const displayConsultations = consultations.filter(c => {
+    if (c.status === 'waiting') return false;
+    if (searchQuery.trim()) {
+      return c.question.toLowerCase().includes(searchQuery.toLowerCase());
+    }
+    return true;
+  });
+
+  return (
+    <div className="flex flex-col gap-6 py-2">
+      
+      {/* Dev Toggle for Coach Role */}
+      <div className="flex justify-end px-2">
+        <label className="flex items-center gap-2 text-xs font-bold text-slate-500 cursor-pointer bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors">
+          <input 
+            type="checkbox" 
+            checked={isCoach} 
+            onChange={(e) => {
+              setIsCoach(e.target.checked);
+              if (!e.target.checked && activeTab === 'coach') {
+                setActiveTab('list');
+              }
+            }} 
+            className="rounded text-brand-blue focus:ring-brand-blue"
+          />
+          [テスト用] コーチ権限を付与
+        </label>
+      </div>
+
+      {/* Hero Header */}
+      <div className="bg-gradient-to-br from-brand-blue to-blue-900 text-white p-6 rounded-3xl shadow-sm relative overflow-hidden">
+        <div className="absolute -top-10 -right-10 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl pointer-events-none" />
+        <div className="relative z-10">
+          <div className="flex items-center gap-2 mb-3">
+            <ShieldCheck size={22} className="text-blue-200" />
+            <h2 className="text-xl font-bold">プロ相談</h2>
+          </div>
+          <p className="text-sm text-blue-100 leading-relaxed">
+            Nexus One認証コーチに直接相談。<br/>
+            練習の悩み、戦術、技術改善を<span className="font-bold text-white">プロの視点</span>で解決します。
+          </p>
+        </div>
+      </div>
+
+      {/* Tab Swticher */}
+      <div className="flex bg-slate-100 p-1 rounded-xl">
+        <button
+          onClick={() => setActiveTab('list')}
+          className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-colors ${
+            activeTab === 'list' ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500 hover:bg-slate-200'
+          }`}
+        >
+          相談一覧
+        </button>
+        <button
+          onClick={() => setActiveTab('new')}
+          className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-colors ${
+            activeTab === 'new' ? 'bg-white text-brand-blue shadow-sm' : 'text-slate-500 hover:bg-slate-200'
+          }`}
+        >
+          新しく相談
+        </button>
+        {isCoach && (
+          <button
+            onClick={() => setActiveTab('coach')}
+            className={`flex-1 py-2.5 text-xs font-bold rounded-lg transition-colors ${
+              activeTab === 'coach' ? 'bg-slate-800 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-200'
+            }`}
+          >
+            コーチ回答
+          </button>
+        )}
+      </div>
+
+      {/* New Question Form - Coin Based */}
+      {activeTab === 'new' && (
+        <div className="space-y-4 animate-in fade-in slide-in-from-right-4 duration-300">
+          {/* Student Coin Balance */}
+          <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">🪙</span>
+              <span className="font-black text-yellow-600 font-mono text-lg">{studentCoins}</span>
+              <span className="text-xs text-slate-500 font-medium">コイン残高</span>
+            </div>
+            <button
+              onClick={() => setShowCoinPurchaseModal(true)}
+              className="flex items-center gap-1.5 bg-yellow-50 text-yellow-700 border border-yellow-200 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-yellow-100 transition-colors"
+            >
+              <ShoppingCart size={14} /> コインを購入
+            </button>
+          </div>
+
+          <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-4">
+            <h3 className="font-bold text-slate-800 flex items-center gap-2">
+              <MessageCircle size={18} className="text-brand-blue" />
+              新しい相談を投稿
+            </h3>
+
+            {/* Question Type Selector */}
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setQuestionType('text')}
+                className={`p-3 rounded-xl border-2 text-center transition-all ${
+                  questionType === 'text'
+                    ? 'border-brand-blue bg-blue-50'
+                    : 'border-slate-200 bg-white hover:bg-slate-50'
+                }`}
+              >
+                <p className="text-sm font-bold text-slate-800">テキストのみ</p>
+                <p className="text-yellow-600 font-mono font-bold text-sm mt-1">1,000 🪙</p>
+              </button>
+              <button
+                onClick={() => setQuestionType('video')}
+                className={`p-3 rounded-xl border-2 text-center transition-all ${
+                  questionType === 'video'
+                    ? 'border-indigo-500 bg-indigo-50'
+                    : 'border-slate-200 bg-white hover:bg-slate-50'
+                }`}
+              >
+                <div className="flex items-center justify-center gap-1">
+                  <Video size={14} className="text-indigo-600" />
+                  <p className="text-sm font-bold text-slate-800">動画付き</p>
+                </div>
+                <p className="text-yellow-600 font-mono font-bold text-sm mt-1">2,000 🪙</p>
+              </button>
+            </div>
+
+            {/* Category Selector */}
+            <div className="space-y-2">
+              <p className="text-xs font-bold text-slate-600">カテゴリ（任意）</p>
+              <div className="flex flex-wrap gap-1.5">
+                {[
+                  { id: 'serve', label: 'サーブ', emoji: '🎾' },
+                  { id: 'stroke', label: 'ストローク', emoji: '💪' },
+                  { id: 'volley', label: 'ボレー', emoji: '⚡' },
+                  { id: 'footwork', label: 'フットワーク', emoji: '👟' },
+                  { id: 'tactics', label: '戦術', emoji: '🧠' },
+                  { id: 'mental', label: 'メンタル', emoji: '🧘' },
+                  { id: 'other', label: 'その他', emoji: '💬' },
+                ].map(cat => (
+                  <button
+                    key={cat.id}
+                    onClick={() => setQuestionCategory(questionCategory === cat.id ? '' : cat.id)}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-bold border transition-all flex items-center gap-1 ${
+                      questionCategory === cat.id
+                        ? 'bg-brand-blue text-white border-brand-blue'
+                        : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    {cat.emoji} {cat.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <textarea
+              value={newQuestion}
+              onChange={(e) => setNewQuestion(e.target.value)}
+              placeholder="練習の悩み、技術的な質問、戦術の相談など何でもどうぞ..."
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm h-32 resize-none focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all leading-relaxed"
+            />
+            
+            {questionType === 'video' && (
+              <div className="flex items-center gap-2">
+                <button className="flex items-center gap-1.5 text-xs text-indigo-600 font-bold bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors">
+                  <Video size={14} /> 動画を添付する
+                </button>
+              </div>
+            )}
+
+            <button
+              onClick={handleSubmitQuestion}
+              disabled={!newQuestion.trim()}
+              className={`w-full rounded-xl py-4 font-bold disabled:opacity-50 transition-all flex justify-center items-center gap-2 ${
+                studentCoins >= questionCost
+                  ? 'bg-brand-blue text-white hover:bg-brand-blue-hover'
+                  : 'bg-red-100 text-red-600 border border-red-200'
+              }`}
+            >
+              <Send size={16} />
+              {studentCoins >= questionCost
+                ? `相談を送信する（${questionCost} 🪙）`
+                : `コインが不足しています（${questionCost} 🪙 必要）`
+              }
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Consultation List */}
+      {activeTab === 'list' && (
+        <div className="space-y-4 animate-in fade-in slide-in-from-left-4 duration-300">
+          
+          {/* Search Bar */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="過去の相談を検索..."
+              className="w-full bg-white border border-slate-200 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all shadow-sm"
+            />
+          </div>
+
+          <div className="space-y-3">
+            {displayConsultations.length === 0 ? (
+              <div className="text-center py-10 text-slate-400 bg-white rounded-2xl border border-slate-100">
+                <MessageCircle size={40} className="mx-auto mb-3 opacity-20" />
+                <p className="text-sm font-bold">相談が見つかりません</p>
+              </div>
+            ) : (
+              displayConsultations.map(c => {
+                const status = statusConfig[c.status];
+                const isExpanded = expandedId === c.id;
+
+              return (
+                <div key={c.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  {/* Question Header */}
+                  <button
+                    onClick={() => setExpandedId(isExpanded ? null : c.id)}
+                    className="w-full p-4 flex items-start gap-3 text-left"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${status.cls}`}>
+                          {status.label}
+                        </span>
+                        <span className="text-[10px] text-slate-400">{c.createdAt}</span>
+                        {c.category && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">
+                            {{
+                              serve: '🎾サーブ', stroke: '💪ストローク', volley: '⚡ボレー',
+                              footwork: '👟フットワーク', tactics: '🧠戦術', mental: '🧘メンタル', other: '💬その他'
+                            }[c.category] || c.category}
+                          </span>
+                        )}
+                        {c.userNickname && (
+                          <span className="text-[10px] text-slate-500 flex items-center gap-1 ml-auto bg-slate-50 px-2 py-0.5 rounded-full">
+                            <span className="text-xs">{c.userAvatar || '🏐'}</span>
+                            {c.userNickname}
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-sm font-medium text-slate-800 ${isExpanded ? '' : 'line-clamp-2'}`}>
+                        {c.question}
+                      </p>
+                    </div>
+                    <div className="text-slate-400 mt-1">
+                      {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                    </div>
+                  </button>
+
+                  {/* Expanded Detail */}
+              {isExpanded && (
+                <div className="border-t border-slate-100 animate-in fade-in duration-200">
+                  
+                  {/* Waiting State */}
+                  {c.status === 'waiting' && (
+                    <div className="p-5 flex flex-col items-center text-center text-slate-400 gap-2">
+                      <Clock size={28} className="text-slate-300" />
+                      <p className="text-sm font-medium">コーチからの回答をお待ちください...</p>
+                      <p className="text-[11px]">通常24時間以内に返信があります</p>
+                    </div>
+                  )}
+
+                  {/* Re-ask State */}
+                  {c.status === 'reask' && (
+                    <div className="p-5 flex flex-col items-center text-center text-yellow-600 gap-2">
+                      <Clock size={28} className="text-yellow-400" />
+                      <p className="text-sm font-medium">再質問を同じコーチに送信しました</p>
+                      <p className="text-[11px] text-slate-400">担当コーチからの追加回答をお待ちください</p>
+                    </div>
+                  )}
+
+                  {/* Answer */}
+                  {(c.status === 'answered' || c.status === 'resolved') && c.coach && c.answer && (
+                    <div className="p-4 space-y-4">
+                      
+                      {/* Coach Profile */}
+                      <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl">
+                        <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white font-black text-sm shrink-0">
+                          {c.coach.avatar}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="font-bold text-sm text-slate-800">{c.coach.name}</span>
+                            {(() => {
+                              const rc = rankConfig[c.coach!.rank];
+                              const RankIcon = rc.icon;
+                              return (
+                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${rc.color} flex items-center gap-1`}>
+                                  <RankIcon size={10} /> {rc.label}
+                                </span>
+                              );
+                            })()}
+                          </div>
+                          <div className="flex flex-wrap gap-1">
+                            {c.coach.specialty.map(s => (
+                              <span key={s} className="text-[10px] text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">
+                                {s}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className="flex items-center gap-0.5 text-xs font-bold text-slate-600">
+                            <Star size={12} className="text-yellow-400 fill-current" />
+                            {c.coach.rating}
+                          </div>
+                          <span className="text-[10px] text-slate-400">{c.coach.answerCount}回答</span>
+                        </div>
+                      </div>
+
+                      {/* Answer Content */}
+                      <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-xl">
+                        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                          {c.answer}
+                        </p>
+                      </div>
+
+                      {/* Actions */}
+                      {c.status === 'answered' && c.isMine && (
+                        <div className="space-y-3">
+                          {/* Auto-resolve notice */}
+                          {c.answeredAt && (
+                            <div className="bg-amber-50 border border-amber-100 px-3 py-2 rounded-xl flex items-center gap-2">
+                              <Clock size={12} className="text-amber-500 shrink-0" />
+                              <p className="text-[10px] text-amber-600">
+                                {(() => {
+                                  const remaining = 24 * 60 * 60 * 1000 - (Date.now() - new Date(c.answeredAt).getTime());
+                                  if (remaining <= 0) return '自動解決処理中...';
+                                  const hours = Math.floor(remaining / (60 * 60 * 1000));
+                                  const mins = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
+                                  return `${hours}時間${mins}分以内に操作がない場合、自動で解決済みになりコーチにコインが付与されます`;
+                                })()}
+                              </p>
+                            </div>
+                          )}
+                          {/* Resolve + Re-ask */}
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => handleResolve(c.id)}
+                              className="flex-1 py-3 bg-brand-blue text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-brand-blue-hover transition-colors"
+                            >
+                              <CheckCircle2 size={16} />
+                              解決した！
+                            </button>
+                            <button
+                              onClick={() => setShowReaskInput(showReaskInput === c.id ? null : c.id)}
+                              className="flex-1 py-3 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-yellow-100 transition-colors"
+                            >
+                              <MessageCircle size={16} />
+                              再質問する
+                            </button>
+                          </div>
+
+                          {/* Re-ask input */}
+                          {showReaskInput === c.id && (
+                            <div className="space-y-2 animate-in fade-in duration-200">
+                              <textarea
+                                value={reaskText}
+                                onChange={(e) => setReaskText(e.target.value)}
+                                placeholder="追加で聞きたいことを入力..."
+                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm h-20 resize-none focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue"
+                              />
+                              <button
+                                onClick={() => handleReask(c.id)}
+                                disabled={!reaskText.trim()}
+                                className="w-full py-2.5 bg-yellow-500 text-white rounded-xl text-sm font-bold disabled:opacity-50 transition-colors hover:bg-yellow-600"
+                              >
+                                再質問を送信（同じコーチへ・無料1回）
+                              </button>
+                            </div>
+                          )}
+
+                          {/* Report → 別コーチに再振分 */}
+                          <button
+                            onClick={() => handleReport(c.id)}
+                            className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-slate-400 hover:text-red-500 transition-colors"
+                          >
+                            <Flag size={12} />
+                            回答に問題がある場合（別のコーチに再振分）
+                          </button>
+                        </div>
+                      )}
+
+                      {/* Resolved → Rating */}
+                      {c.status === 'resolved' && (
+                        <div className="space-y-3">
+                          <div className="bg-green-50 border border-green-100 px-4 py-3 rounded-xl flex items-center gap-2">
+                            <ThumbsUp size={16} className="text-green-500" />
+                            <span className="text-sm font-bold text-green-700">この相談は解決済みです</span>
+                          </div>
+                          
+                          {/* Star Rating */}
+                          {!c.userRating ? (
+                            c.isMine && (
+                              <div className="text-center space-y-2">
+                                <p className="text-xs font-medium text-slate-500">このコーチの回答を評価してください</p>
+                                <div className="flex justify-center gap-1">
+                                  {[1,2,3,4,5].map(star => (
+                                    <button
+                                      key={star}
+                                      onClick={() => handleRate(c.id, star)}
+                                      className="p-1 hover:scale-125 transition-transform"
+                                    >
+                                      <Star size={28} className="text-slate-300 hover:text-yellow-400 hover:fill-current transition-colors" />
+                                    </button>
+                                  ))}
+                                </div>
+                              </div>
+                            )
+                          ) : (
+                            <div className="flex justify-center gap-0.5">
+                              {[1,2,3,4,5].map(star => (
+                                <Star
+                                  key={star}
+                                  size={20}
+                                  className={star <= c.userRating! ? 'text-yellow-400 fill-current' : 'text-slate-200'}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          );
+        })
+      )}
+          </div>
+        </div>
+      )}
+
+      {/* Coach Mode */}
+      {activeTab === 'coach' && isCoach && (
+        <div className="space-y-4 animate-in fade-in zoom-in-95 duration-300">
+          
+          {/* Coach Header / Coins */}
+          <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-bold text-white text-xs">
+                {dummyCoaches[0].avatar}
+              </div>
+              <span className="font-bold text-slate-800 text-sm">{coachNickname || dummyCoaches[0].name} 様</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowCoinExchangeModal(true)}
+                className="flex items-center gap-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 px-3 py-1.5 rounded-full text-xs font-bold hover:bg-emerald-100 transition-colors"
+              >
+                <ArrowRightLeft size={12} /> コイン交換
+              </button>
+              <div className="flex items-center gap-2 bg-yellow-50 px-3 py-1.5 rounded-full border border-yellow-100">
+                <span className="text-lg">🪙</span>
+                <span className="font-black text-yellow-600 font-mono text-sm">{coachCoins}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Rank-Up Notification */}
+          {rankUpNotification && (
+            <div className="bg-gradient-to-r from-yellow-400 to-amber-500 text-white p-4 rounded-2xl text-center font-bold text-sm shadow-lg animate-in zoom-in-95 duration-300">
+              {rankUpNotification}
+            </div>
+          )}
+
+          {/* Rank Progress Panel */}
+          <div className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {(() => { const RankIcon = rankConfig[coachRank].icon; return <RankIcon size={16} />; })()}
+                <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${rankConfig[coachRank].color}`}>
+                  {rankConfig[coachRank].label}
+                </span>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  報酬倍率 ×{rankConfig[coachRank].multiplier}
+                </span>
+              </div>
+              <div className="flex items-center gap-3 text-[11px] text-slate-500">
+                <span>{coachAnswerCount}回答</span>
+                <span className="flex items-center gap-0.5">
+                  <Star size={10} className="text-yellow-400 fill-current" /> {coachAvgRating}
+                </span>
+              </div>
+            </div>
+            {/* Progress to next rank */}
+            {rankUpConditions[coachRank].next && (
+              <div className="space-y-1">
+                <div className="flex items-center justify-between text-[10px] text-slate-400">
+                  <span>次のランク: {rankConfig[rankUpConditions[coachRank].next!].label}</span>
+                  <span>{coachAnswerCount}/{rankUpConditions[coachRank].answers}回答 · 評価{coachAvgRating}/{rankUpConditions[coachRank].rating}</span>
+                </div>
+                <div className="w-full h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-brand-blue to-indigo-500 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(100, (coachAnswerCount / rankUpConditions[coachRank].answers) * 100)}%` }}
+                  />
+                </div>
+              </div>
+            )}</div>
+
+          {/* Question Card Display */}
+          {currentQuestionIndex >= waitingConsultations.length ? (
+            <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm text-center space-y-3">
+              <CheckCircle2 size={48} className="mx-auto text-green-400 mb-2" />
+              <h3 className="font-bold text-slate-800 text-lg">すべての質問に回答しました！</h3>
+              <p className="text-slate-500 text-sm leading-relaxed">
+                現在、新しい相談はありません。<br />お疲れ様でした！
+              </p>
+            </div>
+          ) : (
+            <div 
+              key={waitingConsultations[currentQuestionIndex].id} // Force re-render for animation on index change
+              className="bg-white rounded-3xl border border-slate-100 shadow-lg overflow-hidden flex flex-col min-h-[400px] animate-in slide-in-from-bottom-8 fade-in duration-500"
+            >
+              {/* Card Content (Question) */}
+              <div className="p-6 flex-1 flex flex-col justify-center space-y-4">
+                <div className="flex items-center gap-2 text-slate-400">
+                  <Clock size={14} />
+                  <span className="text-xs font-medium">{waitingConsultations[currentQuestionIndex].createdAt}</span>
+                </div>
+                <p className="text-slate-800 font-bold text-lg leading-relaxed whitespace-pre-wrap">
+                  {waitingConsultations[currentQuestionIndex].question}
+                </p>
+              </div>
+
+              {/* Action Area */}
+              <div className="p-4 bg-slate-50 border-t border-slate-100 space-y-3">
+                {!showCoachAnswerInput ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      onClick={handleSkipQuestion}
+                      className="flex flex-col items-center justify-center gap-1.5 py-4 bg-white border-2 border-slate-200 text-slate-500 font-bold rounded-2xl hover:bg-slate-100 hover:border-slate-300 transition-all"
+                    >
+                      <X size={24} strokeWidth={3} className="text-slate-400" />
+                      <span className="text-xs">
+                        飛ばす <span className="font-mono text-[10px] text-yellow-600 bg-yellow-50 px-1 py-0.5 rounded">-50🪙</span>
+                      </span>
+                    </button>
+                    <button
+                      onClick={() => setShowCoachAnswerInput(true)}
+                      className="flex flex-col items-center justify-center gap-1.5 py-4 bg-brand-blue text-white font-bold rounded-2xl shadow-md hover:bg-brand-blue-hover transition-all"
+                    >
+                      <MessageCircle size={24} />
+                      <span className="text-xs">回答する</span>
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-3 animate-in slide-in-from-bottom-4 duration-300">
+                    <textarea
+                      value={coachAnswerText}
+                      onChange={(e) => setCoachAnswerText(e.target.value)}
+                      placeholder="プロの視点からアドバイスを入力..."
+                      className="w-full h-40 bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
+                      autoFocus
+                    />
+                    {/* Media Attachments for Coach Answer */}
+                    <div className="space-y-2">
+                      <input
+                        type="url"
+                        value={coachAnswerUrl}
+                        onChange={(e) => setCoachAnswerUrl(e.target.value)}
+                        placeholder="YouTube / Instagram URL を貼り付け（任意）"
+                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-brand-blue transition-all"
+                      />
+                      <div className="flex gap-2">
+                        <button className="flex items-center gap-1 text-[11px] text-slate-500 font-medium bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+                          <ImageIcon size={12} /> 画像
+                        </button>
+                        <button className="flex items-center gap-1 text-[11px] text-slate-500 font-medium bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+                          <Video size={12} /> 動画
+                        </button>
+                        <button className="flex items-center gap-1 text-[11px] text-slate-500 font-medium bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+                          <Link size={12} /> リンク
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                       <button
+                        onClick={() => { setShowCoachAnswerInput(false); setCoachAnswerUrl(''); }}
+                        className="py-3 px-4 font-bold text-slate-500 bg-white border border-slate-200 rounded-xl text-sm"
+                      >
+                        キャンセル
+                      </button>
+                      <button
+                        onClick={() => { handleCoachAnswerSubmit(waitingConsultations[currentQuestionIndex].id); setCoachAnswerUrl(''); }}
+                        disabled={!coachAnswerText.trim()}
+                        className="flex-1 py-3 bg-brand-blue text-white rounded-xl text-sm font-bold flex justify-center items-center gap-2 hover:bg-brand-blue-hover"
+                      >
+                        <Send size={16} /> 送信して +{getReward()}🪙
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Coach Roster Preview */}
+      <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
+        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+          <ShieldCheck size={18} className="text-brand-blue" />
+          認証コーチ
+        </h3>
+        <div className="space-y-3">
+          {dummyCoaches.map(coach => {
+            const rc = rankConfig[coach.rank];
+            const RankIcon = rc.icon;
+            return (
+              <div key={coach.name} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
+                <div className="w-11 h-11 bg-slate-900 rounded-full flex items-center justify-center text-white font-black text-sm shrink-0">
+                  {coach.avatar}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-bold text-sm text-slate-800">{coach.name}</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${rc.color} flex items-center gap-1`}>
+                      <RankIcon size={10} /> {rc.label}
+                    </span>
+                  </div>
+                  <div className="flex flex-wrap gap-1">
+                    {coach.specialty.map(s => (
+                      <span key={s} className="text-[10px] text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">{s}</span>
+                    ))}
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <div className="flex items-center gap-0.5 text-xs font-bold text-slate-600">
+                    <Star size={12} className="text-yellow-400 fill-current" /> {coach.rating}
+                  </div>
+                  <span className="text-[10px] text-slate-400">{coach.answerCount}回答</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Quality Assurance Note */}
+      <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex gap-3 items-start">
+        <AlertTriangle size={16} className="text-slate-400 shrink-0 mt-0.5" />
+        <div className="text-xs text-slate-500 leading-relaxed space-y-1">
+           <p className="font-bold text-slate-600">品質管理について</p>
+           <p>すべてのコーチ回答はAIフィルターによる品質チェック（具体性・専門性の検証）を通過しています。不誠実な回答には自動ペナルティ（ランクダウン・資格停止）が適用されます。</p>
+        </div>
+      </div>
+
+      {/* Coach Application Banner */}
+      {!isCoach && (
+        <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 p-5 rounded-2xl space-y-3">
+          <div className="flex items-center gap-2">
+            <ShieldCheck size={18} className="text-indigo-600" />
+            <h3 className="font-bold text-slate-800 text-sm">コーチとして活動しませんか？</h3>
+          </div>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            ソフトテニスの知識と経験を活かして、生徒の悩みを解決しながらコインを稼げます。
+          </p>
+          <div className="flex flex-wrap gap-2 text-[10px]">
+            <span className="bg-white px-2 py-1 rounded-full border border-indigo-100 text-indigo-600 font-bold">経験年6年以上</span>
+            <span className="bg-white px-2 py-1 rounded-full border border-indigo-100 text-indigo-600 font-bold">または 大会実績あり</span>
+            <span className="bg-white px-2 py-1 rounded-full border border-indigo-100 text-indigo-600 font-bold">または JSPO資格</span>
+          </div>
+          {coachAppStatus === 'none' && (
+            <button
+              onClick={() => setShowCoachApplication(true)}
+              className="w-full py-3 bg-indigo-600 text-white rounded-xl font-bold text-sm hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
+            >
+              <FileText size={16} />
+              コーチに応募する
+            </button>
+          )}
+          {coachAppStatus === 'pending' && (
+            <div className="w-full py-3 bg-yellow-100 text-yellow-700 rounded-xl font-bold text-sm text-center flex items-center justify-center gap-2 border border-yellow-200">
+              <Clock size={16} />
+              審査中…通常 3〜5 営業日以内に結果をご連絡します
+            </div>
+          )}
+          {coachAppStatus === 'approved' && (
+            <div className="w-full py-3 bg-green-100 text-green-700 rounded-xl font-bold text-sm text-center flex items-center justify-center gap-2 border border-green-200">
+              <CheckCircle2 size={16} />
+              承認済み！上部のコーチ権限をONにしてください
+            </div>
+          )}
+          {coachAppStatus === 'rejected' && (
+            <div className="space-y-2">
+              <div className="w-full py-3 bg-red-50 text-red-600 rounded-xl font-bold text-sm text-center flex items-center justify-center gap-2 border border-red-200">
+                <X size={16} />
+                申し訳ございませんが、今回は承認できませんでした
+              </div>
+              <button
+                onClick={() => { setCoachAppStatus('none'); }}
+                className="text-xs text-slate-400 hover:text-slate-600 underline"
+              >
+                再応募する
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Coin Economy Summary */}
+      <div className="bg-white border border-slate-200 rounded-2xl p-5 space-y-4 shadow-sm">
+        <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+          <span className="text-lg">🪙</span> コインのしくみ
+        </h3>
+
+        {/* How to EARN coins */}
+        <div className="space-y-2">
+          <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">コインを獲得する（コーチ側）</p>
+          <div className="grid grid-cols-1 gap-1.5">
+            {[
+              { label: '質問に回答（生徒が解決時）', value: '700〜1,050🪙', note: 'ランク倍率 ×1.0〜×1.5' },
+              { label: 'ランクアップボーナス', value: '5,000〜50,000🪙', note: 'シルバー→プラチナ' },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center justify-between bg-green-50 px-3 py-2 rounded-xl">
+                <div>
+                  <span className="text-xs text-slate-700 font-medium">{item.label}</span>
+                  {item.note && <span className="text-[9px] text-slate-400 ml-1.5">({item.note})</span>}
+                </div>
+                <span className="text-xs font-bold text-green-600">{item.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* How coins are SPENT */}
+        <div className="space-y-2">
+          <p className="text-[10px] font-black text-red-500 uppercase tracking-widest">コインを消費する</p>
+          <div className="grid grid-cols-1 gap-1.5">
+            {[
+              { label: 'コーチに質問（テキスト）', value: '-1,000🪙', note: '生徒側' },
+              { label: 'コーチに質問（動画付き）', value: '-2,000🪙', note: '生徒側' },
+              { label: '質問をスキップ（コーチ側）', value: '-50🪙', note: '' },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center justify-between bg-red-50 px-3 py-2 rounded-xl">
+                <div>
+                  <span className="text-xs text-slate-700 font-medium">{item.label}</span>
+                  {item.note && <span className="text-[9px] text-slate-400 ml-1.5">({item.note})</span>}
+                </div>
+                <span className="text-xs font-bold text-red-500">{item.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Coin Purchase */}
+        <div className="space-y-2">
+          <p className="text-[10px] font-black text-yellow-600 uppercase tracking-widest">コイン購入（生徒側）</p>
+          <div className="flex gap-2">
+            {[
+              { label: '5,000🪙', price: '¥500' },
+              { label: '10,000🪙', price: '¥1,000' },
+              { label: '30,000🪙', price: '¥2,800', bonus: true },
+            ].map((item, i) => (
+              <div key={i} className={`flex-1 text-center bg-yellow-50 px-2 py-2 rounded-xl ${item.bonus ? 'border-2 border-yellow-300' : 'border border-yellow-100'}`}>
+                <p className="text-xs font-bold text-yellow-700">{item.label}</p>
+                <p className="text-[10px] text-slate-500">{item.price}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Cash Exchange */}
+        <div className="space-y-2">
+          <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest">現金化（コーチ側）</p>
+          <div className="bg-emerald-50 border border-emerald-100 rounded-xl p-3 space-y-1.5">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-700 font-medium">交換レート</span>
+              <span className="text-xs font-bold text-emerald-700">5,000🪙 → ¥400</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-700 font-medium">最低交換額</span>
+              <span className="text-xs font-bold text-emerald-700">30,000🪙〜</span>
+            </div>
+            <p className="text-[9px] text-slate-400 leading-snug">※ コーチとして回答を積み上げることで、獲得したコインを現金化できます</p>
+          </div>
+        </div>
+
+        {/* Rank System */}
+        <div className="space-y-2">
+          <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">ランクアップ制度（コーチ側）</p>
+          <div className="grid grid-cols-2 gap-2">
+            {[
+              { rank: 'ブロンズ', color: 'bg-amber-100 border-amber-200 text-amber-700', mult: '×1.0', cond: '初期ランク', bonus: '' },
+              { rank: 'シルバー', color: 'bg-slate-100 border-slate-200 text-slate-600', mult: '×1.2', cond: '30回 / ★4.0', bonus: '+5,000🪙' },
+              { rank: 'ゴールド', color: 'bg-yellow-50 border-yellow-200 text-yellow-700', mult: '×1.3', cond: '100回 / ★4.3', bonus: '+15,000🪙' },
+              { rank: 'プラチナ', color: 'bg-indigo-50 border-indigo-200 text-indigo-700', mult: '×1.5', cond: '250回 / ★4.6', bonus: '+50,000🪙' },
+            ].map((r, i) => (
+              <div key={i} className={`p-2.5 rounded-xl border ${r.color} space-y-1`}>
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] font-bold">{r.rank}</span>
+                  <span className="text-[10px] font-black">{r.mult}</span>
+                </div>
+                <p className="text-[9px] opacity-70">{r.cond}</p>
+                {r.bonus && <p className="text-[9px] font-bold">ボーナス {r.bonus}</p>}
+              </div>
+            ))}
+          </div>
+          <p className="text-[9px] text-slate-400 leading-snug">※ 回答数と平均評価の両方を満たすとランクアップ。倍率が報酬に反映されます</p>
+        </div>
+      </div>
+
+      <div className="h-6" />
+
+      {/* Coach Application Modal */}
+      {showCoachApplication && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowCoachApplication(false)}>
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between sticky top-0 bg-white z-10">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <ShieldCheck size={18} className="text-indigo-600" />
+                コーチ応募
+              </h3>
+              <button onClick={() => setShowCoachApplication(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5 space-y-5">
+              {/* Conditions */}
+              <div className="bg-indigo-50 p-4 rounded-xl space-y-2">
+                <p className="text-xs font-bold text-indigo-700">応募条件（いずれか1つを満たすこと）</p>
+                <ul className="text-[11px] text-indigo-600 space-y-1">
+                  <li className="flex items-start gap-1.5"><CheckCircle2 size={12} className="mt-0.5 shrink-0" />ソフトテニス経験年数 <span className="font-bold">6年以上</span></li>
+                  <li className="flex items-start gap-1.5"><CheckCircle2 size={12} className="mt-0.5 shrink-0" />一定以上の<span className="font-bold">大会実績</span>（県大会以上の入賞等）</li>
+                  <li className="flex items-start gap-1.5"><CheckCircle2 size={12} className="mt-0.5 shrink-0" />日本スポーツ協会公認 <span className="font-bold">スポーツ指導者資格</span></li>
+                </ul>
+              </div>
+
+              {/* Full Name */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">氏名（本名） <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={coachAppForm.fullName}
+                  onChange={e => setCoachAppForm({...coachAppForm, fullName: e.target.value})}
+                  placeholder="例: 田中 太郎"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500"
+                />
+                <p className="text-[10px] text-slate-400">※ 本人確認用です。生徒には公開されません</p>
+              </div>
+
+              {/* Nickname */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">ニックネーム（表示名） <span className="text-red-500">*</span></label>
+                <input
+                  type="text"
+                  value={coachAppForm.nickname}
+                  onChange={e => setCoachAppForm({...coachAppForm, nickname: e.target.value})}
+                  placeholder="例: テニスコーチT"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500"
+                />
+                <p className="text-[10px] text-slate-400">※ 生徒に表示される名前です。後から変更可能です</p>
+              </div>
+
+              {/* ID Upload */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">身分証明書 <span className="text-red-500">*</span></label>
+                <button
+                  onClick={() => setCoachAppForm({...coachAppForm, idUploaded: true})}
+                  className={`w-full p-4 border-2 border-dashed rounded-xl flex flex-col items-center gap-2 transition-colors ${
+                    coachAppForm.idUploaded ? 'border-green-300 bg-green-50' : 'border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'
+                  }`}
+                >
+                  {coachAppForm.idUploaded ? (
+                    <><CheckCircle2 size={24} className="text-green-500" /><span className="text-xs font-bold text-green-600">アップロード済み</span></>
+                  ) : (
+                    <><Upload size={24} className="text-slate-400" /><span className="text-xs text-slate-500">クリックして身分証をアップロード</span></>
+                  )}
+                </button>
+                <p className="text-[10px] text-slate-400">運転免許証、マイナンバーカード等（本人確認用・公開されません）</p>
+              </div>
+
+              {/* Experience Years */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">ソフトテニス経験年数 <span className="text-red-500">*</span></label>
+                <select
+                  value={coachAppForm.yearsExperience}
+                  onChange={e => setCoachAppForm({...coachAppForm, yearsExperience: e.target.value})}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="">選択してください</option>
+                  <option value="3-5">3〜5年</option>
+                  <option value="6-10">6〜10年</option>
+                  <option value="11-20">11〜20年</option>
+                  <option value="20+">20年以上</option>
+                </select>
+              </div>
+
+              {/* Tournament Results */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">大会実績（任意）</label>
+                <textarea
+                  value={coachAppForm.tournamentResults}
+                  onChange={e => setCoachAppForm({...coachAppForm, tournamentResults: e.target.value})}
+                  placeholder="例: ○○県大会優勝、全日本選手権出場 など"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm h-20 resize-none focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              {/* Certification */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">所有資格（任意）</label>
+                <select
+                  value={coachAppForm.certification}
+                  onChange={e => setCoachAppForm({...coachAppForm, certification: e.target.value})}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500"
+                >
+                  <option value="">なし</option>
+                  <option value="jspo-start">日本スポーツ協会 スタートコーチ</option>
+                  <option value="jspo-basic">日本スポーツ協会 コーチ②</option>
+                  <option value="jspo-advanced">日本スポーツ協会 コーチ③</option>
+                  <option value="jspo-pro">日本スポーツ協会 コーチ④</option>
+                  <option value="teaching">教員免許（保健体育）</option>
+                  <option value="other">その他</option>
+                </select>
+              </div>
+
+              {/* Resume Upload */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">競技歴書類（任意）</label>
+                <button
+                  onClick={() => setCoachAppForm({...coachAppForm, resumeUploaded: true})}
+                  className={`w-full p-3 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 transition-colors text-xs ${
+                    coachAppForm.resumeUploaded ? 'border-green-300 bg-green-50 text-green-600 font-bold' : 'border-slate-200 text-slate-500 hover:border-indigo-300'
+                  }`}
+                >
+                  {coachAppForm.resumeUploaded ? (
+                    <><CheckCircle2 size={14} /> アップロード済み</>
+                  ) : (
+                    <><Upload size={14} /> 資格証明書・経歴書をアップロード</>
+                  )}
+                </button>
+              </div>
+
+              {/* Self Introduction */}
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">自己PR（任意）</label>
+                <textarea
+                  value={coachAppForm.selfIntro}
+                  onChange={e => setCoachAppForm({...coachAppForm, selfIntro: e.target.value})}
+                  placeholder="得意分野や指導への想いを自由にお書きください"
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm h-24 resize-none focus:outline-none focus:border-indigo-500"
+                />
+              </div>
+
+              {/* Submit */}
+              <button
+                onClick={() => {
+                  setCoachNickname(coachAppForm.nickname);
+                  setCoachAppStatus('pending');
+                  setShowCoachApplication(false);
+                }}
+                disabled={!coachAppForm.idUploaded || !coachAppForm.yearsExperience || !coachAppForm.fullName.trim() || !coachAppForm.nickname.trim()}
+                className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold text-sm disabled:opacity-40 transition-all hover:bg-indigo-700 flex items-center justify-center gap-2"
+              >
+                <Send size={16} />
+                応募を提出する
+              </button>
+            </div>
+            <div className="p-4 bg-slate-50 border-t border-slate-100">
+              <p className="text-[10px] text-slate-400 text-center">提出された情報は審査目的のみに使用され、外部に公開されることはありません。</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Coin Purchase Modal */}
+      {showCoinPurchaseModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowCoinPurchaseModal(false)}>
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <ShoppingCart size={18} className="text-yellow-600" />
+                コインを購入
+              </h3>
+              <button onClick={() => setShowCoinPurchaseModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5 space-y-3">
+              <p className="text-xs text-slate-500 text-center">コインを購入してコーチに質問しよう（5,000コイン = ¥500）</p>
+              {coinPackages.map(pkg => (
+                <button
+                  key={pkg.coins}
+                  onClick={() => {
+                    setStudentCoins(prev => prev + pkg.coins);
+                    setShowCoinPurchaseModal(false);
+                  }}
+                  className={`w-full p-4 rounded-2xl border-2 flex items-center justify-between transition-all hover:shadow-md ${
+                    pkg.popular ? 'border-yellow-400 bg-yellow-50' : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">🪙</span>
+                    <div className="text-left">
+                      <p className="font-bold text-slate-800">{pkg.label}</p>
+                      {pkg.bonus && <span className="text-[10px] font-bold text-yellow-600 bg-yellow-100 px-2 py-0.5 rounded-full">{pkg.bonus}</span>}
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-black text-slate-800">¥{pkg.price.toLocaleString()}</p>
+                    {pkg.popular && <span className="text-[10px] text-yellow-600 font-bold">人気</span>}
+                  </div>
+                </button>
+              ))}
+            </div>
+            <div className="p-4 bg-slate-50 border-t border-slate-100">
+              <p className="text-[10px] text-slate-400 text-center">※ モック実装です。実際の決済は発生しません。</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Coin Exchange Modal (Coach) */}
+      {showCoinExchangeModal && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setShowCoinExchangeModal(false)}>
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <ArrowRightLeft size={18} className="text-emerald-600" />
+                コイン交換
+              </h3>
+              <button onClick={() => setShowCoinExchangeModal(false)} className="text-slate-400 hover:text-slate-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              {/* Direction Tabs */}
+              <div className="flex bg-slate-100 rounded-xl p-1">
+                <button
+                  onClick={() => { setExchangeDirection('toCash'); setExchangeAmount(30000); }}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${
+                    exchangeDirection === 'toCash' ? 'bg-white text-emerald-700 shadow-sm' : 'text-slate-500'
+                  }`}
+                >
+                  🪙 → ¥ 現金化
+                </button>
+                <button
+                  onClick={() => { setExchangeDirection('toCoins'); setExchangeAmount(1000); }}
+                  className={`flex-1 py-2 rounded-lg text-xs font-bold transition-colors ${
+                    exchangeDirection === 'toCoins' ? 'bg-white text-yellow-700 shadow-sm' : 'text-slate-500'
+                  }`}
+                >
+                  ¥ → 🪙 コイン購入
+                </button>
+              </div>
+
+              {/* Amount Input */}
+              <div className="text-center space-y-2">
+                <p className="text-xs text-slate-500">
+                  {exchangeDirection === 'toCash' ? '現金化するコイン数' : '購入するコイン数'}
+                </p>
+                <div className="flex items-center justify-center gap-3">
+                  <button
+                    onClick={() => setExchangeAmount(Math.max(exchangeDirection === 'toCash' ? 30000 : 1000, exchangeAmount - 1000))}
+                    className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-lg hover:bg-slate-200 transition-colors"
+                  >
+                    −
+                  </button>
+                  <span className="text-3xl font-black text-slate-800 font-mono w-24 text-center">{exchangeAmount}</span>
+                  <button
+                    onClick={() => setExchangeAmount(exchangeAmount + 1000)}
+                    className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold text-lg hover:bg-slate-200 transition-colors"
+                  >
+                    ＋
+                  </button>
+                </div>
+              </div>
+
+              {/* Conversion Result */}
+              <div className="bg-slate-50 p-4 rounded-xl text-center">
+                {exchangeDirection === 'toCash' ? (
+                  <>
+                    <p className="text-xs text-slate-500">受取額</p>
+                    <p className="text-2xl font-black text-emerald-600 mt-1">
+                      <Banknote size={20} className="inline mr-1" />
+                      ¥{Math.floor(exchangeAmount / 10 * 0.8).toLocaleString()}
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-1">{exchangeAmount.toLocaleString()}コイン → ¥{Math.floor(exchangeAmount / 10 * 0.8).toLocaleString()}</p>
+                    {exchangeAmount < 30000 && (
+                      <p className="text-[10px] text-red-500 font-bold mt-1">※ 現金化は30,000コインから可能です</p>
+                    )}
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs text-slate-500">取得コイン</p>
+                    <p className="text-2xl font-black text-yellow-600 mt-1">
+                      🪙 {exchangeAmount.toLocaleString()}
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-1">¥{(exchangeAmount / 10).toLocaleString()} = {exchangeAmount.toLocaleString()}コイン</p>
+                  </>
+                )}
+              </div>
+
+              <button
+                onClick={() => {
+                  if (exchangeDirection === 'toCash') {
+                    if (coachCoins >= exchangeAmount) {
+                      setCoachCoins(prev => prev - exchangeAmount);
+                      setShowCoinExchangeModal(false);
+                    }
+                  } else {
+                    setCoachCoins(prev => prev + exchangeAmount);
+                    setShowCoinExchangeModal(false);
+                  }
+                }}
+                disabled={exchangeDirection === 'toCash' && (coachCoins < exchangeAmount || exchangeAmount < 30000)}
+                className="w-full py-3 bg-emerald-600 text-white rounded-xl font-bold disabled:opacity-50 transition-all hover:bg-emerald-700 flex items-center justify-center gap-2"
+              >
+                {exchangeDirection === 'toCash' ? '現金化する' : 'コインを購入する'}
+              </button>
+            </div>
+            <div className="p-4 bg-slate-50 border-t border-slate-100">
+              <p className="text-[10px] text-slate-400 text-center">※ モック実装です。実際の決済は発生しません。</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

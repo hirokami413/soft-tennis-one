@@ -1,0 +1,298 @@
+import React, { useState } from 'react';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { Send, Image as ImageIcon, Video, Info, CheckCircle2, Hash, X, Youtube } from 'lucide-react';
+import { useAuth } from '../contexts/AuthContext';
+
+export const SubmitView: React.FC = () => {
+  const { user } = useAuth();
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [formData, setFormData] = useLocalStorage('submit_view_form', {
+    title: '',
+    category: 'フォアハンド',
+    level: '初級',
+    description: '',
+    tags: [] as string[],
+    youtubeUrl: '',
+    instagramUrl: '',
+  });
+  const [tagInput, setTagInput] = useLocalStorage('submit_view_tag_input', '');
+
+  // タグ入力欄から確定する処理
+  const commitTag = (raw: string) => {
+    // # を除去し、空白をトリム
+    const cleaned = raw.replace(/^#/, '').trim();
+    if (cleaned && !formData.tags.includes(cleaned)) {
+      setFormData({ ...formData, tags: [...formData.tags, cleaned] });
+    }
+    setTagInput('');
+  };
+
+  const handleTagInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // スペースまたは全角スペースが入力されたらタグを確定
+    if (value.endsWith(' ') || value.endsWith('\u3000')) {
+      commitTag(value);
+    } else {
+      setTagInput(value);
+    }
+  };
+
+  const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      if (tagInput.trim()) {
+        commitTag(tagInput);
+      }
+    }
+    // Backspace で入力が空なら最後のタグを削除
+    if (e.key === 'Backspace' && tagInput === '' && formData.tags.length > 0) {
+      setFormData({ ...formData, tags: formData.tags.slice(0, -1) });
+    }
+  };
+
+  const removeTag = (tagToRemove: string) => {
+    setFormData({ ...formData, tags: formData.tags.filter(t => t !== tagToRemove) });
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.title || !formData.description) return;
+    
+    // 入力中のタグがあれば確定
+    if (tagInput.trim()) {
+      commitTag(tagInput);
+    }
+
+    // Simulate API call
+    setTimeout(() => {
+      setIsSubmitted(true);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }, 800);
+  };
+
+  if (isSubmitted) {
+    return (
+      <div className="flex flex-col items-center justify-center p-8 text-center bg-white rounded-3xl border border-slate-100 shadow-sm mt-8 animate-in zoom-in-95 duration-500">
+        <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mb-6">
+          <CheckCircle2 size={40} className="text-green-500" />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-900 mb-3">投稿ありがとうございます！</h2>
+        <p className="text-slate-600 mb-8 leading-relaxed">
+          いただいた練習メニューは、運営チームが内容を確認したのち、ライブラリへ公開させていただきます。
+        </p>
+        <button 
+          onClick={() => {
+            setIsSubmitted(false);
+            setFormData({ title: '', category: 'フォアハンド', level: '初級', description: '', tags: [], youtubeUrl: '', instagramUrl: '' });
+            setTagInput('');
+          }}
+          className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-8 rounded-full transition-colors"
+        >
+          新しく投稿する
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-6 py-2">
+      {/* Header Info */}
+      <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden">
+        <div className="relative z-10">
+          <h2 className="text-xl font-bold text-slate-900 mb-2">メニューを投稿する</h2>
+          <p className="text-sm text-slate-600 leading-relaxed">
+            あなたが普段やっている練習法や、独自の効果的なメニューを教えてください。運営チームが確認後、アプリに掲載されます。
+          </p>
+        </div>
+        <div className="absolute -right-6 -bottom-6 opacity-5">
+          <Send size={120} />
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+        
+        {/* Poster info */}
+        {user && (
+          <div className="flex items-center gap-3 bg-slate-50 px-4 py-3 rounded-xl border border-slate-100">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-xl shadow-inner">
+              {user.avatarEmoji}
+            </div>
+            <div>
+              <p className="text-sm font-bold text-slate-800">{user.nickname}</p>
+              <p className="text-[10px] text-slate-400">として投稿します</p>
+            </div>
+          </div>
+        )}
+        {/* Title */}
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-slate-700 block">
+            練習メニュー名 <span className="text-red-500">*</span>
+          </label>
+          <input 
+            type="text" 
+            required
+            value={formData.title}
+            onChange={(e) => setFormData({...formData, title: e.target.value})}
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
+            placeholder="例: V字ボレー・スマッシュ連携"
+          />
+        </div>
+
+        {/* Category & Level */}
+        <div className="flex gap-4">
+          <div className="flex-1 space-y-2">
+            <label className="text-sm font-bold text-slate-700 block">カテゴリ</label>
+            <div className="relative">
+              <select 
+                value={formData.category}
+                onChange={(e) => setFormData({...formData, category: e.target.value})}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue appearance-none transition-all"
+              >
+                <option>フォアハンド</option>
+                <option>バックハンド</option>
+                <option>ボレー</option>
+                <option>スマッシュ</option>
+                <option>サーブ</option>
+                <option>フットワーク</option>
+                <option>実戦形式</option>
+                <option>その他</option>
+              </select>
+            </div>
+          </div>
+          
+          <div className="flex-1 space-y-2">
+            <label className="text-sm font-bold text-slate-700 block">推奨レベル</label>
+            <div className="relative">
+              <select 
+                value={formData.level}
+                onChange={(e) => setFormData({...formData, level: e.target.value})}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue appearance-none transition-all"
+              >
+                <option>初級</option>
+                <option>初級〜中級</option>
+                <option>中級</option>
+                <option>上級</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        {/* Description & Steps */}
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-slate-700 block">
+            練習の進め方・ポイント <span className="text-red-500">*</span>
+          </label>
+          <textarea 
+            required
+            value={formData.description}
+            onChange={(e) => setFormData({...formData, description: e.target.value})}
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm h-32 resize-none focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all leading-relaxed"
+            placeholder="人数、時間、具体的な手順や意識するポイントを自由に記述してください。"
+          />
+        </div>
+
+        {/* Hashtag Dedicated Input */}
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+            <Hash size={14} className="text-brand-blue" />
+            タグ
+          </label>
+          <div className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 flex flex-wrap items-center gap-2 focus-within:border-brand-blue focus-within:ring-1 focus-within:ring-brand-blue transition-all min-h-[44px]">
+            {formData.tags.map(tag => (
+              <span
+                key={tag}
+                className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-brand-blue text-xs font-bold rounded-full border border-blue-100 animate-in zoom-in-95 duration-200"
+              >
+                #{tag}
+                <button
+                  type="button"
+                  onClick={() => removeTag(tag)}
+                  className="ml-0.5 w-4 h-4 rounded-full flex items-center justify-center hover:bg-blue-200/50 transition-colors"
+                >
+                  <X size={10} />
+                </button>
+              </span>
+            ))}
+            <input
+              type="text"
+              value={tagInput}
+              onChange={handleTagInputChange}
+              onKeyDown={handleTagKeyDown}
+              className="flex-1 min-w-[100px] bg-transparent text-sm outline-none py-1 placeholder:text-slate-400"
+              placeholder={formData.tags.length === 0 ? "ボレー強化、前衛 などキーワードを入力" : "タグを追加..."}
+            />
+          </div>
+          <p className="text-[11px] text-slate-400 font-medium">
+            タグ名を入力し、スペースまたはEnterで確定できます。# は自動で付きます。× で削除できます。
+          </p>
+        </div>
+
+        {/* YouTube URL */}
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+            <Youtube size={16} className="text-red-500" />
+            参考YouTube動画URL（任意）
+          </label>
+          <input
+            type="url"
+            value={formData.youtubeUrl}
+            onChange={(e) => setFormData({...formData, youtubeUrl: e.target.value})}
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
+            placeholder="https://www.youtube.com/watch?v=..."
+          />
+        </div>
+
+        {/* Instagram URL */}
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+            <span className="text-lg leading-none">📸</span>
+            Instagram動画URL（任意）
+          </label>
+          <input
+            type="url"
+            value={formData.instagramUrl}
+            onChange={(e) => setFormData({...formData, instagramUrl: e.target.value})}
+            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
+            placeholder="https://www.instagram.com/reel/... or /p/..."
+          />
+        </div>
+
+        {/* Media Upload Mock */}
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-slate-700 block">
+            参考画像・動画・コート図（任意）
+          </label>
+          <div className="w-full bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-slate-400 hover:bg-slate-100 hover:border-brand-blue cursor-pointer transition-colors">
+            <div className="flex items-center gap-3">
+              <ImageIcon size={28} />
+              <Video size={28} />
+            </div>
+            <span className="text-sm font-medium">タップして画像・動画をアップロード</span>
+            <span className="text-[11px] text-slate-400">JPG, PNG, GIF, MP4, MOV 対応（最大150MB）</span>
+          </div>
+        </div>
+
+        {/* Info Alert */}
+        <div className="bg-blue-50/50 p-4 rounded-xl flex gap-3 items-start border border-blue-100">
+          <Info size={18} className="text-brand-blue shrink-0 mt-0.5" />
+          <p className="text-xs text-slate-600 leading-relaxed">
+            投稿されたメニューは審査され、表現の調整やコーチのアドバイスが追記される場合があります。
+          </p>
+        </div>
+
+        {/* Submit */}
+        <button 
+          type="submit"
+          disabled={!formData.title || !formData.description}
+          className="w-full bg-brand-blue text-white rounded-2xl py-4 font-bold disabled:opacity-50 transition-all flex justify-center items-center gap-2"
+        >
+          <Send size={18} />
+          メニューを投稿する
+        </button>
+      </form>
+      
+      {/* Spacer */}
+      <div className="h-6" />
+    </div>
+  );
+};
