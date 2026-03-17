@@ -19,7 +19,7 @@ export interface CoachConsultation {
 }
 
 export function useSupabaseCoach() {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   const [consultations, setConsultations] = useState<CoachConsultation[]>([]);
   const [loading, setLoading] = useState(false);
   const useDB = isSupabaseConfigured();
@@ -69,11 +69,12 @@ export function useSupabaseCoach() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [useDB, user?.id]);
 
+  // セッション初期化完了後にデータを取得（authLoading=falseを待つ）
   useEffect(() => {
-    if (user?.id) {
+    if (!authLoading && user?.id) {
       loadConsultations();
     }
-  }, [loadConsultations, user?.id]);
+  }, [loadConsultations, user?.id, authLoading]);
 
   const applyCoachApplication = async (fullName: string, nickname: string, extra?: { yearsExperience?: string; certification?: string; selfIntro?: string }) => {
      if (!useDB || !user) return { error: 'Not configured' };
