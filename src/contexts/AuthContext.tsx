@@ -128,69 +128,57 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // Supabase Authセッション監視
   useEffect(() => {
-    // 初回ロード: 既存セッションを確認
-    const initSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          const profile = await sessionToProfile(session);
-          setUser(profile);
-        } else {
-          setUser(prev => {
-            if (prev && !prev.id.startsWith('user_')) {
-              // Supabase user but no valid session -> logout
-              return null;
-            }
-            return prev;
-          });
-        }
-      } catch (err) {
-        console.warn('Supabase session check failed, using localStorage fallback:', err);
-        // セッション取得に失敗してもlocalStorageユーザーが存在する場合は
-        // DBから最新ロールを取得してマージする
-        try {
-          const stored = localStorage.getItem(STORAGE_KEY);
-          if (stored) {
-            const cached = JSON.parse(stored);
-            if (cached?.id && !cached.id.startsWith('user_')) {
-              const { data } = await supabase
-                .from('profiles')
-                .select('system_role, coach_rank, nickname, avatar_emoji, coins')
-                .eq('id', cached.id)
-                .single();
-              if (data) {
-                const d = data as Record<string, any>;
-                setUser({
-                  ...cached,
-                  systemRole: d.system_role || 'user',
-                  coachRank: d.coach_rank || 'bronze',
-                  nickname: d.nickname || cached.nickname,
-                  avatarEmoji: d.avatar_emoji || cached.avatarEmoji,
-                  coins: d.coins ?? cached.coins,
-                });
-              }
-            }
-          }
-        } catch { /* ignore DB fallback errors too */ }
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    initSession();
+    let initialDone = false;
 
-    // セッション変化を監視
+    // onAuthStateChangeで全てのセッションイベントを処理
+    // INITIAL_SESSION: リロード時のセッション復元（トークンリフレッシュ完了後に発火）
+    // SIGNED_IN: ログイン時
+    // SIGNED_OUT: ログアウト時
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          const profile = await sessionToProfile(session);
-          setUser(profile);
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN') {
+          if (session) {
+            const profile = await sessionToProfile(session);
+            setUser(profile);
+          } else if (!initialDone) {
+            // セッションなし（未ログイン）→ localStorageのダミーユーザーは保持
+            setUser(prev => {
+              if (prev && !prev.id.startsWith('user_')) {
+                return null;
+              }
+              return prev;
+            });
+          }
+          if (!initialDone) {
+            initialDone = true;
+            setIsLoading(false);
+          }
         } else if (event === 'SIGNED_OUT') {
           setUser(null);
+          if (!initialDone) {
+            initialDone = true;
+            setIsLoading(false);
+          }
+        } else if (event === 'TOKEN_REFRESHED' && session) {
+          // トークンリフレッシュ後にプロフィール更新
+          const profile = await sessionToProfile(session);
+          setUser(profile);
         }
       }
     );
 
-    return () => subscription.unsubscribe();
+    // フォールバック: 5秒以内にイベントが来なければisLoadingをfalseに
+    const timeout = setTimeout(() => {
+      if (!initialDone) {
+        initialDone = true;
+        setIsLoading(false);
+      }
+    }, 5000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   // ページ読み込み時にDBからsystem_roleを再取得（キャッシュとDBの差分をマージ）
