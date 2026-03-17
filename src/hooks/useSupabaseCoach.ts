@@ -123,6 +123,21 @@ export function useSupabaseCoach() {
      
      const { error } = await supabase.from('coach_questions').update(updates).eq('id', id);
      if (!error) {
+       // resolved時: コーチにコイン報酬を付与
+       if (status === 'resolved') {
+         const { data: question } = await supabase
+           .from('coach_questions')
+           .select('answered_by')
+           .eq('id', id)
+           .single();
+         
+         if (question?.answered_by) {
+           // コーチにコイン付与 (基本報酬200コイン)
+           await supabase.rpc('add_coins', { p_user_id: question.answered_by, p_amount: 200 });
+           // コーチの回答数を+1
+           await supabase.rpc('increment_coach_answer_count', { p_coach_id: question.answered_by });
+         }
+       }
        await loadConsultations();
      }
   };
