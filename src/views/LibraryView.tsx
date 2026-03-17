@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Search, ArrowUpDown, Heart } from 'lucide-react';
 import { MenuCard } from '../components/MenuCard';
 import { MenuDetailModal } from '../components/MenuDetailModal';
-import { type MenuData } from '../data/dummyData';
+import { type MenuData } from '../types/menu';
 import { useSupabaseMenus } from '../hooks/useSupabaseMenus';
 import { usePlaylist } from '../contexts/PlaylistContext';
 import { useFavorites } from '../contexts/FavoritesContext';

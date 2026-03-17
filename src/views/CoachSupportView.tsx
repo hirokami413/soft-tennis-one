@@ -53,24 +53,7 @@ const rankUpConditions: Record<string, { answers: number; rating: number; next: 
 };
 
 // ── Dummy Data ──
-const dummyCoaches: Coach[] = [
-  {
-    name: '上見 宏彰',
-    rank: 'platinum',
-    specialty: ['前衛指導', '戦術', 'メンタル'],
-    avatar: 'N',
-    answerCount: 312,
-    rating: 4.9,
-  },
-  {
-    name: '山田 コーチ',
-    rank: 'gold',
-    specialty: ['後衛指導', 'フットワーク'],
-    avatar: '山',
-    answerCount: 145,
-    rating: 4.7,
-  },
-];
+// ── Dummy Data ──
 
 // removed initialConsultations
 
@@ -112,7 +95,7 @@ export const CoachSupportView: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
 
   // Role State (Mock)
-  const [isCoach, setIsCoach] = useState(false);
+  const isCoach = false;
 
   // Coach Mode States
   const [coachCoins, setCoachCoins] = useLocalStorage('coach_support_coins', 1000);
@@ -142,7 +125,7 @@ export const CoachSupportView: React.FC = () => {
   // Coach Application States
   const [showCoachApplication, setShowCoachApplication] = useState(false);
   const [coachAppStatus, setCoachAppStatus] = useLocalStorage<'none' | 'pending' | 'approved' | 'rejected'>('coach_app_status', 'none');
-  const [coachNickname, setCoachNickname] = useLocalStorage<string>('coach_nickname', '');
+
   const [coachAppForm, setCoachAppForm] = useState({
     fullName: '',
     nickname: '',
@@ -252,8 +235,7 @@ export const CoachSupportView: React.FC = () => {
             ...c, 
             status: 'answered', 
             answer: coachAnswerText,
-            answeredAt: new Date().toISOString(),
-            coach: dummyCoaches[0]
+            answeredAt: new Date().toISOString()
           } 
         : c
     ));
@@ -307,23 +289,7 @@ export const CoachSupportView: React.FC = () => {
   return (
     <div className="flex flex-col gap-6 py-2">
       
-      {/* Dev Toggle for Coach Role */}
-      <div className="flex justify-end px-2">
-        <label className="flex items-center gap-2 text-xs font-bold text-slate-500 cursor-pointer bg-white px-3 py-1.5 rounded-full border border-slate-200 shadow-sm hover:bg-slate-50 transition-colors">
-          <input 
-            type="checkbox" 
-            checked={isCoach} 
-            onChange={(e) => {
-              setIsCoach(e.target.checked);
-              if (!e.target.checked && activeTab === 'coach') {
-                setActiveTab('list');
-              }
-            }} 
-            className="rounded text-brand-blue focus:ring-brand-blue"
-          />
-          [テスト用] コーチ権限を付与
-        </label>
-      </div>
+
 
       {/* Hero Header */}
       <div className="bg-gradient-to-br from-brand-blue to-blue-900 text-white p-6 rounded-3xl shadow-sm relative overflow-hidden">
@@ -742,9 +708,9 @@ export const CoachSupportView: React.FC = () => {
           <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-bold text-white text-xs">
-                {dummyCoaches[0].avatar}
+                N
               </div>
-              <span className="font-bold text-slate-800 text-sm">{coachNickname || dummyCoaches[0].name} 様</span>
+              <span className="font-bold text-slate-800 text-sm">コーチ 様</span>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -901,45 +867,7 @@ export const CoachSupportView: React.FC = () => {
         </div>
       )}
 
-      {/* Coach Roster Preview */}
-      <div className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm">
-        <h3 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
-          <ShieldCheck size={18} className="text-brand-blue" />
-          認証コーチ
-        </h3>
-        <div className="space-y-3">
-          {dummyCoaches.map(coach => {
-            const rc = rankConfig[coach.rank];
-            const RankIcon = rc.icon;
-            return (
-              <div key={coach.name} className="flex items-center gap-3 p-3 bg-slate-50 rounded-xl">
-                <div className="w-11 h-11 bg-slate-900 rounded-full flex items-center justify-center text-white font-black text-sm shrink-0">
-                  {coach.avatar}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-bold text-sm text-slate-800">{coach.name}</span>
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${rc.color} flex items-center gap-1`}>
-                      <RankIcon size={10} /> {rc.label}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-1">
-                    {coach.specialty.map(s => (
-                      <span key={s} className="text-[10px] text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">{s}</span>
-                    ))}
-                  </div>
-                </div>
-                <div className="text-right shrink-0">
-                  <div className="flex items-center gap-0.5 text-xs font-bold text-slate-600">
-                    <Star size={12} className="text-yellow-400 fill-current" /> {coach.rating}
-                  </div>
-                  <span className="text-[10px] text-slate-400">{coach.answerCount}回答</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
+
 
       {/* Quality Assurance Note */}
       <div className="bg-slate-50 border border-slate-200 p-4 rounded-2xl flex gap-3 items-start">
@@ -1251,7 +1179,6 @@ export const CoachSupportView: React.FC = () => {
               {/* Submit */}
               <button
                 onClick={() => {
-                  setCoachNickname(coachAppForm.nickname);
                   setCoachAppStatus('pending');
                   setShowCoachApplication(false);
                 }}

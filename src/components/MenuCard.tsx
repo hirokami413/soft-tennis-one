@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Clock, Users, Star, ChevronRight, CheckCircle2, Calendar, Heart, MoreVertical, Flag, X } from 'lucide-react';
-import type { MenuData } from '../data/dummyData';
+import type { MenuData } from '../types/menu';
 
 interface MenuCardProps {
   menu: MenuData;

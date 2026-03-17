@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, type ReactNode } from 'react';
-import type { MenuData } from '../data/dummyData';
+import type { MenuData } from '../types/menu';
 
 export interface PlaylistItem extends MenuData {
   customDuration: number;

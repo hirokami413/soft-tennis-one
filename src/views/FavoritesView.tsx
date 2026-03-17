@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Heart, Search } from 'lucide-react';
-import { type MenuData } from '../data/dummyData';
+import { type MenuData } from '../types/menu';
 import { useSupabaseMenus } from '../hooks/useSupabaseMenus';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { usePlaylist } from '../contexts/PlaylistContext';

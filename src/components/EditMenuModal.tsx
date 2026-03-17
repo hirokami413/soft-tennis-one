@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Send, Hash, X, Youtube } from 'lucide-react';
-import { type MenuData } from '../data/dummyData';
+import { type MenuData } from '../types/menu';
 import { useSupabaseMenus } from '../hooks/useSupabaseMenus';
 
 interface EditMenuModalProps {

@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { type MenuData, dummyMenus } from '../data/dummyData';
+import { type MenuData } from '../types/menu';
 
 export function useSupabaseMenus() {
   const { user } = useAuth();
@@ -16,8 +16,8 @@ export function useSupabaseMenus() {
       setError(null);
 
       if (!isSupabaseConfigured()) {
-        console.warn('Supabase is not configured. Falling back to dummy menus.');
-        setMenus(dummyMenus);
+        console.warn('Supabase is not configured. Returning empty menus.');
+        setMenus([]);
         return;
       }
 
@@ -51,8 +51,8 @@ export function useSupabaseMenus() {
     } catch (err: any) {
       console.error('Error fetching menus:', err);
       setError(err);
-      // エラー時はフォールバックとしてダミーを表示
-      setMenus(dummyMenus);
+      // エラー時は空配列を設定
+      setMenus([]);
     } finally {
       setIsLoading(false);
     }

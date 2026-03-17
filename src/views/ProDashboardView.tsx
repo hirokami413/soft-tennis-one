@@ -27,7 +27,6 @@ interface SubmittedNote {
   coachAdvice?: string;
 }
 
-// ── Dummy Data Removed ──
 // Data will be fetched from Supabase tennis_notes (published=true)
 
 // --- Radar Chart ---

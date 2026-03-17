@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Clock, Users, Star, MessageCircle, AlertCircle, Camera, Check, Youtube, Edit2, Trash2 } from 'lucide-react';
-import { type MenuData } from '../data/dummyData';
+import { type MenuData } from '../types/menu';
 import { Rating } from './Rating';
 import { useAuth } from '../contexts/AuthContext';
 import { useSupabaseMenus } from '../hooks/useSupabaseMenus';
@@ -142,7 +142,7 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
 
               {menu.tags && menu.tags.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 mb-4">
-                  {menu.tags.map(tag => (
+                  {menu.tags.map((tag: string) => (
                     <span key={tag} className="text-xs font-bold text-brand-blue bg-blue-50 px-2.5 py-1 rounded-full border border-blue-100">
                       #{tag}
                     </span>
@@ -178,7 +178,7 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
                   練習手順
                 </h3>
                 <ul className="space-y-3">
-                  {menu.steps.map((step, idx) => (
+                  {menu.steps.map((step: string, idx: number) => (
                     <li key={idx} className="flex gap-3 text-sm text-slate-700">
                       <span className="font-bold text-brand-blue opacity-50">{idx + 1}.</span>
                       <span>{step}</span>
@@ -272,27 +272,7 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
                 </div>
               )}
 
-              {/* Mock Reports List */}
-              <div className="mt-6 space-y-4">
-                 <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm">
-                   <div className="flex justify-between items-center mb-2">
-                     <span className="text-sm font-bold text-slate-800">テニス部キャプテン</span>
-                     <Rating initialRating={5} readonly size={14} />
-                   </div>
-                   <p className="text-sm text-slate-600">
-                     コーチのアドバイス通り、打った後の戻りを意識したら後半バテましたが、実戦にすごく近い練習になりました！
-                   </p>
-                 </div>
-                 <div className="bg-white border border-slate-100 p-4 rounded-2xl shadow-sm">
-                   <div className="flex justify-between items-center mb-2">
-                     <span className="text-sm font-bold text-slate-800">週末プレイヤー</span>
-                     <Rating initialRating={4} readonly size={14} />
-                   </div>
-                   <p className="text-sm text-slate-600">
-                     4人で回すとちょうどいい運動量です。
-                   </p>
-                 </div>
-              </div>
+
             </div>
             
             {/* Bottom spacer for fixed button */}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { Send, Image as ImageIcon, Video, Info, CheckCircle2, Hash, X, Youtube } from 'lucide-react';
+import { Send, Info, CheckCircle2, Hash, X, Youtube } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSupabaseMenus } from '../hooks/useSupabaseMenus';
 
@@ -283,20 +283,7 @@ export const SubmitView: React.FC = () => {
           />
         </div>
 
-        {/* Media Upload Mock */}
-        <div className="space-y-2">
-          <label className="text-sm font-bold text-slate-700 block">
-            参考画像・動画・コート図（任意）
-          </label>
-          <div className="w-full bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl p-6 flex flex-col items-center justify-center gap-3 text-slate-400 hover:bg-slate-100 hover:border-brand-blue cursor-pointer transition-colors">
-            <div className="flex items-center gap-3">
-              <ImageIcon size={28} />
-              <Video size={28} />
-            </div>
-            <span className="text-sm font-medium">タップして画像・動画をアップロード</span>
-            <span className="text-[11px] text-slate-400">JPG, PNG, GIF, MP4, MOV 対応（最大150MB）</span>
-          </div>
-        </div>
+
 
         {/* Info Alert */}
         <div className="bg-blue-50/50 p-4 rounded-xl flex gap-3 items-start border border-blue-100">
