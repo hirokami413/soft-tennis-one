@@ -63,7 +63,7 @@ const SmallRadarChart: React.FC<{ skills: number[] }> = ({ skills }) => {
 
 // --- Main Component ---
 export const ProDashboardView: React.FC = () => {
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
   
   // States
   const [inbox, setInbox] = React.useState<SubmittedNote[]>([]);
@@ -84,7 +84,7 @@ export const ProDashboardView: React.FC = () => {
 
   // Fetch Public Notes
   React.useEffect(() => {
-    if (!isSupabaseConfigured() || !user) return;
+    if (!isSupabaseConfigured() || !user || authLoading) return;
     
     const fetchPublicNotes = async () => {
       const { data, error } = await supabase
@@ -132,7 +132,7 @@ export const ProDashboardView: React.FC = () => {
 
   // Fetch Reports (admin only)
   React.useEffect(() => {
-    if (!isSupabaseConfigured() || !isAdmin) return;
+    if (!isSupabaseConfigured() || !isAdmin || authLoading) return;
     const fetchReports = async () => {
       const { data, error } = await supabase
         .from('coach_questions')
@@ -146,11 +146,11 @@ export const ProDashboardView: React.FC = () => {
       if (data && !error) setReports(data);
     };
     fetchReports();
-  }, [isAdmin]);
+  }, [isAdmin, authLoading]);
 
   // Fetch All Questions (admin only)
   React.useEffect(() => {
-    if (!isSupabaseConfigured() || !isAdmin) return;
+    if (!isSupabaseConfigured() || !isAdmin || authLoading) return;
     const fetchAllQuestions = async () => {
       const { data, error } = await supabase
         .from('coach_questions')
@@ -163,7 +163,7 @@ export const ProDashboardView: React.FC = () => {
       if (data && !error) setAllQuestions(data);
     };
     fetchAllQuestions();
-  }, [isAdmin]);
+  }, [isAdmin, authLoading]);
 
   // Derived
   const filteredNotes = inbox.filter(n => n.status === activeTab);
