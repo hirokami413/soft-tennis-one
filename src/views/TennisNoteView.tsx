@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSubscription } from '../hooks/useSubscription';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useSupabaseNotes, useSupabaseGoals } from '../hooks/useSupabaseNotes';
-import type { NoteEntry, Goal } from '../hooks/useSupabaseNotes';
+import type { Goal } from '../hooks/useSupabaseNotes';
 import { 
   BookOpen, Plus, Target, TrendingUp, Star, Lock,
   ChevronDown, ChevronUp, Edit3, Check, Crown, Shield, MessageCircle,
@@ -70,7 +70,7 @@ export const TennisNoteView: React.FC = () => {
   const { canUseTennisNoteBase, canAskCoachInNote } = useSubscription();
   const { addCoins } = useAuth();
   const { addNotification } = useNotifications();
-  const { notes, setNotes, communityNotes, addNote, publishNote } = useSupabaseNotes();
+  const { notes, setNotes, addNote, publishNote } = useSupabaseNotes();
   const { goals, setGoals, addGoal: addGoalToDb, deleteGoal: deleteGoalFromDb } = useSupabaseGoals();
   const [expandedNote, setExpandedNote] = useState<string | null>('n-1');
   const [showForm, setShowForm] = useState(false);

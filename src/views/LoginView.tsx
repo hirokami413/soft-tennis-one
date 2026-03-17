@@ -32,6 +32,7 @@ export const LoginView: React.FC = () => {
         nickname: nickname.trim(),
         avatarEmoji: selectedAvatar,
         provider: selectedProvider,
+        coins: 0,
       });
     }, 600);
   };

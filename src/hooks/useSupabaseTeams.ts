@@ -71,8 +71,8 @@ export function useSupabaseTeams() {
   const createTeam = useCallback(async (name: string, code: string) => {
     if (!useDB || !user) return null;
 
-    const { data, error } = await supabase
-      .from('teams')
+    const { data, error } = await (supabase
+      .from('teams') as any)
       .insert({ name, code, created_by: user.id })
       .select()
       .single();
@@ -80,7 +80,7 @@ export function useSupabaseTeams() {
     if (error || !data) return null;
 
     // 作成者をadminとして追加
-    await supabase.from('team_members').insert({
+    await (supabase.from('team_members') as any).insert({
       team_id: data.id,
       user_id: user.id,
       role: 'admin',
@@ -115,7 +115,7 @@ export function useSupabaseTeams() {
       return { id: team.id, name: team.name, code: team.code, createdBy: team.created_by } as TeamInfo;
     }
 
-    await supabase.from('team_members').insert({
+    await (supabase.from('team_members') as any).insert({
       team_id: team.id,
       user_id: user.id,
       role: 'member',

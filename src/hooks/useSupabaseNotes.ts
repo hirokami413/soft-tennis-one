@@ -194,8 +194,8 @@ export function useSupabaseNotes() {
   // ── ノート公開 ──
   const publishNote = useCallback(async (noteId: string) => {
     if (useSupabase) {
-      await supabase
-        .from('tennis_notes')
+      await (supabase
+        .from('tennis_notes') as any)
         .update({ published: true })
         .eq('id', noteId);
     }
@@ -273,8 +273,8 @@ export function useSupabaseGoals() {
     const newGoal: Goal = { id: `g-${Date.now()}`, text, type, done: false, progress: 0 };
 
     if (useDB && user) {
-      const { data, error } = await supabase
-        .from('goals')
+      const { data, error } = await (supabase
+        .from('goals') as any)
         .insert({ user_id: user.id, text, type })
         .select()
         .single();
