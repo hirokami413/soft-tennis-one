@@ -99,7 +99,7 @@ export function useSupabaseCoach() {
   };
 
   const answerQuestion = async (id: string, answer: string) => {
-    if (!useDB || !user) return;
+    if (!useDB || !user) return false;
     const { error } = await supabase.from('coach_questions').update({
       answer: answer,
       status: 'answered',
@@ -107,9 +107,13 @@ export function useSupabaseCoach() {
       answered_at: new Date().toISOString()
     }).eq('id', id);
 
-    if (!error) {
-      await loadConsultations();
+    if (error) {
+      console.error('回答の保存に失敗しました:', error.message, error);
+      alert('回答の保存に失敗しました: ' + error.message);
+      return false;
     }
+    await loadConsultations();
+    return true;
   };
   
   const updateQuestionStatus = async (id: string, status: string, rating?: number) => {
