@@ -244,7 +244,7 @@ export const ProDashboardView: React.FC = () => {
   };
 
   const handleDeleteQuestion = async (id: string) => {
-    if (!window.confirm('この相談を削除しますか？')) return;
+    if (!window.confirm('この相談を完全に削除しますか？元に戻せません。')) return;
     const { error } = await supabase.rpc('admin_delete_question', { p_question_id: id });
     if (!error) {
       setAllQuestions(prev => prev.filter(q => q.id !== id));
@@ -253,6 +253,18 @@ export const ProDashboardView: React.FC = () => {
     } else {
       console.error('削除エラー:', error);
       alert('削除に失敗しました: ' + error.message);
+    }
+  };
+
+  const handleHideQuestion = async (id: string, currentlyHidden: boolean) => {
+    const newReason = currentlyHidden ? null : 'admin_hidden';
+    const { error } = await supabase.from('coach_questions').update({ report_reason: newReason }).eq('id', id);
+    if (!error) {
+      setAllQuestions(prev => prev.map(q => q.id === id ? { ...q, report_reason: newReason } : q));
+      alert(currentlyHidden ? '表示を復元しました。' : '相談を非表示にしました。');
+    } else {
+      console.error('非表示エラー:', error);
+      alert('操作に失敗しました: ' + error.message);
     }
   };
 
@@ -497,13 +509,22 @@ export const ProDashboardView: React.FC = () => {
                         <p className="text-sm text-slate-700 whitespace-pre-wrap line-clamp-3">{q.answer}</p>
                       </div>
                     )}
-                    <button
-                      type="button"
-                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleDeleteQuestion(q.id); }}
-                      className="w-full py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-1 cursor-pointer relative z-10"
-                    >
-                      <Trash2 size={14} /> この相談を削除
-                    </button>
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleHideQuestion(q.id, q.report_reason === 'admin_hidden'); }}
+                        className={`flex-1 py-2 rounded-xl text-xs font-bold transition-colors flex items-center justify-center gap-1 cursor-pointer ${q.report_reason === 'admin_hidden' ? 'bg-green-50 text-green-600 hover:bg-green-100' : 'bg-amber-50 text-amber-600 hover:bg-amber-100'}`}
+                      >
+                        {q.report_reason === 'admin_hidden' ? '👁 表示を復元' : '🚫 非表示にする'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleDeleteQuestion(q.id); }}
+                        className="flex-1 py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-1 cursor-pointer relative z-10"
+                      >
+                        <Trash2 size={14} /> 完全に削除
+                      </button>
+                    </div>
                   </div>
                 );
               })

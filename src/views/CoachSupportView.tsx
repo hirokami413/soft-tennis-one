@@ -192,6 +192,8 @@ export const CoachSupportView: React.FC = () => {
 
   // Filtered list for display
   const displayConsultations = consultations.filter(c => {
+    // 管理者により非表示にされた相談は除外
+    if (c.report_reason === 'admin_hidden') return false;
     // 他人のwaitingはコーチ回答タブで扱うのでここでは除外
     // 自分のwaitingは「回答待ち」として表示
     // answered / resolved は全員分表示（Q&A一覧として）

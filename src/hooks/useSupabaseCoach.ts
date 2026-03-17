@@ -16,6 +16,7 @@ export interface CoachConsultation {
   userAvatar?: string;
   questionType?: 'text' | 'video';
   category?: string;
+  report_reason?: string | null;
 }
 
 export function useSupabaseCoach() {
@@ -54,6 +55,7 @@ export function useSupabaseCoach() {
         userRating: row.user_rating,
         questionType: row.question_type,
         category: row.category,
+        report_reason: row.report_reason,
         isMine: row.user_id === user.id,
         userNickname: row.profiles?.nickname,
         userAvatar: row.profiles?.avatar_emoji,
