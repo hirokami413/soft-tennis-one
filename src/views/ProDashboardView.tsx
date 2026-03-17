@@ -245,7 +245,7 @@ export const ProDashboardView: React.FC = () => {
 
   const handleDeleteQuestion = async (id: string) => {
     if (!window.confirm('この相談を削除しますか？')) return;
-    // まずRPCを試行、失敗したらUPDATEにフォールバック
+    // まずRPCを試行
     const { error: rpcError } = await supabase.rpc('admin_delete_question', { p_question_id: id });
     if (!rpcError) {
       setAllQuestions(prev => prev.filter(q => q.id !== id));
@@ -253,6 +253,7 @@ export const ProDashboardView: React.FC = () => {
       alert('相談を削除しました。');
       return;
     }
+    console.error('RPC削除エラー:', rpcError);
     // RPCが未作成の場合はUPDATEでソフトデリート
     const { error } = await supabase.from('coach_questions').update({ status: 'deleted', question: '[削除済み]', answer: null }).eq('id', id);
     if (!error) {
@@ -260,8 +261,8 @@ export const ProDashboardView: React.FC = () => {
       setReports(prev => prev.filter(r => r.id !== id));
       alert('相談を削除しました。');
     } else {
-      console.error('削除エラー:', error);
-      alert('削除に失敗しました: ' + error.message);
+      console.error('UPDATE削除エラー:', error);
+      alert(`削除に失敗しました\nRPC: ${rpcError.message}\nUPDATE: ${error.message}`);
     }
   };
 
