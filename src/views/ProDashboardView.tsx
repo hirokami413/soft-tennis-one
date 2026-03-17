@@ -245,12 +245,15 @@ export const ProDashboardView: React.FC = () => {
 
   const handleDeleteQuestion = async (id: string) => {
     if (!window.confirm('この相談を完全に削除しますか？この操作は取り消せません。')) return;
-    const { error } = await supabase.rpc('admin_delete_question', { p_question_id: id });
+    const { error } = await supabase.from('coach_questions').delete().eq('id', id);
     if (!error) {
       setAllQuestions(prev => prev.filter(q => q.id !== id));
       setReports(prev => prev.filter(r => r.id !== id));
       alert('相談を削除しました。');
-    } else alert('エラー: ' + error.message);
+    } else {
+      console.error('削除エラー:', error);
+      alert('削除に失敗しました: ' + error.message);
+    }
   };
 
   const filteredQuestions = allQuestions.filter(q => questionFilter === 'all' || q.status === questionFilter);
