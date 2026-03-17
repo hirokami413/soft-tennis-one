@@ -245,11 +245,9 @@ export const ProDashboardView: React.FC = () => {
 
   const handleDeleteQuestion = async (id: string) => {
     if (!window.confirm('この相談を削除しますか？')) return;
-    // UPDATEでソフトデリート（CHECK制約に合う'resolved'を使用）
+    // questionテキストのみ変更（CHECK制約を完全回避）
     const { error } = await supabase.from('coach_questions').update({
-      status: 'resolved',
       question: '[管理者により削除]',
-      answer: '[削除済み]',
       reported: false
     }).eq('id', id);
     if (!error) {
