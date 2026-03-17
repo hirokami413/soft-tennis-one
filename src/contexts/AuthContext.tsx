@@ -131,6 +131,32 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         }
       } catch (err) {
         console.warn('Supabase session check failed, using localStorage fallback:', err);
+        // セッション取得に失敗してもlocalStorageユーザーが存在する場合は
+        // DBから最新ロールを取得してマージする
+        try {
+          const stored = localStorage.getItem(STORAGE_KEY);
+          if (stored) {
+            const cached = JSON.parse(stored);
+            if (cached?.id && !cached.id.startsWith('user_')) {
+              const { data } = await supabase
+                .from('profiles')
+                .select('system_role, coach_rank, nickname, avatar_emoji, coins')
+                .eq('id', cached.id)
+                .single();
+              if (data) {
+                const d = data as Record<string, any>;
+                setUser({
+                  ...cached,
+                  systemRole: d.system_role || 'user',
+                  coachRank: d.coach_rank || 'bronze',
+                  nickname: d.nickname || cached.nickname,
+                  avatarEmoji: d.avatar_emoji || cached.avatarEmoji,
+                  coins: d.coins ?? cached.coins,
+                });
+              }
+            }
+          }
+        } catch { /* ignore DB fallback errors too */ }
       } finally {
         setIsLoading(false);
       }
@@ -157,12 +183,12 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (!user || user.id.startsWith('user_')) return;
     const refreshRole = async () => {
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from('profiles')
           .select('system_role, coach_rank')
           .eq('id', user.id)
           .single();
-        if (data) {
+        if (data && !error) {
           const d = data as Record<string, any>;
           const newRole = d.system_role || 'user';
           const newRank = d.coach_rank || 'bronze';
@@ -170,9 +196,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setUser(prev => prev ? { ...prev, systemRole: newRole, coachRank: newRank } : null);
           }
         }
-      } catch { /* ignore */ }
+      } catch (e) {
+        console.warn('refreshRole failed:', e);
+      }
     };
-    refreshRole();
+    // 少し遅延させてセッション初期化の競合を避ける
+    const timer = setTimeout(refreshRole, 1000);
+    return () => clearTimeout(timer);
   }, [user?.id]);
 
   // ── OAuth ログイン（Supabase Auth経由）──
