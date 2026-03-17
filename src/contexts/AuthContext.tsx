@@ -119,6 +119,13 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   }, [user]);
 
+  // 古い独立localStorageキーをクリーンアップ（DB同期に移行済み）
+  useEffect(() => {
+    ['student_coins', 'coach_support_coins', 'coach_rank', 'coach_answer_count', 'coach_avg_rating'].forEach(key => {
+      localStorage.removeItem(key);
+    });
+  }, []);
+
   // Supabase Authセッション監視
   useEffect(() => {
     // 初回ロード: 既存セッションを確認
