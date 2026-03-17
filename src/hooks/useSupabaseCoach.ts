@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -23,23 +23,24 @@ export function useSupabaseCoach() {
   const [consultations, setConsultations] = useState<CoachConsultation[]>([]);
   const [loading, setLoading] = useState(true);
   const useDB = isSupabaseConfigured();
+  const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadConsultations = useCallback(async () => {
+  const loadConsultations = useCallback(async (isRetry = false) => {
     if (!useDB) {
       setLoading(false);
       return;
     }
     
-    // セッションから直接ユーザーIDを取得（外部stateに依存しない）
-    const { data: { session } } = await supabase.auth.getSession();
-    const currentUserId = session?.user?.id || user?.id;
+    // サーバー検証でセッション確認（getSessionはキャッシュを返すだけなので不十分）
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    const currentUserId = authUser?.id || user?.id;
     
     if (!currentUserId) {
       setLoading(false);
       return;
     }
     
-    setLoading(true);
+    if (!isRetry) setLoading(true);
 
     const { data, error } = await supabase
       .from('coach_questions')
@@ -77,6 +78,11 @@ export function useSupabaseCoach() {
         } : undefined
       }));
       setConsultations(parsed);
+      
+      // 結果が0件で初回の場合、1秒後にリトライ（トークンリフレッシュ待ち）
+      if (parsed.length === 0 && !isRetry) {
+        retryRef.current = setTimeout(() => loadConsultations(true), 1000);
+      }
     }
     setLoading(false);
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -87,20 +93,8 @@ export function useSupabaseCoach() {
     if (!authLoading && user?.id) {
       loadConsultations();
     }
+    return () => { if (retryRef.current) clearTimeout(retryRef.current); };
   }, [loadConsultations, user?.id, authLoading]);
-
-  // Supabase Auth状態変化を直接監視（リロード時のセッション復元を確実にキャッチ）
-  useEffect(() => {
-    if (!useDB) return;
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
-        setTimeout(() => {
-          loadConsultations();
-        }, 300);
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [useDB, loadConsultations]);
 
   const applyCoachApplication = async (fullName: string, nickname: string, extra?: { yearsExperience?: string; certification?: string; selfIntro?: string }) => {
      if (!useDB || !user) return { error: 'Not configured' };
