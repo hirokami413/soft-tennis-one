@@ -37,6 +37,9 @@ export function useSupabaseCoach() {
       `)
       .order('created_at', { ascending: false });
 
+    if (error) {
+      console.error('相談データ取得エラー:', error.message, error);
+    }
     if (data && !error) {
       const parsed: CoachConsultation[] = data.map(row => ({
         id: row.id,
