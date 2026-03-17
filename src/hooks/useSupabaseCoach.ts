@@ -1,9 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
-import { isSupabaseConfigured } from '../lib/supabase';
 
-// Consultant structure used in CoachSupportView
 export interface CoachConsultation {
   id: string;
   question: string;
@@ -30,30 +28,39 @@ export function useSupabaseCoach() {
     if (!useDB || !user) return;
     setLoading(true);
 
-    // We store the generic consultation JSON in the `coach_chat_history` table
-    // using coach_id = 'consultation_board' and text = JSON string.
     const { data, error } = await supabase
-      .from('coach_chat_history')
-      .select('*')
-      .eq('coach_id', 'consultation_board')
+      .from('coach_questions')
+      .select(`
+        *,
+        profiles:user_id(nickname, avatar_emoji),
+        coach:answered_by(nickname, avatar_emoji, coach_rank, coach_answer_count, coach_avg_rating)
+      `)
       .order('created_at', { ascending: false });
 
     if (data && !error) {
-      try {
-        const parsed = data.map(row => {
-          const obj = JSON.parse(row.text);
-          // If viewing our own consultation, or a public board (RLS allows seeing our own)
-          // Actually, our RLS policy says: CREATE POLICY "coach_chats select" ON coach_chat_history FOR SELECT USING (user_id = auth.uid());
-          // So we only get our OWN consultations.
-          return {
-            ...obj,
-            isMine: row.user_id === user.id
-          };
-        });
-        setConsultations(parsed);
-      } catch (e) {
-        console.error('JSON Parse error in consultations', e);
-      }
+      const parsed: CoachConsultation[] = data.map(row => ({
+        id: row.id,
+        question: row.question,
+        status: row.status,
+        createdAt: row.created_at,
+        answer: row.answer,
+        answeredAt: row.answered_at,
+        userRating: row.user_rating,
+        questionType: row.question_type,
+        category: row.category,
+        isMine: row.user_id === user.id,
+        userNickname: row.profiles?.nickname,
+        userAvatar: row.profiles?.avatar_emoji,
+        coach: row.coach ? {
+          name: row.coach.nickname,
+          avatar: row.coach.avatar_emoji,
+          rank: row.coach.coach_rank,
+          answerCount: row.coach.coach_answer_count,
+          rating: row.coach.coach_avg_rating,
+          specialty: ['全般'] // Currently not stored in DB, fallback
+        } : undefined
+      }));
+      setConsultations(parsed);
     }
     setLoading(false);
   }, [useDB, user]);
@@ -62,47 +69,64 @@ export function useSupabaseCoach() {
     loadConsultations();
   }, [loadConsultations]);
 
-  // Save the entire list or individual consultation
-  // To keep it simple and match the local storage behavior, passing updated array:
-  const saveConsultation = async (consultation: CoachConsultation) => {
+  const applyCoachApplication = async (fullName: string, nickname: string) => {
+     if (!useDB || !user) return { error: 'Not configured' };
+     const { error } = await supabase.from('coach_applications').upsert({
+       user_id: user.id,
+       full_name: fullName,
+       nickname: nickname,
+       status: 'pending'
+     }, { onConflict: 'user_id' });
+     return { error };
+  };
+
+  const askQuestion = async (content: Partial<CoachConsultation>) => {
     if (!useDB || !user) return;
-    
-    // First, check if it already exists
-    const { data } = await supabase
-      .from('coach_chat_history')
-      .select('id')
-      .eq('coach_id', 'consultation_board')
-      .like('text', `%"id":"${consultation.id}"%`);
-      
-    if (data && data.length > 0) {
-      // Update by deleting and re-inserting, or just generic update
-      await supabase
-        .from('coach_chat_history')
-        .update({ text: JSON.stringify(consultation) })
-        .eq('id', data[0].id);
-    } else {
-      // Insert new
-      await supabase.from('coach_chat_history').insert({
-        user_id: user.id,
-        coach_id: 'consultation_board',
-        sender_type: 'user',
-        text: JSON.stringify(consultation)
-      });
+    const { data, error } = await supabase.from('coach_questions').insert({
+      user_id: user.id,
+      question: content.question,
+      category: content.category || '',
+      question_type: content.questionType || 'text',
+      status: 'waiting'
+    }).select().single();
+
+    if (data && !error) {
+       await loadConsultations();
     }
-    
-    // Optimistic update
-    setConsultations(prev => {
-      const exists = prev.find(c => c.id === consultation.id);
-      if (exists) return prev.map(c => c.id === consultation.id ? consultation : c);
-      return [consultation, ...prev];
-    });
+  };
+
+  const answerQuestion = async (id: string, answer: string) => {
+    if (!useDB || !user) return;
+    const { error } = await supabase.from('coach_questions').update({
+      answer: answer,
+      status: 'answered',
+      answered_by: user.id,
+      answered_at: new Date().toISOString()
+    }).eq('id', id);
+
+    if (!error) {
+      await loadConsultations();
+    }
+  };
+  
+  const updateQuestionStatus = async (id: string, status: string, rating?: number) => {
+     if (!useDB || !user) return;
+     const updates: any = { status };
+     if (rating !== undefined) updates.user_rating = rating;
+     
+     const { error } = await supabase.from('coach_questions').update(updates).eq('id', id);
+     if (!error) {
+       await loadConsultations();
+     }
   };
 
   return {
     consultations,
     loading,
-    saveConsultation,
     reload: loadConsultations,
-    setConsultationsOptimistic: setConsultations
+    applyCoachApplication,
+    askQuestion,
+    answerQuestion,
+    updateQuestionStatus
   };
 }

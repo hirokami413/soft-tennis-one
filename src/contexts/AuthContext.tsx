@@ -10,6 +10,10 @@ export interface UserProfile {
   provider: 'google' | 'line' | 'apple' | 'email';
   createdAt: string;
   coins: number;
+  systemRole: 'user' | 'coach' | 'admin';
+  coachRank: 'bronze' | 'silver' | 'gold' | 'platinum';
+  coachAnswerCount: number;
+  coachAvgRating: number;
 }
 
 interface AuthContextType {
@@ -52,6 +56,10 @@ async function sessionToProfile(session: Session): Promise<UserProfile> {
       provider,
       createdAt: p.created_at,
       coins: p.coins,
+      systemRole: p.system_role || 'user',
+      coachRank: p.coach_rank || 'bronze',
+      coachAnswerCount: p.coach_answer_count || 0,
+      coachAvgRating: p.coach_avg_rating || 0,
     };
   }
 
@@ -76,6 +84,10 @@ async function sessionToProfile(session: Session): Promise<UserProfile> {
     provider,
     createdAt: np?.created_at || new Date().toISOString(),
     coins: np?.coins || 20,
+    systemRole: np?.system_role || 'user',
+    coachRank: np?.coach_rank || 'bronze',
+    coachAnswerCount: np?.coach_answer_count || 0,
+    coachAvgRating: np?.coach_avg_rating || 0,
   };
 }
 
@@ -166,12 +178,25 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // ── ログアウト ──
   const logout = async () => {
-    try {
-      await supabase.auth.signOut();
-    } catch {
-      // Supabase未接続の場合はlocalStorageのみクリア
-    }
+    // 1. アプリの状態をクリア
+    localStorage.removeItem(STORAGE_KEY);
     setUser(null);
+
+    // 2. Supabase signOut を試行
+    try {
+      await supabase.auth.signOut({ scope: 'global' });
+    } catch {
+      // 失敗しても続行
+    }
+
+    // 3. Supabaseが独自にlocalStorageに保存するセッショントークンも強制クリア
+    const keysToRemove = Object.keys(localStorage).filter(
+      key => key.startsWith('sb-') || key.includes('supabase')
+    );
+    keysToRemove.forEach(key => localStorage.removeItem(key));
+
+    // 4. 完全にクリーンな状態でリロード
+    window.location.href = window.location.origin;
   };
 
   // ── プロフィール更新 ──

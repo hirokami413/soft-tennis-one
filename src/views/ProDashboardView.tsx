@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { 
   ShieldCheck, CheckCircle2, 
   ChevronRight, ArrowLeft, Send, Video, Clock, 
-  TrendingUp, MessageCircle, Crown
+  TrendingUp, MessageCircle, Crown, UserPlus, XCircle
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -70,9 +70,11 @@ export const ProDashboardView: React.FC = () => {
     try { return JSON.parse(localStorage.getItem('pro_dashboard_reviewed') || '[]'); } catch { return []; }
   });
   
-  const [activeTab, setActiveTab] = useState<'pending' | 'reviewed'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'reviewed' | 'applications'>('pending');
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [adviceText, setAdviceText] = useState('');
+  
+  const [applications, setApplications] = useState<any[]>([]);
 
   // Fetch Public Notes
   React.useEffect(() => {
@@ -108,7 +110,14 @@ export const ProDashboardView: React.FC = () => {
         setInbox(mapped);
       }
     };
+
+    const fetchApps = async () => {
+      const { data, error } = await supabase.from('coach_applications').select('*').eq('status', 'pending').order('created_at', { ascending: false });
+      if (data && !error) setApplications(data);
+    };
+
     fetchPublicNotes();
+    fetchApps();
   }, [user, reviewedIds]);
 
   // Derived
@@ -143,6 +152,19 @@ export const ProDashboardView: React.FC = () => {
       setAdviceText('');
       setActiveTab('pending');
     }, 500);
+  };
+
+  const handleApproveApp = async (id: string, userId: string) => {
+    await supabase.from('coach_applications').update({ status: 'approved' }).eq('id', id);
+    await supabase.from('profiles').update({ system_role: 'coach', coach_rank: 'bronze' }).eq('id', userId);
+    setApplications(prev => prev.filter(a => a.id !== id));
+    alert('コーチとして承認しました！対象ユーザーはコーチ機能が利用可能になります。');
+  };
+
+  const handleRejectApp = async (id: string) => {
+    if (!window.confirm('この応募を本当に却下しますか？')) return;
+    await supabase.from('coach_applications').update({ status: 'rejected' }).eq('id', id);
+    setApplications(prev => prev.filter(a => a.id !== id));
   };
 
   // --- Render Detail View ---
@@ -295,52 +317,90 @@ export const ProDashboardView: React.FC = () => {
         >
           対応済 <span className="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full">{inbox.filter(n => n.status === 'reviewed').length}</span>
         </button>
+        <button 
+          onClick={() => setActiveTab('applications')}
+          className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all ${
+            activeTab === 'applications' ? 'bg-indigo-600 text-white shadow-md' : 'bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-50'
+          }`}
+        >
+          <UserPlus size={16} />
+          審査 <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{applications.length}</span>
+        </button>
       </div>
 
       {/* List */}
       <div className="space-y-3">
-        {filteredNotes.length === 0 ? (
-          <div className="bg-slate-50 border border-slate-100 rounded-3xl p-10 flex flex-col items-center justify-center text-center">
-            <CheckCircle2 size={40} className="text-slate-300 mb-3" />
-            <p className="font-bold text-slate-600">すべてのノートに対応しました</p>
-            <p className="text-xs text-slate-400 mt-1">現在、新しい提出はありません。</p>
-          </div>
+        {activeTab === 'applications' ? (
+          applications.length === 0 ? (
+            <div className="bg-slate-50 border border-slate-100 rounded-3xl p-10 flex flex-col items-center justify-center text-center">
+              <CheckCircle2 size={40} className="text-slate-300 mb-3" />
+              <p className="font-bold text-slate-600">新しい応募はありません</p>
+            </div>
+          ) : (
+            applications.map(app => (
+              <div key={app.id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-3">
+                <div className="flex items-center justify-between border-b border-slate-50 pb-2">
+                  <h4 className="font-bold text-slate-800 text-lg flex items-center gap-2">
+                    <UserPlus size={18} className="text-indigo-600"/>
+                    {app.full_name} <span className="font-normal text-sm text-slate-500">({app.nickname})</span>
+                  </h4>
+                  <span className="text-xs text-slate-400 flex items-center gap-1"><Clock size={12}/>{new Date(app.created_at).toLocaleDateString()}</span>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <button onClick={() => handleApproveApp(app.id, app.user_id)} className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-sm flex justify-center items-center gap-2 shadow-sm transition-transform hover:scale-[1.02]">
+                    <CheckCircle2 size={16} /> 承認する
+                  </button>
+                  <button onClick={() => handleRejectApp(app.id)} className="flex-1 py-2.5 bg-white border border-red-200 text-red-500 hover:bg-red-50 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-colors">
+                    <XCircle size={16} /> 却下
+                  </button>
+                </div>
+              </div>
+            ))
+          )
         ) : (
-          filteredNotes.map(note => (
-            <button 
-              key={note.id}
-              onClick={() => handleSelectNote(note.id)}
-              className="w-full text-left bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:border-brand-blue hover:shadow-md transition-all group flex flex-col gap-3"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-blue-50 text-brand-blue rounded-full flex items-center justify-center font-bold text-sm">
-                    {note.studentName.charAt(0)}
+          filteredNotes.length === 0 ? (
+            <div className="bg-slate-50 border border-slate-100 rounded-3xl p-10 flex flex-col items-center justify-center text-center">
+              <CheckCircle2 size={40} className="text-slate-300 mb-3" />
+              <p className="font-bold text-slate-600">すべてのノートに対応しました</p>
+              <p className="text-xs text-slate-400 mt-1">現在、新しい提出はありません。</p>
+            </div>
+          ) : (
+            filteredNotes.map(note => (
+              <button 
+                key={note.id}
+                onClick={() => handleSelectNote(note.id)}
+                className="w-full text-left bg-white p-5 rounded-2xl shadow-sm border border-slate-100 hover:border-brand-blue hover:shadow-md transition-all group flex flex-col gap-3"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-blue-50 text-brand-blue rounded-full flex items-center justify-center font-bold text-sm">
+                      {note.studentName.charAt(0)}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-slate-800 text-sm">{note.studentName} <span className="text-[10px] font-normal text-slate-400">({note.studentGrade})</span></h4>
+                      <p className="text-[10px] text-slate-500">{note.teamName}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h4 className="font-bold text-slate-800 text-sm">{note.studentName} <span className="text-[10px] font-normal text-slate-400">({note.studentGrade})</span></h4>
-                    <p className="text-[10px] text-slate-500">{note.teamName}</p>
+                  <div className="flex flex-col items-end gap-1">
+                    <span className="text-[10px] text-slate-400 flex items-center gap-1"><Clock size={10}/>{new Date(note.submittedAt).toLocaleDateString()}</span>
+                    {note.content.videoUrl || note.content.coachQuestion?.includes('動画') ? <span className="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded text-[8px] font-bold">要動画チェック</span> : null}
                   </div>
                 </div>
-                <div className="flex flex-col items-end gap-1">
-                  <span className="text-[10px] text-slate-400 flex items-center gap-1"><Clock size={10}/>{new Date(note.submittedAt).toLocaleDateString()}</span>
-                  {note.content.videoUrl || note.content.coachQuestion?.includes('動画') ? <span className="bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded text-[8px] font-bold">要動画チェック</span> : null}
+
+                <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 relative overflow-hidden">
+                  <div className="absolute top-0 left-0 w-1 h-full bg-brand-blue" />
+                  <p className="text-xs text-slate-700 line-clamp-2">
+                    <span className="font-bold text-red-500 mr-1">課題:</span>
+                    {note.content.problem}
+                  </p>
                 </div>
-              </div>
 
-              <div className="bg-slate-50 rounded-xl p-3 border border-slate-100 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-1 h-full bg-brand-blue" />
-                <p className="text-xs text-slate-700 line-clamp-2">
-                  <span className="font-bold text-red-500 mr-1">課題:</span>
-                  {note.content.problem}
-                </p>
-              </div>
-
-              <div className="flex items-center justify-end text-[10px] font-bold text-brand-blue opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all">
-                詳細を確認する <ChevronRight size={14}/>
-              </div>
-            </button>
-          ))
+                <div className="flex items-center justify-end text-[10px] font-bold text-brand-blue opacity-0 translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all">
+                  詳細を確認する <ChevronRight size={14}/>
+                </div>
+              </button>
+            ))
+          )
         )}
       </div>
     </div>

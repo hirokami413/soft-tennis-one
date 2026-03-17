@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { X, Edit3 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
+import { X, Edit3, ShieldAlert } from 'lucide-react';
 
 const AVATAR_EMOJIS = [
   '🎾', '🏸', '⭐', '🔥', '💪', '🌟', '🎯', '🏆',
@@ -73,6 +74,27 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ onClose }) =
               maxLength={20}
               className="w-full bg-slate-50 dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded-xl px-4 py-3 text-sm dark:text-slate-100 focus:outline-none focus:border-brand-blue"
             />
+          </div>
+
+          {/* Debug: Admin Role Toggle */}
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-700">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-500 font-bold">現在の権限: {user?.systemRole}</span>
+              {user?.systemRole !== 'admin' && (
+                <button
+                  onClick={async () => {
+                    if (!user) return;
+                    await supabase.from('profiles').update({ system_role: 'admin' }).eq('id', user.id);
+                    alert('管理者権限を付与しました！ページをリロードして反映させます。');
+                    window.location.reload();
+                  }}
+                  className="text-[10px] bg-red-100 text-red-600 px-2 py-1 rounded-md font-bold flex items-center gap-1 hover:bg-red-200 transition-colors"
+                >
+                  <ShieldAlert size={12} />
+                  管理者になる(テスト)
+                </button>
+              )}
+            </div>
           </div>
 
           {/* Save */}

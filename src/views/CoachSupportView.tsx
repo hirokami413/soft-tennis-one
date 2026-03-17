@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { 
   ShieldCheck, Send, Star, MessageCircle, CheckCircle2, 
@@ -18,22 +18,6 @@ interface Coach {
   avatar: string;
   answerCount: number;
   rating: number;
-}
-
-interface Consultation {
-  id: string;
-  question: string;
-  status: 'waiting' | 'answered' | 'resolved' | 'reask';
-  createdAt: string;
-  coach?: Coach;
-  answer?: string;
-  answeredAt?: string;
-  userRating?: number;
-  isMine?: boolean;
-  userNickname?: string;
-  userAvatar?: string;
-  questionType?: 'text' | 'video';
-  category?: string;
 }
 
 // ── Helpers ──
@@ -66,27 +50,9 @@ const coinPackages = [
 
 // ── Main Component ──
 
-function useConsultationsWithDB(): [Consultation[], React.Dispatch<React.SetStateAction<Consultation[]>>] {
-  const { consultations, setConsultationsOptimistic, saveConsultation } = useSupabaseCoach();
-  const setConsultationsHook = React.useCallback((action: React.SetStateAction<Consultation[]>) => {
-    setConsultationsOptimistic((prev: Consultation[]) => {
-      const next = typeof action === 'function' ? action(prev) as Consultation[] : action as Consultation[];
-      next.forEach(newItem => {
-        const oldItem = prev.find(p => p.id === newItem.id);
-        if (!oldItem || JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
-          saveConsultation(newItem as any); // Cast as CoachConsultation
-        }
-      });
-      return next;
-    });
-  }, [setConsultationsOptimistic, saveConsultation]);
-  
-  return [consultations as Consultation[], setConsultationsHook];
-}
-
 export const CoachSupportView: React.FC = () => {
   const { user } = useAuth();
-  const [consultations, setConsultations] = useConsultationsWithDB();
+  const { consultations, askQuestion, answerQuestion, updateQuestionStatus, applyCoachApplication } = useSupabaseCoach();
   const [newQuestion, setNewQuestion] = useLocalStorage('coach_support_new_question', '');
   const [expandedId, setExpandedId] = useState<string | null>('c-1');
   const [reaskText, setReaskText] = useState('');
@@ -94,8 +60,8 @@ export const CoachSupportView: React.FC = () => {
   const [activeTab, setActiveTab] = useLocalStorage<'list' | 'new' | 'coach'>('coach_support_active_tab', 'list');
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Role State (Mock)
-  const isCoach = false;
+  // Role State
+  const isCoach = user?.systemRole === 'coach' || user?.systemRole === 'admin';
 
   // Coach Mode States
   const [coachCoins, setCoachCoins] = useLocalStorage('coach_support_coins', 1000);
@@ -146,26 +112,19 @@ export const CoachSupportView: React.FC = () => {
       setShowCoinPurchaseModal(true);
       return;
     }
-    const newConsultation: Consultation = {
-      id: `c-${Date.now()}`,
-      question: newQuestion.trim(),
-      status: 'waiting',
-      createdAt: new Date().toISOString().split('T')[0],
-      isMine: true,
-      userNickname: user?.nickname || '匿名',
-      userAvatar: user?.avatarEmoji || '🏐',
-      questionType,
-      category: questionCategory || undefined,
-    };
     setStudentCoins(prev => prev - questionCost);
-    setConsultations(prev => [newConsultation, ...prev]);
+    askQuestion({
+      question: newQuestion.trim(),
+      questionType,
+      category: questionCategory || undefined
+    });
     setNewQuestion('');
     setActiveTab('list');
   };
 
   // Resolve → コーチにコインを付与
   const handleResolve = (id: string) => {
-    setConsultations(prev => prev.map(c => c.id === id ? { ...c, status: 'resolved' as const } : c));
+    updateQuestionStatus(id, 'resolved');
     // コーチにコインを付与
     const reward = getReward();
     setCoachCoins(prev => prev + reward);
@@ -187,24 +146,20 @@ export const CoachSupportView: React.FC = () => {
 
   // Rate
   const handleRate = (id: string, rating: number) => {
-    setConsultations(prev => prev.map(c => c.id === id ? { ...c, userRating: rating } : c));
+    updateQuestionStatus(id, 'resolved', rating);
   };
 
   // Re-ask → 同じコーチに再質問が戻る
   const handleReask = (id: string) => {
     if (!reaskText.trim()) return;
-    setConsultations(prev => prev.map(c => c.id === id ? { ...c, status: 'reask' as const } : c));
+    updateQuestionStatus(id, 'reask');
     setShowReaskInput(null);
     setReaskText('');
   };
 
   // Report → 別のコーチに回答を再振分
   const handleReport = (id: string) => {
-    setConsultations(prev => prev.map(c =>
-      c.id === id
-        ? { ...c, status: 'waiting' as const, answer: undefined, coach: undefined }
-        : c
-    ));
+    updateQuestionStatus(id, 'waiting');
     alert('回答を報告しました。別のコーチに再振分され、新しい回答をお待ちいただけます。');
   };
 
@@ -228,47 +183,11 @@ export const CoachSupportView: React.FC = () => {
 
   const handleCoachAnswerSubmit = (consultationId: string) => {
     if (!coachAnswerText.trim()) return;
-    
-    setConsultations(prev => prev.map(c => 
-      c.id === consultationId 
-        ? { 
-            ...c, 
-            status: 'answered', 
-            answer: coachAnswerText,
-            answeredAt: new Date().toISOString()
-          } 
-        : c
-    ));
-    // コインは生徒が「解決した」を押した時に付与（24時間無操作なら自動付与）
+    answerQuestion(consultationId, coachAnswerText);
     goToNextQuestion();
   };
 
-  // 24時間経過で自動解決（コーチにコイン自動付与）
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      setConsultations(prev => {
-        let changed = false;
-        const updated = prev.map(c => {
-          if (c.status === 'answered' && c.answeredAt) {
-            const elapsed = now - new Date(c.answeredAt).getTime();
-            if (elapsed >= 24 * 60 * 60 * 1000) {
-              changed = true;
-              return { ...c, status: 'resolved' as const };
-            }
-          }
-          return c;
-        });
-        if (changed) {
-          // 自動解決時にコーチにコイン付与
-          const reward = getReward();
-          setCoachCoins(p => p + reward);
-        }
-        return changed ? updated : prev;
-      });
-    }, 30000); // 30秒ごとにチェック
-    return () => clearInterval(interval);
-  }, [getReward]);
+  // 24時間経過で自動解決（サーバーサイドに任せるためフロントエンド実装は削除）
 
   const statusConfig = {
     waiting: { label: '回答待ち', cls: 'bg-slate-100 text-slate-600 border-slate-200' },
@@ -550,7 +469,7 @@ export const CoachSupportView: React.FC = () => {
                           <div className="flex items-center gap-2 mb-0.5">
                             <span className="font-bold text-sm text-slate-800">{c.coach.name}</span>
                             {(() => {
-                              const rc = rankConfig[c.coach!.rank];
+                              const rc = rankConfig[c.coach!.rank as keyof typeof rankConfig] || rankConfig.bronze;
                               const RankIcon = rc.icon;
                               return (
                                 <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${rc.color} flex items-center gap-1`}>
@@ -560,7 +479,7 @@ export const CoachSupportView: React.FC = () => {
                             })()}
                           </div>
                           <div className="flex flex-wrap gap-1">
-                            {c.coach.specialty.map(s => (
+                            {c.coach.specialty.map((s: string) => (
                               <span key={s} className="text-[10px] text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">
                                 {s}
                               </span>
@@ -1176,9 +1095,9 @@ export const CoachSupportView: React.FC = () => {
                 />
               </div>
 
-              {/* Submit */}
               <button
-                onClick={() => {
+                onClick={async () => {
+                  await applyCoachApplication(coachAppForm.fullName, coachAppForm.nickname);
                   setCoachAppStatus('pending');
                   setShowCoachApplication(false);
                 }}
