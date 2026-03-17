@@ -52,7 +52,7 @@ const coinPackages = [
 
 export const CoachSupportView: React.FC = () => {
   const { user, refreshProfile, addCoins } = useAuth();
-  const { consultations, askQuestion, answerQuestion, updateQuestionStatus, applyCoachApplication, reportQuestion } = useSupabaseCoach();
+  const { consultations, loading: consultationsLoading, askQuestion, answerQuestion, updateQuestionStatus, applyCoachApplication, reportQuestion } = useSupabaseCoach();
   const [newQuestion, setNewQuestion] = useLocalStorage('coach_support_new_question', '');
   const [expandedId, setExpandedId] = useState<string | null>('c-1');
   const [reaskText, setReaskText] = useState('');
@@ -739,6 +739,12 @@ export const CoachSupportView: React.FC = () => {
 
           {/* Question Card Display */}
           {currentQuestionIndex >= waitingConsultations.length ? (
+            consultationsLoading ? (
+            <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm text-center space-y-3">
+              <div className="w-10 h-10 border-4 border-slate-200 border-t-brand-blue rounded-full animate-spin mx-auto" />
+              <p className="text-slate-500 text-sm">質問を読み込み中...</p>
+            </div>
+            ) : (
             <div className="bg-white p-8 rounded-3xl border border-slate-100 shadow-sm text-center space-y-3">
               <CheckCircle2 size={48} className="mx-auto text-green-400 mb-2" />
               <h3 className="font-bold text-slate-800 text-lg">すべての質問に回答しました！</h3>
@@ -746,6 +752,7 @@ export const CoachSupportView: React.FC = () => {
                 現在、新しい相談はありません。<br />お疲れ様でした！
               </p>
             </div>
+            )
           ) : (
             <div 
               key={waitingConsultations[currentQuestionIndex].id} // Force re-render for animation on index change
