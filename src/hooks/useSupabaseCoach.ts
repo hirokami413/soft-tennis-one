@@ -157,7 +157,8 @@ export function useSupabaseCoach() {
 
   const updateQuestionStatus = async (id: string, status: string, rating?: number) => {
      if (!useDB || !user) return;
-     const updates: any = { status };
+     // 'rated' = 評価のみ保存（ステータスは変更しない、コイン付与もしない）
+     const updates: any = status === 'rated' ? {} : { status };
      if (rating !== undefined) updates.user_rating = rating;
      
      const { error } = await supabase.from('coach_questions').update(updates).eq('id', id);

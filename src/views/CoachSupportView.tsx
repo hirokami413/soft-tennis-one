@@ -131,9 +131,9 @@ export const CoachSupportView: React.FC = () => {
     await refreshProfile();
   };
 
-  // Rate
+  // Rate → 評価のみ保存（resolvedのコイン付与は上のhandleResolveで済み）
   const handleRate = async (id: string, rating: number) => {
-    await updateQuestionStatus(id, 'resolved', rating);
+    await updateQuestionStatus(id, 'rated', rating);
     await refreshProfile();
   };
 
