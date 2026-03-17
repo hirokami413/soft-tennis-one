@@ -87,6 +87,7 @@ export const ProDashboardView: React.FC = () => {
     if (!isSupabaseConfigured() || !user) return;
     
     const fetchPublicNotes = async () => {
+      await supabase.auth.refreshSession();
       const { data, error } = await supabase
         .from('tennis_notes')
         .select(`
@@ -124,6 +125,7 @@ export const ProDashboardView: React.FC = () => {
   React.useEffect(() => {
     if (!isSupabaseConfigured() || !isAdmin) return;
     const fetchApps = async () => {
+      await supabase.auth.refreshSession();
       const { data, error } = await supabase.from('coach_applications').select('*').eq('status', 'pending').order('created_at', { ascending: false });
       if (data && !error) setApplications(data);
     };
@@ -134,6 +136,7 @@ export const ProDashboardView: React.FC = () => {
   React.useEffect(() => {
     if (!isSupabaseConfigured() || !isAdmin) return;
     const fetchReports = async () => {
+      await supabase.auth.refreshSession();
       const { data, error } = await supabase
         .from('coach_questions')
         .select(`
@@ -152,6 +155,7 @@ export const ProDashboardView: React.FC = () => {
   React.useEffect(() => {
     if (!isSupabaseConfigured() || !isAdmin) return;
     const fetchAllQuestions = async () => {
+      await supabase.auth.refreshSession();
       const { data, error } = await supabase
         .from('coach_questions')
         .select(`

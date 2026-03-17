@@ -31,9 +31,9 @@ export function useSupabaseCoach() {
       return;
     }
     
-    // サーバー検証でセッション確認（getSessionはキャッシュを返すだけなので不十分）
-    const { data: { user: authUser } } = await supabase.auth.getUser();
-    const currentUserId = authUser?.id || user?.id;
+    // セッションを明示的にリフレッシュ（期限切れトークンを更新し、内部authヘッダーも更新される）
+    const { data: refreshData } = await supabase.auth.refreshSession();
+    const currentUserId = refreshData?.user?.id || user?.id;
     
     if (!currentUserId) {
       setLoading(false);
