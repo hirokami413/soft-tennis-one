@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { 
   ShieldCheck, CheckCircle2, 
   ChevronRight, ArrowLeft, Send, Video, Clock, 
-  TrendingUp, MessageCircle, Crown, UserPlus, XCircle
+  TrendingUp, MessageCircle, Crown, UserPlus, XCircle,
+  Flag, AlertTriangle, Trash2, Ban
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -70,12 +71,13 @@ export const ProDashboardView: React.FC = () => {
     try { return JSON.parse(localStorage.getItem('pro_dashboard_reviewed') || '[]'); } catch { return []; }
   });
   
-  const [activeTab, setActiveTab] = useState<'pending' | 'reviewed' | 'applications'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'reviewed' | 'applications' | 'reports'>('pending');
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [adviceText, setAdviceText] = useState('');
   
   const [applications, setApplications] = useState<any[]>([]);
   const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
+  const [reports, setReports] = useState<any[]>([]);
   const isAdmin = user?.systemRole === 'admin';
 
   // Fetch Public Notes
@@ -126,6 +128,24 @@ export const ProDashboardView: React.FC = () => {
     fetchApps();
   }, [isAdmin]);
 
+  // Fetch Reports (admin only)
+  React.useEffect(() => {
+    if (!isSupabaseConfigured() || !isAdmin) return;
+    const fetchReports = async () => {
+      const { data, error } = await supabase
+        .from('coach_questions')
+        .select(`
+          *,
+          reporter:reported_by(nickname),
+          answerer:answered_by(nickname)
+        `)
+        .eq('reported', true)
+        .order('reported_at', { ascending: false });
+      if (data && !error) setReports(data);
+    };
+    fetchReports();
+  }, [isAdmin]);
+
   // Derived
   const filteredNotes = inbox.filter(n => n.status === activeTab);
   const selectedNote = inbox.find(n => n.id === selectedNoteId);
@@ -171,6 +191,37 @@ export const ProDashboardView: React.FC = () => {
     if (!window.confirm('この応募を本当に却下しますか？')) return;
     await supabase.from('coach_applications').update({ status: 'rejected' }).eq('id', id);
     setApplications(prev => prev.filter(a => a.id !== id));
+  };
+
+  // Report action handlers
+  const handleDismissReport = async (id: string) => {
+    if (!window.confirm('この報告を却下しますか？')) return;
+    const { error } = await supabase.rpc('admin_dismiss_report', { p_question_id: id });
+    if (!error) setReports(prev => prev.filter(r => r.id !== id));
+    else alert('エラー: ' + error.message);
+  };
+
+  const handleDeleteAnswer = async (id: string) => {
+    if (!window.confirm('この回答を削除し、質問を再振分しますか？')) return;
+    const { error } = await supabase.rpc('admin_clear_answer', { p_question_id: id });
+    if (!error) {
+      setReports(prev => prev.filter(r => r.id !== id));
+      alert('回答を削除し、質問を再振分しました。');
+    } else alert('エラー: ' + error.message);
+  };
+
+  const handleWarnUser = async (userId: string) => {
+    if (!window.confirm('このユーザーに警告を与えますか？')) return;
+    const { error } = await supabase.rpc('admin_warn_user', { p_user_id: userId });
+    if (!error) alert('ユーザーに警告を与えました。');
+    else alert('エラー: ' + error.message);
+  };
+
+  const handleBanUser = async (userId: string) => {
+    if (!window.confirm('⚠️ このユーザーをBANしますか？この操作は重大です。')) return;
+    const { error } = await supabase.rpc('admin_ban_user', { p_user_id: userId });
+    if (!error) alert('ユーザーをBANしました。');
+    else alert('エラー: ' + error.message);
   };
 
   // --- Render Detail View ---
@@ -334,6 +385,17 @@ export const ProDashboardView: React.FC = () => {
             審査 <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{applications.length}</span>
           </button>
         )}
+        {isAdmin && (
+          <button 
+            onClick={() => setActiveTab('reports')}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all ${
+              activeTab === 'reports' ? 'bg-red-600 text-white shadow-md' : 'bg-white text-red-600 border border-red-200 hover:bg-red-50'
+            }`}
+          >
+            <Flag size={16} />
+            報告 {reports.length > 0 && <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{reports.length}</span>}
+          </button>
+        )}
       </div>
 
       {/* List */}
@@ -407,6 +469,88 @@ export const ProDashboardView: React.FC = () => {
                 </div>
               );
             })
+          )
+        ) : activeTab === 'reports' ? (
+          reports.length === 0 ? (
+            <div className="bg-slate-50 border border-slate-100 rounded-3xl p-10 flex flex-col items-center justify-center text-center">
+              <CheckCircle2 size={40} className="text-slate-300 mb-3" />
+              <p className="font-bold text-slate-600">未対応の報告はありません</p>
+            </div>
+          ) : (
+            reports.map(report => (
+              <div key={report.id} className="bg-white rounded-2xl shadow-sm border border-red-100 p-5 space-y-4">
+                {/* Report Header */}
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-red-100 text-red-500 rounded-full flex items-center justify-center">
+                      <Flag size={14} />
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500">
+                        報告者: <span className="font-bold text-slate-700">{report.reporter?.nickname || '不明'}</span>
+                      </p>
+                      <p className="text-[10px] text-slate-400">
+                        {report.reported_at ? new Date(report.reported_at).toLocaleString('ja-JP') : ''}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Report Reason */}
+                <div className="bg-red-50 border border-red-100 p-3 rounded-xl">
+                  <p className="text-[10px] text-red-500 font-bold mb-1">📋 報告理由</p>
+                  <p className="text-sm text-slate-700">{report.report_reason}</p>
+                </div>
+
+                {/* Question & Answer */}
+                <div className="space-y-2">
+                  <div className="bg-slate-50 p-3 rounded-xl">
+                    <p className="text-[10px] text-slate-400 font-bold mb-1">❓ 質問</p>
+                    <p className="text-sm text-slate-700">{report.question}</p>
+                  </div>
+                  {report.answer && (
+                    <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl">
+                      <p className="text-[10px] text-blue-500 font-bold mb-1">
+                        💬 回答（{report.answerer?.nickname || '不明'}）
+                      </p>
+                      <p className="text-sm text-slate-700 whitespace-pre-wrap">{report.answer}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Admin Actions */}
+                <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                  <button
+                    onClick={() => handleDismissReport(report.id)}
+                    className="py-2 px-3 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors flex items-center justify-center gap-1"
+                  >
+                    <XCircle size={14} /> 報告を却下
+                  </button>
+                  <button
+                    onClick={() => handleDeleteAnswer(report.id)}
+                    className="py-2 px-3 bg-amber-100 text-amber-700 rounded-xl text-xs font-bold hover:bg-amber-200 transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Trash2 size={14} /> 回答を削除
+                  </button>
+                  {report.answered_by && (
+                    <>
+                      <button
+                        onClick={() => handleWarnUser(report.answered_by)}
+                        className="py-2 px-3 bg-orange-100 text-orange-700 rounded-xl text-xs font-bold hover:bg-orange-200 transition-colors flex items-center justify-center gap-1"
+                      >
+                        <AlertTriangle size={14} /> コーチに警告
+                      </button>
+                      <button
+                        onClick={() => handleBanUser(report.answered_by)}
+                        className="py-2 px-3 bg-red-100 text-red-700 rounded-xl text-xs font-bold hover:bg-red-200 transition-colors flex items-center justify-center gap-1"
+                      >
+                        <Ban size={14} /> コーチをBAN
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+            ))
           )
         ) : (
           filteredNotes.length === 0 ? (

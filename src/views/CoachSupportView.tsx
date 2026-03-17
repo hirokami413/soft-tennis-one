@@ -52,7 +52,7 @@ const coinPackages = [
 
 export const CoachSupportView: React.FC = () => {
   const { user, refreshProfile, addCoins } = useAuth();
-  const { consultations, askQuestion, answerQuestion, updateQuestionStatus, applyCoachApplication } = useSupabaseCoach();
+  const { consultations, askQuestion, answerQuestion, updateQuestionStatus, applyCoachApplication, reportQuestion } = useSupabaseCoach();
   const [newQuestion, setNewQuestion] = useLocalStorage('coach_support_new_question', '');
   const [expandedId, setExpandedId] = useState<string | null>('c-1');
   const [reaskText, setReaskText] = useState('');
@@ -143,18 +143,16 @@ export const CoachSupportView: React.FC = () => {
     setReaskText('');
   };
 
-  // Report → 別のコーチに回答を再振分
-  const handleReport = (id: string) => {
-    const confirmed = window.confirm(
-      '⚠️ 回答を報告する前にご確認ください\n\n' +
-      '• 報告すると、この回答は取り消され、別のコーチに再振分されます\n' +
-      '• 報告は不適切・不正確な回答に対してのみ使用してください\n' +
-      '• 虚偽の報告を繰り返すとアカウントが制限される場合があります\n\n' +
-      '本当にこの回答を報告しますか？'
+  // Report → 報告理由を入力してDBに保存
+  const handleReport = async (id: string) => {
+    const reason = window.prompt(
+      '→️ 報告理由を入力してください\n\n' +
+      '• 不適切・不正確な回答に対してのみ使用してください\n' +
+      '• 虚偽の報告を繰り返すとアカウントが制限される場合があります'
     );
-    if (!confirmed) return;
-    updateQuestionStatus(id, 'waiting');
-    alert('回答を報告しました。別のコーチに再振分され、新しい回答をお待ちいただけます。');
+    if (!reason || !reason.trim()) return;
+    await reportQuestion(id, reason.trim());
+    alert('報告を送信しました。管理者が確認し対応いたします。');
   };
 
   // Coach Handlers

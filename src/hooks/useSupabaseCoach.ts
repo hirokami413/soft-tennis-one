@@ -216,6 +216,22 @@ export function useSupabaseCoach() {
      await loadConsultations();
   };
 
+  const reportQuestion = async (id: string, reason: string) => {
+    if (!useDB || !user) return;
+    const { error } = await supabase.from('coach_questions').update({
+      reported: true,
+      report_reason: reason,
+      reported_at: new Date().toISOString(),
+      reported_by: user.id
+    }).eq('id', id);
+    if (error) {
+      console.error('報告の保存に失敗:', error);
+      alert('報告の保存に失敗しました: ' + error.message);
+    } else {
+      await loadConsultations();
+    }
+  };
+
   return {
     consultations,
     loading,
@@ -223,6 +239,7 @@ export function useSupabaseCoach() {
     applyCoachApplication,
     askQuestion,
     answerQuestion,
-    updateQuestionStatus
+    updateQuestionStatus,
+    reportQuestion
   };
 }
