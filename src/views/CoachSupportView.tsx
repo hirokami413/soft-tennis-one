@@ -8,6 +8,7 @@ import {
   Upload, FileText
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSupabaseCoach } from '../hooks/useSupabaseCoach';
 
 // ── Types ──
 interface Coach {
@@ -71,38 +72,7 @@ const dummyCoaches: Coach[] = [
   },
 ];
 
-const initialConsultations: Consultation[] = [
-  {
-    id: 'c-1',
-    question: '前衛でポーチに出るタイミングが分かりません。特にクロス展開の時にいつ出ればいいか教えてください。',
-    status: 'answered',
-    createdAt: '2026-03-12',
-    coach: dummyCoaches[0],
-    answer: 'ポーチのタイミングは「相手後衛のテイクバック完了時」が基本です。具体的には、相手がラケットを引き切った瞬間に1歩目を出しましょう。\n\nクロス展開では、以下の3つのサインを見てください：\n1. 相手後衛の体が外向き（クロスに打つ構え）\n2. ボールがベースラインより浅い位置\n3. 味方後衛のボールが相手のバック側に入った時\n\nまずは3番目のシチュエーションだけに絞って練習してみてください。成功体験を積むことで、徐々にタイミング感覚が身につきます。',
-    isMine: true,
-    userNickname: 'ソフテニ花子',
-    userAvatar: '🌸',
-  },
-  {
-    id: 'c-2',
-    question: 'サーブのトスが安定しません。毎回高さが変わってしまいます。',
-    status: 'waiting',
-    createdAt: '2026-03-13',
-    userNickname: 'テニス次郎',
-    userAvatar: '🔥',
-  },
-  {
-    id: 'c-3',
-    question: '試合になると緊張して普段の力が出せません。メンタルの整え方を教えてください。',
-    status: 'resolved',
-    createdAt: '2026-03-10',
-    coach: dummyCoaches[0],
-    answer: '試合前のルーティンを決めることが最も効果的です。具体的には...',
-    userRating: 5,
-    userNickname: 'メンタル強化中',
-    userAvatar: '💪',
-  },
-];
+// removed initialConsultations
 
 // ── Coin Purchase Packages ──
 const coinPackages = [
@@ -112,9 +82,28 @@ const coinPackages = [
 ];
 
 // ── Main Component ──
+
+function useConsultationsWithDB(): [Consultation[], React.Dispatch<React.SetStateAction<Consultation[]>>] {
+  const { consultations, setConsultationsOptimistic, saveConsultation } = useSupabaseCoach();
+  const setConsultationsHook = React.useCallback((action: React.SetStateAction<Consultation[]>) => {
+    setConsultationsOptimistic((prev: Consultation[]) => {
+      const next = typeof action === 'function' ? action(prev) as Consultation[] : action as Consultation[];
+      next.forEach(newItem => {
+        const oldItem = prev.find(p => p.id === newItem.id);
+        if (!oldItem || JSON.stringify(oldItem) !== JSON.stringify(newItem)) {
+          saveConsultation(newItem as any); // Cast as CoachConsultation
+        }
+      });
+      return next;
+    });
+  }, [setConsultationsOptimistic, saveConsultation]);
+  
+  return [consultations as Consultation[], setConsultationsHook];
+}
+
 export const CoachSupportView: React.FC = () => {
   const { user } = useAuth();
-  const [consultations, setConsultations] = useLocalStorage<Consultation[]>('coach_support_consultations', initialConsultations);
+  const [consultations, setConsultations] = useConsultationsWithDB();
   const [newQuestion, setNewQuestion] = useLocalStorage('coach_support_new_question', '');
   const [expandedId, setExpandedId] = useState<string | null>('c-1');
   const [reaskText, setReaskText] = useState('');

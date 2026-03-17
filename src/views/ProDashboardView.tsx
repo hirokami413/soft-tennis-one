@@ -4,7 +4,9 @@ import {
   ChevronRight, ArrowLeft, Send, Video, Clock, 
   TrendingUp, MessageCircle, Crown
 } from 'lucide-react';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
+import { isSupabaseConfigured } from '../lib/supabase';
 
 // --- Types ---
 interface SubmittedNote {
@@ -25,53 +27,8 @@ interface SubmittedNote {
   coachAdvice?: string;
 }
 
-// --- Dummy Data ---
-const initialInbox: SubmittedNote[] = [
-  {
-    id: 'note-101',
-    studentName: '佐藤 健太',
-    studentGrade: '2年',
-    teamName: '青葉台中テニス部',
-    submittedAt: '2026-03-13T18:30:00Z',
-    status: 'pending',
-    content: {
-      keep: 'クロスへの展開が安定してきた。打点を前に保てている。',
-      problem: 'バック側に振られた時の返球が甘くなり、攻め込まれる。',
-      try: 'バックのテイクバックを早くする。スプリットステップをサボらない。',
-      skills: [4, 2, 3, 3, 3, 3],
-      coachQuestion: 'バックハンドでどうしても差し込まれてしまいます。動画を添付しましたので、フォームの修正点を教えてください。',
-    }
-  },
-  {
-    id: 'note-102',
-    studentName: '鈴木 美咲',
-    studentGrade: '1年',
-    teamName: '青葉台中テニス部',
-    submittedAt: '2026-03-12T20:15:00Z',
-    status: 'pending',
-    content: {
-      keep: 'サーブのファースト確率が上がった。',
-      problem: 'ポーチに出るタイミングが遅れてパッシングを抜かれる。',
-      try: '相手が打つ瞬間に動き出す勇気を持つ。',
-      skills: [3, 3, 2, 4, 3, 2],
-    }
-  },
-  {
-    id: 'note-103',
-    studentName: '高橋 翔太',
-    studentGrade: '3年',
-    teamName: '第一高校 庭球部',
-    submittedAt: '2026-03-10T19:00:00Z',
-    status: 'reviewed',
-    content: {
-      keep: '前衛でのボレーの決定力が上がってきた。',
-      problem: 'スマッシュのミスが目立つ。打点が後ろになりがち。',
-      try: '左手でボールをしっかり指さす。',
-      skills: [4, 4, 4, 3, 5, 4],
-    },
-    coachAdvice: 'スマッシュの課題、よく分析できていますね。左手で指さすだけでなく、あごを上げてボールを最後まで見ることも意識するとさらに安定しますよ！'
-  }
-];
+// ── Dummy Data Removed ──
+// Data will be fetched from Supabase tennis_notes (published=true)
 
 // --- Radar Chart ---
 const SmallRadarChart: React.FC<{ skills: number[] }> = ({ skills }) => {
@@ -106,11 +63,54 @@ const SmallRadarChart: React.FC<{ skills: number[] }> = ({ skills }) => {
 
 // --- Main Component ---
 export const ProDashboardView: React.FC = () => {
+  const { user } = useAuth();
+  
   // States
-  const [inbox, setInbox] = useLocalStorage<SubmittedNote[]>('pro_dashboard_inbox', initialInbox);
+  const [inbox, setInbox] = React.useState<SubmittedNote[]>([]);
+  const [reviewedIds, setReviewedIds] = React.useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('pro_dashboard_reviewed') || '[]'); } catch { return []; }
+  });
+  
   const [activeTab, setActiveTab] = useState<'pending' | 'reviewed'>('pending');
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [adviceText, setAdviceText] = useState('');
+
+  // Fetch Public Notes
+  React.useEffect(() => {
+    if (!isSupabaseConfigured() || !user) return;
+    
+    const fetchPublicNotes = async () => {
+      const { data, error } = await supabase
+        .from('tennis_notes')
+        .select(`
+          id, date, keep, problem, try_item, coach_question, skills, created_at,
+          profiles ( nickname )
+        `)
+        .eq('published', true)
+        .order('created_at', { ascending: false })
+        .limit(20);
+        
+      if (!error && data) {
+        const mapped: SubmittedNote[] = data.map((n: any) => ({
+          id: n.id,
+          studentName: n.profiles?.nickname || '匿名プレイヤー',
+          studentGrade: '一般',
+          teamName: 'チーム未登録',
+          submittedAt: n.created_at,
+          status: reviewedIds.includes(n.id) ? 'reviewed' : 'pending',
+          content: {
+            keep: n.keep || 'なし',
+            problem: n.problem || 'なし',
+            try: n.try_item || 'なし',
+            skills: n.skills || [3,3,3,3,3,3],
+            coachQuestion: n.coach_question
+          }
+        }));
+        setInbox(mapped);
+      }
+    };
+    fetchPublicNotes();
+  }, [user, reviewedIds]);
 
   // Derived
   const filteredNotes = inbox.filter(n => n.status === activeTab);
@@ -133,7 +133,12 @@ export const ProDashboardView: React.FC = () => {
         : note
     ));
     
-    // 成功アニメーション用の遅延
+    const nextReviewedIds = [...reviewedIds, selectedNoteId];
+    setReviewedIds(nextReviewedIds);
+    localStorage.setItem('pro_dashboard_reviewed', JSON.stringify(nextReviewedIds));
+    
+    alert('アドバイスを送信しました！(ダミー)');
+    
     setTimeout(() => {
       setSelectedNoteId(null);
       setAdviceText('');

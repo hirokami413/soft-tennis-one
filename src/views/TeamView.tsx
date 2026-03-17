@@ -6,6 +6,10 @@ import {
   Trash2, Edit2, CopyPlus, Repeat, Search, Image, Video, Link
 } from 'lucide-react';
 
+import { useAuth } from '../contexts/AuthContext';
+import { useSupabaseTeams } from '../hooks/useSupabaseTeams';
+import { useSupabaseTeamFeatures } from '../hooks/useSupabaseTeamFeatures';
+
 // ── Types ──
 type Role = 'admin' | 'captain' | 'member' | 'parent';
 
@@ -103,71 +107,10 @@ const roleConfig: Record<Role, { label: string; color: string; icon: React.FC<{s
 };
 
 // ── Dummy Data ──
-const teamName = 'Nexus One つくば';
-const inviteCode = 'NX-2026-TSUKUBA';
-
-const initialMembers: TeamMember[] = [
-  { name: '上見 宏彰', role: 'admin', avatar: 'N', message: 'Nexus One代表。みんなで楽しく強くなろう！' },
-  { name: '鈴木 太郎', role: 'captain', avatar: '鈴', message: '部長の鈴木です。県大会出場目指して頑張ります。' },
-  { name: '田中 花子', role: 'member', avatar: '田', message: 'バックハンド強化中！' },
-  { name: '佐藤 健',   role: 'member', avatar: '佐', message: 'よろしくお願いします。' },
-  { name: '山本 美咲', role: 'member', avatar: '山', message: 'サーブの確率を上げたいです。' },
-  { name: '田中 裕子', role: 'parent', avatar: '母', message: '花子の母です。いつもお世話になっております。' },
-];
+// Removed: Dummy data is now fetched from Supabase.
 
 const todayDate = new Date();
 const fmtDate = (d: Date) => d.toISOString().split('T')[0];
-
-const initialEvents: PracticeEvent[] = [
-  { 
-    id: 'ev-1', title: '通常練習', date: fmtDate(todayDate), time: '17:00-19:00', location: '中央公園テニスコート', 
-    attendance: { '田中 花子': 'present', '佐藤 健': 'late', '山本 美咲': null },
-    comments: [
-      { id: 'c1', sender: '田中 花子', avatar: '田', text: 'ラケットのガット張り替え終わりました！楽しみです。', time: '09:30' },
-      { id: 'c2', sender: '上見 宏彰', avatar: 'N', text: '道具のメンテナンスは大事ですね！', time: '10:15' }
-    ],
-    needsAttendance: true
-  },
-  { id: 'ev-2', title: '日曜練習', date: fmtDate(new Date(todayDate.getTime() + 2 * 86400000)), time: '9:00-12:00', location: '大学コート', attendance: {}, comments: [], needsAttendance: true },
-  { id: 'ev-3', title: '夜間練習', date: fmtDate(new Date(todayDate.getTime() + 5 * 86400000)), time: '17:00-19:00', location: '中央公園テニスコート', attendance: {}, comments: [], needsAttendance: false },
-];
-
-const initialChats: ChatMsg[] = [
-  { id: '1', sender: '上見 宏彰', targetId: 'all', text: '今日の練習のテーマは「ポーチの飛び出し」です。遅刻の人はストレッチ済ませてから合流してね。', time: '16:30' },
-  { id: '2', sender: '鈴木 太郎', targetId: 'all', text: '了解です！コートの予約は3番コートです。あと、来月の大会の要項が送られてきました。', time: '16:35', 
-    attachments: [{ name: '大会要項_詳細.pdf', type: 'pdf', url: '', size: 1024 * 1024 * 1.5 }] 
-  },
-  { id: '3', sender: '上見 宏彰', targetId: '鈴木 太郎', text: '鈴木君、今日の練習メニューの確認をお願いします。', time: '16:38' },
-];
-
-const initialBoardPosts: BoardPost[] = [
-  {
-    id: 'bp-1',
-    author: '上見 宏彰',
-    title: '春季県大会エントリー完了のお知らせと注意事項',
-    content: '来月の春季県大会のエントリーが無事完了しました。\n各自、ドロー表を確認し、初戦の対戦相手の分析をしておくようにしてください。今回の大会からユニフォームの規定が厳格化されているため、添付のガイドラインを必ず一読すること！',
-    createdAt: '2026-03-12 10:00',
-    attachments: [
-      { name: '春季県大会ドロー表.pdf', type: 'pdf', url: '', size: 2450000 },
-      { name: '新規ユニフォーム規定.pdf', type: 'pdf', url: '', size: 850000 }
-    ],
-    voteOptions: [
-      { id: 'v1', text: '確認した', voterNames: ['鈴木 太郎', '佐藤 健'], voteTimestamps: {'鈴木 太郎': new Date(Date.now() - 3600000).toISOString(), '佐藤 健': new Date(Date.now() - 1800000).toISOString()} }
-    ]
-  },
-  {
-    id: 'bp-2',
-    author: '鈴木 太郎',
-    title: '来週末の合同練習会 参加確認',
-    content: '東高校との合同練習会が決定しました。場所は先方のコート（３面）を使用します。配車の関係があるため、早めの出欠入力をお願いします。',
-    createdAt: '2026-03-11 18:30',
-    voteOptions: [
-      { id: 'y', text: '参加（配車可能）', voterNames: ['山田 父'], voteTimestamps: {'山田 父': new Date(Date.now() - 7200000).toISOString()} },
-      { id: 'y2', text: '参加（同乗希望）', voterNames: ['田中 花子', '山本 美咲'], voteTimestamps: {'田中 花子': new Date(Date.now() - 86400000).toISOString(), '山本 美咲': new Date(Date.now() - 4000000).toISOString()} },
-      { id: 'n', text: '不参加', voterNames: [] }
-    ]
-  }
-];
 
 // ── Component ──
 export const TeamView: React.FC = () => {
@@ -181,28 +124,27 @@ export const TeamView: React.FC = () => {
     setTimeout(() => setToastMsg(null), 2500);
   };
   
-  // Teams State - Initialized with Dummy Data or LocalStorage
-  const [teams, setTeams] = useState<Team[]>(() => {
-    const saved = localStorage.getItem('softtennis_teams_data');
-    if (saved) {
-      const parsedTeams = JSON.parse(saved);
-      // Migrate existing data to include new properties
-      return parsedTeams.map((t: any) => ({
-        ...t,
-        boardPosts: t.boardPosts || (t.id === 't-1' ? initialBoardPosts : []),
-      }));
+  const { user } = useAuth();
+  const { teams: dbTeams } = useSupabaseTeams();
+
+  // Teams State - Initialize empty, then sync with DB
+  const [teams, setTeams] = useState<Team[]>([]);
+  useEffect(() => {
+    if (dbTeams && dbTeams.length > 0) {
+      setTeams(dbTeams.map(t => ({
+        id: t.id,
+        name: t.name,
+        inviteCode: t.code,
+        members: [{ name: user?.nickname || '私', role: 'admin', avatar: user?.avatarEmoji || '👤' }], // TODO: Sync actual members
+        events: [],
+        chats: [],
+        groups: [],
+        boardPosts: []
+      })));
+    } else {
+      setTeams([]);
     }
-    return [{
-      id: 't-1',
-      name: teamName,
-      inviteCode: inviteCode,
-      members: initialMembers,
-      events: initialEvents,
-      chats: initialChats,
-      groups: [],
-      boardPosts: initialBoardPosts
-    }];
-  });
+  }, [dbTeams, user]);
 
   const [currentTeamId, setCurrentTeamId] = useState<string>(() => {
     const saved = localStorage.getItem('softtennis_active_team_id');
@@ -210,6 +152,8 @@ export const TeamView: React.FC = () => {
   });
 
   const currentTeam = teams.find(t => t.id === currentTeamId) || teams[0];
+
+  const { chats: dbChats, events: dbEvents, sendChat, addBoardPost } = useSupabaseTeamFeatures(currentTeam?.id);
 
   // Guard: if no team exists at all, show a placeholder
   if (!currentTeam) {
@@ -220,22 +164,19 @@ export const TeamView: React.FC = () => {
     );
   }
 
-  // Derived States from currentTeam
+  // Derived States from currentTeam and remote DB
   const members = currentTeam.members || [];
-  const events = currentTeam.events || [];
-  const chats = currentTeam.chats || [];
+  const events = dbEvents as any as PracticeEvent[];
+  const chats = dbChats as any as ChatMsg[];
   const groups = currentTeam.groups || [];
+  // Derived state boardPosts removed as it's unused
 
   const teamMembersMap = members.reduce((acc, m) => {
     acc[m.name] = m;
     return acc;
   }, {} as Record<string, TeamMember>);
 
-  // Effects for Persistence
-  useEffect(() => {
-    localStorage.setItem('softtennis_teams_data', JSON.stringify(teams));
-  }, [teams]);
-
+  // Removed LocalStorage sync for teams since it's DB driven now
   useEffect(() => {
     localStorage.setItem('softtennis_active_team_id', currentTeamId);
   }, [currentTeamId]);
@@ -397,22 +338,7 @@ export const TeamView: React.FC = () => {
       showToast('タイトルと本文を入力してください');
       return;
     }
-    const myName = myRole === 'admin' ? '上見 宏彰' : '鈴木 太郎';
-    
-    const newPost: BoardPost = {
-      id: `bp-${Date.now()}`,
-      author: myName,
-      title: newPostTitle.trim(),
-      content: newPostContent.trim(),
-      createdAt: new Date().toLocaleString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }),
-      attachments: newPostAttachments.length > 0 ? newPostAttachments : undefined,
-      voteOptions: newPostVoteOptions.length > 0 ? newPostVoteOptions.map(opt => ({ id: opt.id, text: opt.text, voterNames: [] })) : undefined,
-      surveyTitle: newPostSurveyTitle.trim() || undefined,
-      isAnonymousVote: newPostIsAnonymous,
-      voteDeadline: newPostVoteDeadline || undefined
-    };
-
-    setTeams(prev => prev.map(t => t.id === currentTeamId ? { ...t, boardPosts: [newPost, ...(t.boardPosts || [])] } : t));
+    addBoardPost(newPostTitle.trim(), newPostContent.trim());
     setIsNewPostModalOpen(false);
     setNewPostTitle('');
     setNewPostContent('');
@@ -424,20 +350,10 @@ export const TeamView: React.FC = () => {
     showToast('お知らせを投稿しました');
   };
 
-  const handleSendChat = (mediaUrl?: string, mediaType?: 'image' | 'video') => {
+  const handleSendChat = (mediaUrl?: string) => {
     if (!chatInput.trim() && !mediaUrl) return;
-    const myName = myRole === 'admin' ? '上見 宏彰' : '鈴木 太郎';
-    
-    const newMsg: ChatMsg = {
-      id: `m-${Date.now()}`,
-      sender: myName,
-      targetId: chatTarget,
-      text: chatInput.trim(),
-      time: new Date().toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }),
-      ...(mediaUrl ? { mediaUrl, mediaType } : {}),
-    };
-
-    setTeams(prev => prev.map(t => t.id === currentTeamId ? { ...t, chats: [...t.chats, newMsg] } : t));
+    // Optional media URLs will be supported later
+    sendChat(chatInput.trim(), chatTarget);
     setChatInput('');
   };
 
@@ -1448,7 +1364,7 @@ export const TeamView: React.FC = () => {
                           const file = e.target.files?.[0];
                           if (file) {
                             const reader = new FileReader();
-                            reader.onload = () => handleSendChat(reader.result as string, 'image');
+                            reader.onload = () => handleSendChat(reader.result as string);
                             reader.readAsDataURL(file);
                           }
                           e.target.value = '';
@@ -1460,7 +1376,7 @@ export const TeamView: React.FC = () => {
                           const file = e.target.files?.[0];
                           if (file) {
                             const reader = new FileReader();
-                            reader.onload = () => handleSendChat(reader.result as string, 'video');
+                            reader.onload = () => handleSendChat(reader.result as string);
                             reader.readAsDataURL(file);
                           }
                           e.target.value = '';
