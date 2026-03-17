@@ -80,7 +80,7 @@ export const CoachSupportView: React.FC = () => {
   };
 
   // Student Coin & Question Type States
-  const [studentCoins, setStudentCoins] = useLocalStorage('student_coins', 1000);
+  const studentCoins = user?.coins || 0;
   const [questionType, setQuestionType] = useState<'text' | 'video'>('text');
   const [questionCategory, setQuestionCategory] = useState('');
   const [showCoinPurchaseModal, setShowCoinPurchaseModal] = useState(false);
@@ -106,13 +106,13 @@ export const CoachSupportView: React.FC = () => {
   const questionCost = questionType === 'text' ? 1000 : 2000;
 
   // Submit new question
-  const handleSubmitQuestion = () => {
+  const handleSubmitQuestion = async () => {
     if (!newQuestion.trim()) return;
     if (studentCoins < questionCost) {
       setShowCoinPurchaseModal(true);
       return;
     }
-    setStudentCoins(prev => prev - questionCost);
+    await addCoins(-questionCost);
     askQuestion({
       question: newQuestion.trim(),
       questionType,
@@ -1189,8 +1189,8 @@ export const CoachSupportView: React.FC = () => {
               {coinPackages.map(pkg => (
                 <button
                   key={pkg.coins}
-                  onClick={() => {
-                    setStudentCoins(prev => prev + pkg.coins);
+                  onClick={async () => {
+                    await addCoins(pkg.coins);
                     setShowCoinPurchaseModal(false);
                   }}
                   className={`w-full p-4 rounded-2xl border-2 flex items-center justify-between transition-all hover:shadow-md ${
