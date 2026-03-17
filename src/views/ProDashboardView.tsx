@@ -498,8 +498,9 @@ export const ProDashboardView: React.FC = () => {
                       </div>
                     )}
                     <button
-                      onClick={() => handleDeleteQuestion(q.id)}
-                      className="w-full py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-1"
+                      type="button"
+                      onClick={(e) => { e.stopPropagation(); e.preventDefault(); handleDeleteQuestion(q.id); }}
+                      className="w-full py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-1 cursor-pointer relative z-10"
                     >
                       <Trash2 size={14} /> この相談を削除
                     </button>
