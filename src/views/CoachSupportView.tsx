@@ -51,7 +51,7 @@ const coinPackages = [
 // ── Main Component ──
 
 export const CoachSupportView: React.FC = () => {
-  const { user } = useAuth();
+  const { user, refreshProfile, addCoins } = useAuth();
   const { consultations, askQuestion, answerQuestion, updateQuestionStatus, applyCoachApplication } = useSupabaseCoach();
   const [newQuestion, setNewQuestion] = useLocalStorage('coach_support_new_question', '');
   const [expandedId, setExpandedId] = useState<string | null>('c-1');
@@ -63,16 +63,16 @@ export const CoachSupportView: React.FC = () => {
   // Role State
   const isCoach = user?.systemRole === 'coach' || user?.systemRole === 'admin';
 
-  // Coach Mode States
-  const [coachCoins, setCoachCoins] = useLocalStorage('coach_support_coins', 1000);
+  // Coach Mode States — DBのuser profileから読み取り
+  const coachCoins = user?.coins || 0;
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [coachAnswerText, setCoachAnswerText] = useState('');
   const [showCoachAnswerInput, setShowCoachAnswerInput] = useState(false);
   const [coachAnswerUrl, setCoachAnswerUrl] = useState('');
-  const [coachRank, setCoachRank] = useLocalStorage<Coach['rank']>('coach_rank', 'silver');
-  const [coachAnswerCount, setCoachAnswerCount] = useLocalStorage('coach_answer_count', 45);
-  const [coachAvgRating, setCoachAvgRating] = useLocalStorage('coach_avg_rating', 4.2);
-  const [rankUpNotification, setRankUpNotification] = useState<string | null>(null);
+  const coachRank = (user?.coachRank || 'bronze') as Coach['rank'];
+  const coachAnswerCount = user?.coachAnswerCount || 0;
+  const coachAvgRating = user?.coachAvgRating || 0;
+  const [rankUpNotification, _setRankUpNotification] = useState<string | null>(null);
 
   // Rank-based reward calculation (fixed base: 700 = 70% of text question cost)
   const getReward = () => {
@@ -122,31 +122,17 @@ export const CoachSupportView: React.FC = () => {
     setActiveTab('list');
   };
 
-  // Resolve → コーチにコインを付与
-  const handleResolve = (id: string) => {
-    updateQuestionStatus(id, 'resolved');
-    // コーチにコインを付与
-    const reward = getReward();
-    setCoachCoins(prev => prev + reward);
-    setCoachAnswerCount(prev => {
-      const newCount = prev + 1;
-      const condition = rankUpConditions[coachRank];
-      if (condition.next && newCount >= condition.answers && coachAvgRating >= condition.rating) {
-        const newRank = condition.next;
-        const bonus = rankConfig[newRank].rankUpBonus;
-        setCoachRank(newRank);
-        setCoachCoins(c => c + bonus);
-        setRankUpNotification(`🎉 ${rankConfig[newRank].label}にランクアップ！ボーナス +${bonus}🪙`);
-        setTimeout(() => setRankUpNotification(null), 5000);
-      }
-      return newCount;
-    });
-    setCoachAvgRating(prev => Math.min(5.0, +(prev + 0.01).toFixed(2)));
+  // Resolve → コーチにコインを付与（DB処理はuseSupabaseCoachで実行）
+  const handleResolve = async (id: string) => {
+    await updateQuestionStatus(id, 'resolved');
+    // DB処理完了後にプロフィール更新（コインが変わった場合UIに反映）
+    await refreshProfile();
   };
 
   // Rate
-  const handleRate = (id: string, rating: number) => {
-    updateQuestionStatus(id, 'resolved', rating);
+  const handleRate = async (id: string, rating: number) => {
+    await updateQuestionStatus(id, 'resolved', rating);
+    await refreshProfile();
   };
 
   // Re-ask → 同じコーチに再質問が戻る
@@ -180,9 +166,9 @@ export const CoachSupportView: React.FC = () => {
     setShowCoachAnswerInput(false);
   };
 
-  const handleSkipQuestion = () => {
+  const handleSkipQuestion = async () => {
     if (coachCoins >= 50) {
-      setCoachCoins(prev => prev - 50);
+      await addCoins(-50);
       goToNextQuestion();
     } else {
       alert('コインが不足しています。');
@@ -1314,14 +1300,14 @@ export const CoachSupportView: React.FC = () => {
               </div>
 
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (exchangeDirection === 'toCash') {
                     if (coachCoins >= exchangeAmount) {
-                      setCoachCoins(prev => prev - exchangeAmount);
+                      await addCoins(-exchangeAmount);
                       setShowCoinExchangeModal(false);
                     }
                   } else {
-                    setCoachCoins(prev => prev + exchangeAmount);
+                    await addCoins(exchangeAmount);
                     setShowCoinExchangeModal(false);
                   }
                 }}

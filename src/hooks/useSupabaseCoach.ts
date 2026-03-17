@@ -137,52 +137,77 @@ export function useSupabaseCoach() {
      if (rating !== undefined) updates.user_rating = rating;
      
      const { error } = await supabase.from('coach_questions').update(updates).eq('id', id);
-     if (!error) {
-       // resolved時: コーチにコイン報酬を付与 + ランクアップ判定
-       if (status === 'resolved') {
-         const { data: question } = await supabase
+     if (error) {
+       console.error('ステータス更新失敗:', error);
+       return;
+     }
+     
+     // resolved時: コーチにコイン報酬を付与 + ランクアップ判定
+     if (status === 'resolved') {
+       try {
+         const { data: question, error: qErr } = await supabase
            .from('coach_questions')
            .select('answered_by')
            .eq('id', id)
            .single();
          
-         if (question?.answered_by) {
-           // コーチのプロフィールを取得
-           const { data: coachProfile } = await supabase
-             .from('profiles')
-             .select('coach_rank, coach_answer_count, coach_avg_rating')
-             .eq('id', question.answered_by)
-             .single();
+         if (qErr || !question?.answered_by) {
+           console.error('回答者情報取得失敗:', qErr, question);
+           await loadConsultations();
+           return;
+         }
+
+         // コーチのプロフィールを取得
+         const { data: coachProfile, error: pErr } = await supabase
+           .from('profiles')
+           .select('coach_rank, coach_answer_count, coach_avg_rating')
+           .eq('id', question.answered_by)
+           .single();
+         
+         if (pErr) {
+           console.error('コーチプロフィール取得失敗:', pErr);
+         }
+         
+         const rank = coachProfile?.coach_rank || 'bronze';
+         const config = RANK_CONFIG[rank] || RANK_CONFIG.bronze;
+         const reward = Math.floor(BASE_REWARD * config.multiplier);
+         
+         // コーチにランクベースのコイン付与
+         const { error: coinErr } = await supabase.rpc('add_coins', { p_user_id: question.answered_by, p_amount: reward });
+         if (coinErr) {
+           console.error('コイン付与失敗:', coinErr);
+           alert('コイン付与に失敗しました: ' + coinErr.message);
+         } else {
+           console.log(`コーチ ${question.answered_by} に ${reward}コイン付与成功`);
+         }
+         
+         // コーチの回答数を+1
+         const { error: countErr } = await supabase.rpc('increment_coach_answer_count', { p_coach_id: question.answered_by });
+         if (countErr) {
+           console.error('回答数更新失敗:', countErr);
+         }
+         
+         // ランクアップ判定
+         if (coachProfile) {
+           const newCount = (coachProfile.coach_answer_count || 0) + 1;
+           const avgRating = coachProfile.coach_avg_rating || 0;
+           const condition = RANK_UP_CONDITIONS[rank];
            
-           const rank = coachProfile?.coach_rank || 'bronze';
-           const config = RANK_CONFIG[rank] || RANK_CONFIG.bronze;
-           const reward = Math.floor(BASE_REWARD * config.multiplier);
-           
-           // コーチにランクベースのコイン付与
-           await supabase.rpc('add_coins', { p_user_id: question.answered_by, p_amount: reward });
-           // コーチの回答数を+1
-           await supabase.rpc('increment_coach_answer_count', { p_coach_id: question.answered_by });
-           
-           // ランクアップ判定
-           if (coachProfile) {
-             const newCount = (coachProfile.coach_answer_count || 0) + 1;
-             const avgRating = coachProfile.coach_avg_rating || 0;
-             const condition = RANK_UP_CONDITIONS[rank];
+           if (condition?.next && newCount >= condition.answers && avgRating >= condition.rating) {
+             const { error: rankErr } = await supabase.rpc('update_coach_rank', { p_coach_id: question.answered_by, p_new_rank: condition.next });
+             if (rankErr) console.error('ランクアップ失敗:', rankErr);
              
-             if (condition?.next && newCount >= condition.answers && avgRating >= condition.rating) {
-               // ランクアップ！
-               await supabase.rpc('update_coach_rank', { p_coach_id: question.answered_by, p_new_rank: condition.next });
-               // ランクアップボーナス付与
-               const bonus = RANK_CONFIG[condition.next]?.rankUpBonus || 0;
-               if (bonus > 0) {
-                 await supabase.rpc('add_coins', { p_user_id: question.answered_by, p_amount: bonus });
-               }
+             const bonus = RANK_CONFIG[condition.next]?.rankUpBonus || 0;
+             if (bonus > 0) {
+               await supabase.rpc('add_coins', { p_user_id: question.answered_by, p_amount: bonus });
              }
            }
          }
+       } catch (e) {
+         console.error('コイン付与処理でエラー:', e);
        }
-       await loadConsultations();
      }
+     await loadConsultations();
   };
 
   return {

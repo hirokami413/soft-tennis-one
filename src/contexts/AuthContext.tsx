@@ -25,6 +25,7 @@ interface AuthContextType {
   logout: () => void;
   updateProfile: (updates: Partial<Pick<UserProfile, 'nickname' | 'avatarEmoji'>>) => void;
   addCoins: (amount: number) => void;
+  refreshProfile: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -277,8 +278,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     }
   };
 
+  // ── プロフィール再取得（DBから最新情報を取得）──
+  const refreshProfile = async () => {
+    if (!user) return;
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+      if (profile) {
+        const p = profile as Record<string, any>;
+        setUser(prev => prev ? {
+          ...prev,
+          coins: p.coins,
+          systemRole: p.system_role || prev.systemRole,
+          coachRank: p.coach_rank || prev.coachRank,
+          coachAnswerCount: p.coach_answer_count || 0,
+          coachAvgRating: p.coach_avg_rating || 0,
+        } : null);
+      }
+    } catch (e) {
+      console.error('プロフィール再取得失敗:', e);
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, isLoading, login, loginWithOAuth, logout, updateProfile, addCoins }}>
+    <AuthContext.Provider value={{ user, isLoggedIn: !!user, isLoading, login, loginWithOAuth, logout, updateProfile, addCoins, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
