@@ -75,6 +75,7 @@ export const ProDashboardView: React.FC = () => {
   const [adviceText, setAdviceText] = useState('');
   
   const [applications, setApplications] = useState<any[]>([]);
+  const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
   const isAdmin = user?.systemRole === 'admin';
 
   // Fetch Public Notes
@@ -112,15 +113,18 @@ export const ProDashboardView: React.FC = () => {
       }
     };
 
+    fetchPublicNotes();
+  }, [user, reviewedIds]);
+
+  // Fetch Coach Applications (admin only, separate effect to react to isAdmin changes)
+  React.useEffect(() => {
+    if (!isSupabaseConfigured() || !isAdmin) return;
     const fetchApps = async () => {
-      if (!isAdmin) return;
       const { data, error } = await supabase.from('coach_applications').select('*').eq('status', 'pending').order('created_at', { ascending: false });
       if (data && !error) setApplications(data);
     };
-
-    fetchPublicNotes();
     fetchApps();
-  }, [user, reviewedIds]);
+  }, [isAdmin]);
 
   // Derived
   const filteredNotes = inbox.filter(n => n.status === activeTab);
@@ -341,50 +345,68 @@ export const ProDashboardView: React.FC = () => {
               <p className="font-bold text-slate-600">新しい応募はありません</p>
             </div>
           ) : (
-            applications.map(app => (
-              <div key={app.id} className="bg-white p-5 rounded-2xl shadow-sm border border-slate-100 flex flex-col gap-4">
-                {/* Header */}
-                <div className="flex items-center justify-between border-b border-slate-50 pb-3">
-                  <h4 className="font-bold text-slate-800 text-lg flex items-center gap-2">
-                    <UserPlus size={18} className="text-indigo-600"/>
-                    {app.full_name}
-                  </h4>
-                  <span className="text-xs text-slate-400 flex items-center gap-1"><Clock size={12}/>{new Date(app.created_at).toLocaleDateString('ja-JP')}</span>
-                </div>
+            applications.map(app => {
+              const isExpanded = expandedAppId === app.id;
+              return (
+                <div key={app.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+                  {/* Header - tappable */}
+                  <button
+                    onClick={() => setExpandedAppId(isExpanded ? null : app.id)}
+                    className="w-full flex items-center justify-between p-5 hover:bg-slate-50 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center font-bold text-sm">
+                        {app.full_name.charAt(0)}
+                      </div>
+                      <div>
+                        <h4 className="font-bold text-slate-800 flex items-center gap-2">
+                          {app.full_name}
+                          <span className="text-xs font-normal text-slate-400">({app.nickname})</span>
+                        </h4>
+                        <p className="text-[10px] text-slate-400 flex items-center gap-1 mt-0.5">
+                          <Clock size={10}/>{new Date(app.created_at).toLocaleDateString('ja-JP')} 応募
+                        </p>
+                      </div>
+                    </div>
+                    <ChevronRight size={18} className={`text-slate-400 transition-transform duration-200 ${isExpanded ? 'rotate-90' : ''}`} />
+                  </button>
 
-                {/* Details */}
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-slate-50 rounded-xl p-3">
-                    <p className="text-[10px] text-slate-400 font-medium">ニックネーム</p>
-                    <p className="text-sm font-bold text-slate-700 mt-0.5">{app.nickname}</p>
-                  </div>
-                  <div className="bg-slate-50 rounded-xl p-3">
-                    <p className="text-[10px] text-slate-400 font-medium">指導経験</p>
-                    <p className="text-sm font-bold text-slate-700 mt-0.5">{app.years_experience || '未記入'}</p>
-                  </div>
-                  <div className="col-span-2 bg-slate-50 rounded-xl p-3">
-                    <p className="text-[10px] text-slate-400 font-medium">資格・実績</p>
-                    <p className="text-sm text-slate-700 mt-0.5">{app.certification || '未記入'}</p>
-                  </div>
-                  {app.self_intro && (
-                    <div className="col-span-2 bg-indigo-50 rounded-xl p-3 border border-indigo-100">
-                      <p className="text-[10px] text-indigo-500 font-medium">自己PR</p>
-                      <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap leading-relaxed">{app.self_intro}</p>
+                  {/* Expandable Details */}
+                  {isExpanded && (
+                    <div className="px-5 pb-5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                      <div className="border-t border-slate-100 pt-4 grid grid-cols-2 gap-3">
+                        <div className="bg-slate-50 rounded-xl p-3">
+                          <p className="text-[10px] text-slate-400 font-medium">ニックネーム</p>
+                          <p className="text-sm font-bold text-slate-700 mt-0.5">{app.nickname}</p>
+                        </div>
+                        <div className="bg-slate-50 rounded-xl p-3">
+                          <p className="text-[10px] text-slate-400 font-medium">指導経験</p>
+                          <p className="text-sm font-bold text-slate-700 mt-0.5">{app.years_experience || '未記入'}</p>
+                        </div>
+                        <div className="col-span-2 bg-slate-50 rounded-xl p-3">
+                          <p className="text-[10px] text-slate-400 font-medium">資格・実績</p>
+                          <p className="text-sm text-slate-700 mt-0.5">{app.certification || '未記入'}</p>
+                        </div>
+                        {app.self_intro && (
+                          <div className="col-span-2 bg-indigo-50 rounded-xl p-3 border border-indigo-100">
+                            <p className="text-[10px] text-indigo-500 font-medium">自己PR</p>
+                            <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap leading-relaxed">{app.self_intro}</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <button onClick={() => handleApproveApp(app.id, app.user_id)} className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-sm flex justify-center items-center gap-2 shadow-sm transition-transform hover:scale-[1.02]">
+                          <CheckCircle2 size={16} /> 承認する
+                        </button>
+                        <button onClick={() => handleRejectApp(app.id)} className="flex-1 py-2.5 bg-white border border-red-200 text-red-500 hover:bg-red-50 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-colors">
+                          <XCircle size={16} /> 却下
+                        </button>
+                      </div>
                     </div>
                   )}
                 </div>
-
-                {/* Actions */}
-                <div className="flex gap-2 pt-1">
-                  <button onClick={() => handleApproveApp(app.id, app.user_id)} className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-sm flex justify-center items-center gap-2 shadow-sm transition-transform hover:scale-[1.02]">
-                    <CheckCircle2 size={16} /> 承認する
-                  </button>
-                  <button onClick={() => handleRejectApp(app.id)} className="flex-1 py-2.5 bg-white border border-red-200 text-red-500 hover:bg-red-50 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-colors">
-                    <XCircle size={16} /> 却下
-                  </button>
-                </div>
-              </div>
-            ))
+              );
+            })
           )
         ) : (
           filteredNotes.length === 0 ? (
