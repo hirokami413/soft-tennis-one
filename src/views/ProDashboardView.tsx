@@ -215,14 +215,14 @@ export const ProDashboardView: React.FC = () => {
   // Report action handlers
   const handleDismissReport = async (id: string) => {
     if (!window.confirm('この報告を却下しますか？')) return;
-    const { error } = await supabase.rpc('admin_dismiss_report', { p_question_id: id });
+    const { error } = await supabase.from('coach_questions').update({ reported: false, report_reason: null, reported_at: null, reported_by: null }).eq('id', id);
     if (!error) setReports(prev => prev.filter(r => r.id !== id));
     else alert('エラー: ' + error.message);
   };
 
   const handleDeleteAnswer = async (id: string) => {
     if (!window.confirm('この回答を削除し、質問を再振分しますか？')) return;
-    const { error } = await supabase.rpc('admin_clear_answer', { p_question_id: id });
+    const { error } = await supabase.from('coach_questions').update({ answer: null, answered_by: null, answered_at: null, status: 'waiting', reported: false, report_reason: null, reported_at: null, reported_by: null }).eq('id', id);
     if (!error) {
       setReports(prev => prev.filter(r => r.id !== id));
       alert('回答を削除し、質問を再振分しました。');
