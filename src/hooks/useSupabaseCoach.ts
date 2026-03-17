@@ -25,7 +25,10 @@ export function useSupabaseCoach() {
   const useDB = isSupabaseConfigured();
 
   const loadConsultations = useCallback(async () => {
-    if (!useDB || !user) return;
+    if (!useDB || !user) {
+      setLoading(false);
+      return;
+    }
     setLoading(true);
 
     const { data, error } = await supabase
