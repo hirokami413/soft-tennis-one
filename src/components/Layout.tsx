@@ -1,5 +1,5 @@
 import React, { useState, type ReactNode } from 'react';
-import { Sun, Moon, Bell, Check, Home, Users, BookOpen, LogOut, Coins, Edit3, BellOff, Trash2, ShieldCheck, Info } from 'lucide-react';
+import { Sun, Moon, Bell, Check, Home, BookOpen, LogOut, Coins, Edit3, BellOff, Trash2, ShieldCheck, Info } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotifications, type Notification } from '../contexts/NotificationContext';
@@ -11,7 +11,7 @@ interface LayoutProps {
   onTabChange: (tab: string) => void;
 }
 
-const notifTypeConfig: Record<Notification['type'], { emoji: string; color: string }> = {
+const notifTypeConfig: Record<Notification['type'] | 'team', { emoji: string; color: string }> = {
   coach: { emoji: '🎓', color: 'bg-indigo-100 dark:bg-indigo-900/40' },
   team: { emoji: '👥', color: 'bg-blue-100 dark:bg-blue-900/40' },
   note: { emoji: '📝', color: 'bg-emerald-100 dark:bg-emerald-900/40' },
@@ -28,10 +28,9 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
   const [showProfileEdit, setShowProfileEdit] = useState(false);
 
   const tabs = [
-    { id: 'team', label: 'チーム', icon: Users },
+    { id: 'menu', label: '練習メニュー', icon: Home },
     { id: 'note', label: 'テニスノート', icon: BookOpen },
     { id: 'coach', label: 'コーチ相談', icon: ShieldCheck },
-    { id: 'menu', label: '練習メニュー', icon: Home },
     ...(isProCoach ? [{ id: 'pro-dashboard', label: 'プロ管理', icon: ShieldCheck }] : []),
     { id: 'about', label: 'Nexus One', icon: Info },
   ];

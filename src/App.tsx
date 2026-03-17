@@ -1,8 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { Layout } from './components/Layout';
 import { MenuHubView } from './views/MenuHubView';
-import { TeamView } from './views/TeamView';
 import { TennisNoteView } from './views/TennisNoteView';
 import { CoachSupportView } from './views/CoachSupportView';
 import { AboutView } from './views/AboutView';
@@ -23,19 +22,7 @@ function AppContent() {
     return !localStorage.getItem('app_onboarding_done');
   });
 
-  // Handle invite link if present
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const inviteCode = params.get('invite');
-    if (inviteCode) {
-      sessionStorage.setItem('softtennis_pending_invite', inviteCode);
-      setActiveTab('team');
-      
-      // Clean up URL
-      const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
-      window.history.replaceState({ path: newUrl }, '', newUrl);
-    }
-  }, []);
+  // Invite link handling removed
 
   if (!isLoggedIn) {
     return <LoginView />;
@@ -45,8 +32,6 @@ function AppContent() {
     switch (activeTab) {
       case 'menu':
         return <MenuHubView />;
-      case 'team':
-        return <TeamView />;
       case 'note':
         return <TennisNoteView />;
       case 'coach':
