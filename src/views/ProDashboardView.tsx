@@ -245,28 +245,24 @@ export const ProDashboardView: React.FC = () => {
 
   const handleDeleteQuestion = async (id: string) => {
     if (!window.confirm('この相談を削除しますか？')) return;
-    // まずRPCを試行
-    const { error: rpcError } = await supabase.rpc('admin_delete_question', { p_question_id: id });
-    if (!rpcError) {
-      setAllQuestions(prev => prev.filter(q => q.id !== id));
-      setReports(prev => prev.filter(r => r.id !== id));
-      alert('相談を削除しました。');
-      return;
-    }
-    console.error('RPC削除エラー:', rpcError);
-    // RPCが未作成の場合はUPDATEでソフトデリート
-    const { error } = await supabase.from('coach_questions').update({ status: 'deleted', question: '[削除済み]', answer: null }).eq('id', id);
+    // UPDATEでソフトデリート（CHECK制約に合う'resolved'を使用）
+    const { error } = await supabase.from('coach_questions').update({
+      status: 'resolved',
+      question: '[管理者により削除]',
+      answer: '[削除済み]',
+      reported: false
+    }).eq('id', id);
     if (!error) {
       setAllQuestions(prev => prev.filter(q => q.id !== id));
       setReports(prev => prev.filter(r => r.id !== id));
       alert('相談を削除しました。');
     } else {
-      console.error('UPDATE削除エラー:', error);
-      alert(`削除に失敗しました\nRPC: ${rpcError.message}\nUPDATE: ${error.message}`);
+      console.error('削除エラー:', error);
+      alert('削除に失敗しました: ' + error.message);
     }
   };
 
-  const filteredQuestions = allQuestions.filter(q => q.status !== 'deleted' && (questionFilter === 'all' || q.status === questionFilter));
+  const filteredQuestions = allQuestions.filter(q => q.question !== '[管理者により削除]' && (questionFilter === 'all' || q.status === questionFilter));
 
   // --- Render Detail View ---
   if (selectedNote) {
