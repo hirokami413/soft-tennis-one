@@ -116,6 +116,21 @@ export function useSupabaseCoach() {
     return true;
   };
   
+  // ランク報酬設定
+  const RANK_CONFIG: Record<string, { multiplier: number; rankUpBonus: number }> = {
+    bronze:   { multiplier: 1.0, rankUpBonus: 0 },
+    silver:   { multiplier: 1.2, rankUpBonus: 5000 },
+    gold:     { multiplier: 1.3, rankUpBonus: 15000 },
+    platinum: { multiplier: 1.5, rankUpBonus: 50000 },
+  };
+  const RANK_UP_CONDITIONS: Record<string, { answers: number; rating: number; next: string | null }> = {
+    bronze:   { answers: 30, rating: 4.0, next: 'silver' },
+    silver:   { answers: 100, rating: 4.3, next: 'gold' },
+    gold:     { answers: 250, rating: 4.6, next: 'platinum' },
+    platinum: { answers: Infinity, rating: 5.0, next: null },
+  };
+  const BASE_REWARD = 700;
+
   const updateQuestionStatus = async (id: string, status: string, rating?: number) => {
      if (!useDB || !user) return;
      const updates: any = { status };
@@ -123,7 +138,7 @@ export function useSupabaseCoach() {
      
      const { error } = await supabase.from('coach_questions').update(updates).eq('id', id);
      if (!error) {
-       // resolved時: コーチにコイン報酬を付与
+       // resolved時: コーチにコイン報酬を付与 + ランクアップ判定
        if (status === 'resolved') {
          const { data: question } = await supabase
            .from('coach_questions')
@@ -132,10 +147,38 @@ export function useSupabaseCoach() {
            .single();
          
          if (question?.answered_by) {
-           // コーチにコイン付与 (基本報酬200コイン)
-           await supabase.rpc('add_coins', { p_user_id: question.answered_by, p_amount: 200 });
+           // コーチのプロフィールを取得
+           const { data: coachProfile } = await supabase
+             .from('profiles')
+             .select('coach_rank, coach_answer_count, coach_avg_rating')
+             .eq('id', question.answered_by)
+             .single();
+           
+           const rank = coachProfile?.coach_rank || 'bronze';
+           const config = RANK_CONFIG[rank] || RANK_CONFIG.bronze;
+           const reward = Math.floor(BASE_REWARD * config.multiplier);
+           
+           // コーチにランクベースのコイン付与
+           await supabase.rpc('add_coins', { p_user_id: question.answered_by, p_amount: reward });
            // コーチの回答数を+1
            await supabase.rpc('increment_coach_answer_count', { p_coach_id: question.answered_by });
+           
+           // ランクアップ判定
+           if (coachProfile) {
+             const newCount = (coachProfile.coach_answer_count || 0) + 1;
+             const avgRating = coachProfile.coach_avg_rating || 0;
+             const condition = RANK_UP_CONDITIONS[rank];
+             
+             if (condition?.next && newCount >= condition.answers && avgRating >= condition.rating) {
+               // ランクアップ！
+               await supabase.rpc('update_coach_rank', { p_coach_id: question.answered_by, p_new_rank: condition.next });
+               // ランクアップボーナス付与
+               const bonus = RANK_CONFIG[condition.next]?.rankUpBonus || 0;
+               if (bonus > 0) {
+                 await supabase.rpc('add_coins', { p_user_id: question.answered_by, p_amount: bonus });
+               }
+             }
+           }
          }
        }
        await loadConsultations();
