@@ -155,20 +155,11 @@ export const TeamView: React.FC = () => {
 
   const { chats: dbChats, events: dbEvents, sendChat, addBoardPost } = useSupabaseTeamFeatures(currentTeam?.id);
 
-  // Guard: if no team exists at all, show a placeholder
-  if (!currentTeam) {
-    return (
-      <div className="flex flex-col items-center justify-center py-20 gap-4">
-        <p className="text-slate-500 text-sm">チームがありません。チームを作成または参加してください。</p>
-      </div>
-    );
-  }
-
   // Derived States from currentTeam and remote DB
-  const members = currentTeam.members || [];
+  const members = currentTeam?.members || [];
   const events = dbEvents as any as PracticeEvent[];
   const chats = dbChats as any as ChatMsg[];
-  const groups = currentTeam.groups || [];
+  const groups = currentTeam?.groups || [];
   // Derived state boardPosts removed as it's unused
 
   const teamMembersMap = members.reduce((acc, m) => {
@@ -750,8 +741,10 @@ export const TeamView: React.FC = () => {
         </button>
       </div>
 
-      {/* Role Selector (Demo Utility) */}
-      <div className="bg-slate-100 p-2 rounded-xl flex items-center justify-between gap-2">
+      {currentTeam ? (
+        <>
+          {/* Role Selector (Demo Utility) */}
+          <div className="bg-slate-100 p-2 rounded-xl flex items-center justify-between gap-2">
         <span className="text-[10px] font-bold text-slate-500 ml-2 uppercase">Role Demo:</span>
         <div className="flex gap-1">
           {(['admin', 'captain', 'member', 'parent'] as const).map(r => (
@@ -1710,7 +1703,26 @@ export const TeamView: React.FC = () => {
           </div>
         </div>
       )}
-
+        </>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-10 gap-4 flex-1 m-auto bg-slate-50/50 rounded-[2rem] border-2 border-dashed border-slate-200 mt-4 w-full h-full min-h-[50vh]">
+          <div className="w-20 h-20 bg-white rounded-3xl shadow-sm flex items-center justify-center text-brand-blue mb-2 rotate-3">
+            <Users size={36} />
+          </div>
+          <h2 className="text-xl font-black text-slate-800">チームに参加・作成しよう</h2>
+          <p className="text-slate-500 text-sm font-bold text-center max-w-sm px-4">
+            現在所属しているチームがありません。<br/>指導者から共有された招待コードで参加するか、新しいチームを作成してください。
+          </p>
+          <div className="flex flex-wrap items-center justify-center gap-4 mt-4">
+            <button onClick={() => setIsJoinTeamMode(true)} className="px-6 py-3.5 bg-white text-brand-blue border-2 border-brand-blue rounded-xl font-bold hover:bg-blue-50 transition-colors flex items-center gap-2 shadow-sm">
+              <Plus size={18} className="translate-y-[1px]" /> 既存チームに参加
+            </button>
+            <button onClick={() => setIsCreateTeamMode(true)} className="px-6 py-3.5 bg-gradient-to-br from-brand-blue to-blue-600 text-white rounded-xl font-bold hover:from-brand-blue-hover hover:to-blue-700 transition-colors shadow-md flex items-center gap-2">
+              <Users size={18} /> 新規チーム作成
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* ─── MODAL: Join Team ─── */}
       {isJoinTeamMode && (
