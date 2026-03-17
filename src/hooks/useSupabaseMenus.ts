@@ -42,6 +42,7 @@ export function useSupabaseMenus() {
           instagramUrl: row.instagram_url,
           author: row.author_nickname,
           authorAvatar: row.author_avatar,
+          authorId: row.author_id,
           createdAt: new Date(row.created_at).toISOString().split('T')[0],
           favoritesCount: row.favorites_count || 0,
         }));
@@ -96,11 +97,66 @@ export function useSupabaseMenus() {
     }
   };
 
+  // メニューを更新する関数
+  const updateMenu = async (id: string, menuData: Partial<MenuData>) => {
+    if (!user || !user.id || !isSupabaseConfigured()) {
+      throw new Error('ログインが必要です');
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('menus')
+        .update({
+          title: menuData.title,
+          category: menuData.category,
+          level: menuData.level,
+          description: menuData.description,
+          tags: menuData.tags,
+          youtube_url: menuData.youtubeUrl,
+          instagram_url: menuData.instagramUrl,
+        })
+        .eq('id', id)
+        .eq('author_id', user.id) // セキュリティのため念押し
+        .select()
+        .single();
+
+      if (error) throw error;
+      await fetchMenus();
+      return data;
+    } catch (err) {
+      console.error('Error updating menu:', err);
+      throw err;
+    }
+  };
+
+  // メニューを削除する関数
+  const deleteMenu = async (id: string) => {
+    if (!user || !user.id || !isSupabaseConfigured()) {
+      throw new Error('ログインが必要です');
+    }
+
+    try {
+      const { error } = await supabase
+        .from('menus')
+        .delete()
+        .eq('id', id)
+        .eq('author_id', user.id); // セキュリティのため念押し
+
+      if (error) throw error;
+      await fetchMenus();
+    } catch (err) {
+      console.error('Error deleting menu:', err);
+      throw err;
+    }
+  };
+
   return {
     menus,
     isLoading,
     error,
     fetchMenus,
     submitMenu,
+    updateMenu,
+    deleteMenu,
   };
 }

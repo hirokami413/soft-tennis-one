@@ -1,7 +1,10 @@
 import React, { useState } from 'react';
-import { X, Clock, Users, Star, MessageCircle, AlertCircle, Camera, Check, Youtube } from 'lucide-react';
+import { X, Clock, Users, Star, MessageCircle, AlertCircle, Camera, Check, Youtube, Edit2, Trash2 } from 'lucide-react';
 import { type MenuData } from '../data/dummyData';
 import { Rating } from './Rating';
+import { useAuth } from '../contexts/AuthContext';
+import { useSupabaseMenus } from '../hooks/useSupabaseMenus';
+import { EditMenuModal } from './EditMenuModal';
 
 interface MenuDetailModalProps {
   menu: MenuData;
@@ -21,8 +24,40 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
   const [showReportForm, setShowReportForm] = useState(false);
   const [reportText, setReportText] = useState("");
   const [reportRating, setReportRating] = useState(0);
+  
+  const { user } = useAuth();
+  const { deleteMenu } = useSupabaseMenus();
+  const [isEditing, setIsEditing] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const isAuthor = user?.id === menu.authorId;
 
   if (!isOpen) return null;
+
+  if (isEditing) {
+    return (
+      <EditMenuModal 
+        menu={menu} 
+        onClose={() => {
+          setIsEditing(false);
+          onClose();
+        }} 
+      />
+    );
+  }
+
+  const handleDelete = async () => {
+    if (!window.confirm("本当にこのメニューを削除しますか？\n（この操作は取り消せません）")) return;
+    try {
+      setIsDeleting(true);
+      await deleteMenu(menu.id);
+      onClose();
+    } catch (err) {
+      console.error(err);
+      alert('削除に失敗しました。');
+      setIsDeleting(false);
+    }
+  };
 
   const handleSubmitReport = () => {
     alert("「やってみた！」レポートを投稿しました！（※モック動作）");
@@ -82,6 +117,25 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
                   </div>
                 )}
               </div>
+              
+              {isAuthor && (
+                <div className="flex gap-2 mb-3">
+                  <button 
+                    onClick={() => setIsEditing(true)}
+                    className="flex-1 py-2 bg-slate-100 text-slate-700 text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-slate-200"
+                  >
+                    <Edit2 size={14} /> 編集する
+                  </button>
+                  <button 
+                    onClick={handleDelete}
+                    disabled={isDeleting}
+                    className="flex-1 py-2 bg-red-50 text-red-600 text-sm font-bold rounded-xl flex items-center justify-center gap-1.5 hover:bg-red-100 disabled:opacity-50"
+                  >
+                    {isDeleting ? <span className="animate-spin text-red-600">...</span> : <><Trash2 size={14} /> 削除する</>}
+                  </button>
+                </div>
+              )}
+
               <h2 className="text-2xl font-bold text-slate-900 leading-tight mb-3">
                 {menu.title}
               </h2>

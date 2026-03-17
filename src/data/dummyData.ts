@@ -14,6 +14,7 @@ export interface MenuData {
   imageUrl?: string;
   author?: string;
   authorAvatar?: string;
+  authorId?: string;
   favoritesCount?: number;
   createdAt: string; // "YYYY-MM-DD"形式
   tags?: string[];
