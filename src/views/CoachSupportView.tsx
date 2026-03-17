@@ -502,10 +502,11 @@ export const CoachSupportView: React.FC = () => {
                   )}
 
                   {/* Answer */}
-                  {(c.status === 'answered' || c.status === 'resolved') && c.coach && c.answer && (
+                  {(c.status === 'answered' || c.status === 'resolved') && c.answer && (
                     <div className="p-4 space-y-4">
                       
                       {/* Coach Profile */}
+                      {c.coach ? (
                       <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl">
                         <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white font-black text-sm shrink-0">
                           {c.coach.avatar}
@@ -539,6 +540,17 @@ export const CoachSupportView: React.FC = () => {
                           <span className="text-[10px] text-slate-400">{c.coach.answerCount}回答</span>
                         </div>
                       </div>
+                      ) : (
+                      <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl">
+                        <div className="w-10 h-10 bg-brand-blue rounded-full flex items-center justify-center text-white font-black text-sm shrink-0">
+                          🎾
+                        </div>
+                        <div>
+                          <span className="font-bold text-sm text-slate-800">コーチからの回答</span>
+                          <p className="text-[10px] text-slate-400">{c.answeredAt ? new Date(c.answeredAt).toLocaleDateString('ja-JP') : ''}</p>
+                        </div>
+                      </div>
+                      )}
 
                       {/* Answer Content */}
                       <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-xl">
