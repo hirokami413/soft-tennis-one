@@ -126,7 +126,7 @@ export const TeamView: React.FC = () => {
   };
   
   const { user } = useAuth();
-  const { teams: dbTeams } = useSupabaseTeams();
+  const { teams: dbTeams, joinTeam } = useSupabaseTeams();
 
   // Teams State - Initialize empty, then sync with DB
   const [teams, setTeams] = useState<Team[]>([]);
@@ -382,24 +382,33 @@ export const TeamView: React.FC = () => {
     setSelectedGroupMembers([]);
   };
 
-  const handleJoinTeam = () => {
+  const handleJoinTeam = async () => {
     if (!joinCodeInput.trim()) return;
-    // デモ用: どのようなコードでもモックチームを生成して参加状態にする
-    const newTeam: Team = {
-      id: `t-${Date.now()}`,
-      name: `参加チーム (${joinCodeInput})`,
-      inviteCode: joinCodeInput,
-      members: [{ name: '自分（加入者）', role: 'member', avatar: '自', message: 'よろしくお願いします。' }],
-      events: [],
-      chats: [],
-      groups: [],
-      boardPosts: []
-    };
-    setTeams(prev => [...prev, newTeam]);
-    setCurrentTeamId(newTeam.id);
-    setIsJoinTeamMode(false);
-    setJoinCodeInput('');
-    showToast('チームに参加しました！');
+    
+    // DBへの参加処理
+    const joinedTeam = await joinTeam(joinCodeInput.trim());
+    
+    if (joinedTeam) {
+      // ローカルのUI即時反映用モックデータ
+      const newTeam: Team = {
+        id: joinedTeam.id,
+        name: joinedTeam.name,
+        inviteCode: joinedTeam.code,
+        members: [{ name: user?.nickname || '自分', role: 'member', avatar: user?.avatarEmoji || '👤' }],
+        events: [],
+        chats: [],
+        groups: [],
+        boardPosts: []
+      };
+      
+      setTeams(prev => prev.some(t => t.id === newTeam.id) ? prev : [...prev, newTeam]);
+      setCurrentTeamId(newTeam.id);
+      setIsJoinTeamMode(false);
+      setJoinCodeInput('');
+      showToast('チームに参加しました！');
+    } else {
+      showToast('無効な招待コードです。コードを確認してください。');
+    }
   };
 
   const handleAddComment = (evId: string) => {
