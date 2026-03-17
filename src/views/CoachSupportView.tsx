@@ -198,8 +198,9 @@ export const CoachSupportView: React.FC = () => {
 
   // Filtered list for display
   const displayConsultations = consultations.filter(c => {
-    // 自分の質問はwaitingでも表示（回答待ちとして）
-    // 他人のwaitingはコーチタブで表示するのでここでは除外
+    // 他人のwaitingはコーチ回答タブで扱うのでここでは除外
+    // 自分のwaitingは「回答待ち」として表示
+    // answered / resolved は全員分表示（Q&A一覧として）
     if (c.status === 'waiting' && !c.isMine) return false;
     if (searchQuery.trim()) {
       return c.question.toLowerCase().includes(searchQuery.toLowerCase());
