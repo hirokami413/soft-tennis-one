@@ -108,6 +108,14 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         if (session) {
           const profile = await sessionToProfile(session);
           setUser(profile);
+        } else {
+          setUser(prev => {
+            if (prev && !prev.id.startsWith('user_')) {
+              // Supabase user but no valid session -> logout
+              return null;
+            }
+            return prev;
+          });
         }
       } catch (err) {
         console.warn('Supabase session check failed, using localStorage fallback:', err);

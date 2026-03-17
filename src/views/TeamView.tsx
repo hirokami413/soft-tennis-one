@@ -10,6 +10,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSupabaseTeams } from '../hooks/useSupabaseTeams';
 import { useSupabaseTeamFeatures } from '../hooks/useSupabaseTeamFeatures';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 // ── Types ──
 type Role = 'admin' | 'captain' | 'member' | 'parent';
@@ -126,31 +127,34 @@ export const TeamView: React.FC = () => {
   };
   
   const { user } = useAuth();
-  const { teams: dbTeams, joinTeam } = useSupabaseTeams();
+  const { teams: dbTeams, joinTeam, createTeam, isSupabase } = useSupabaseTeams();
 
   // Teams State - Initialize empty, then sync with DB
+  const [localTeams, setLocalTeams] = useLocalStorage<Team[]>('softtennis_guest_teams', []);
   const [teams, setTeams] = useState<Team[]>([]);
+  
   useEffect(() => {
-    if (dbTeams && dbTeams.length > 0) {
-      setTeams(dbTeams.map(t => ({
-        id: t.id,
-        name: t.name,
-        inviteCode: t.code,
-        members: [{ name: user?.nickname || '私', role: 'admin', avatar: user?.avatarEmoji || '👤' }], // TODO: Sync actual members
-        events: [],
-        chats: [],
-        groups: [],
-        boardPosts: []
-      })));
+    if (isSupabase) {
+      if (dbTeams && dbTeams.length > 0) {
+        setTeams(dbTeams.map(t => ({
+          id: t.id,
+          name: t.name,
+          inviteCode: t.code,
+          members: [{ name: user?.nickname || '私', role: 'admin', avatar: user?.avatarEmoji || '👤' }], // TODO: Sync actual members
+          events: [],
+          chats: [],
+          groups: [],
+          boardPosts: []
+        })));
+      } else {
+        setTeams([]);
+      }
     } else {
-      setTeams([]);
+      setTeams(localTeams);
     }
-  }, [dbTeams, user]);
+  }, [dbTeams, user, isSupabase, localTeams]);
 
-  const [currentTeamId, setCurrentTeamId] = useState<string>(() => {
-    const saved = localStorage.getItem('softtennis_active_team_id');
-    return saved || 't-1';
-  });
+  const [currentTeamId, setCurrentTeamId] = useLocalStorage<string>('softtennis_active_team_id', 't-1');
 
   const currentTeam = teams.find(t => t.id === currentTeamId) || teams[0];
 
@@ -1814,16 +1818,31 @@ export const TeamView: React.FC = () => {
                 <input type="text" value={newTeamName} onChange={e => setNewTeamName(e.target.value)} placeholder="例: ○○中学校ソフトテニス部"
                   className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-brand-blue/20" />
               </div>
-              <button onClick={() => {
+              <button onClick={async () => {
                 if (!newTeamName.trim()) return;
-                const newId = `team-${Date.now()}`;
                 const myN = myRole === 'admin' ? '上見 宏彰' : '鈴木 太郎';
                 const myAv = myRole === 'admin' ? 'N' : '鈴';
-                setTeams(prev => [...prev, { id: newId, name: newTeamName.trim(), inviteCode: `NX-${Math.random().toString(36).substring(2, 6).toUpperCase()}`, members: [{ name: myN, role: 'admin', avatar: myAv }], events: [], chats: [], groups: [], boardPosts: [] }]);
-                setCurrentTeamId(newId);
-                setNewTeamName('');
-                setIsCreateTeamMode(false);
-                showToast(`チーム「${newTeamName.trim()}」を作成しました！`);
+
+                if (isSupabase) {
+                  const code = `NX-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+                  const created = await createTeam(newTeamName.trim(), code);
+                  if (created) {
+                    setCurrentTeamId(created.id);
+                    setNewTeamName('');
+                    setIsCreateTeamMode(false);
+                    showToast(`チーム「${newTeamName.trim()}」を作成しました！`);
+                  } else {
+                    showToast('チーム作成に失敗しました');
+                  }
+                } else {
+                  const newId = `team-${Date.now()}`;
+                  const newLocalTeam = { id: newId, name: newTeamName.trim(), inviteCode: `NX-${Math.random().toString(36).substring(2, 6).toUpperCase()}`, members: [{ name: myN, role: 'admin' as Role, avatar: myAv }], events: [], chats: [], groups: [], boardPosts: [] };
+                  setLocalTeams(prev => [...prev, newLocalTeam]);
+                  setCurrentTeamId(newId);
+                  setNewTeamName('');
+                  setIsCreateTeamMode(false);
+                  showToast(`チーム「${newTeamName.trim()}」を作成しました！`);
+                }
               }}
                 disabled={!newTeamName.trim()}
                 className="w-full bg-brand-blue text-white rounded-xl py-3.5 font-bold hover:bg-brand-blue-hover shadow-lg shadow-blue-100 active:scale-95 transition-all disabled:opacity-50">
