@@ -244,8 +244,8 @@ export const ProDashboardView: React.FC = () => {
   };
 
   const handleDeleteQuestion = async (id: string) => {
-    if (!window.confirm('この相談を完全に削除しますか？この操作は取り消せません。')) return;
-    const { error } = await supabase.from('coach_questions').delete().eq('id', id);
+    if (!window.confirm('この相談を削除しますか？')) return;
+    const { error } = await supabase.from('coach_questions').update({ status: 'deleted', question: '[削除済み]', answer: null }).eq('id', id);
     if (!error) {
       setAllQuestions(prev => prev.filter(q => q.id !== id));
       setReports(prev => prev.filter(r => r.id !== id));
@@ -256,7 +256,7 @@ export const ProDashboardView: React.FC = () => {
     }
   };
 
-  const filteredQuestions = allQuestions.filter(q => questionFilter === 'all' || q.status === questionFilter);
+  const filteredQuestions = allQuestions.filter(q => q.status !== 'deleted' && (questionFilter === 'all' || q.status === questionFilter));
 
   // --- Render Detail View ---
   if (selectedNote) {
