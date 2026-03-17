@@ -21,7 +21,7 @@ export interface CoachConsultation {
 export function useSupabaseCoach() {
   const { user, isLoading: authLoading } = useAuth();
   const [consultations, setConsultations] = useState<CoachConsultation[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
   const useDB = isSupabaseConfigured();
 
   const loadConsultations = useCallback(async () => {
