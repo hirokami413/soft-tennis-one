@@ -11,7 +11,16 @@ if (!supabaseUrl || !supabaseAnonKey) {
 
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
-  supabaseAnonKey || 'placeholder-key'
+  supabaseAnonKey || 'placeholder-key',
+  {
+    auth: {
+      // Navigator.locks APIのロック競合を回避
+      lock: async (_name: string, _opts: any, fn: () => Promise<any>) => {
+        return await fn();
+      },
+      flowType: 'implicit',
+    },
+  }
 );
 
 export const isSupabaseConfigured = () => {
