@@ -44,20 +44,21 @@ async function sessionToProfile(session: Session): Promise<UserProfile> {
     .single();
 
   if (profile) {
+    const p = profile as Record<string, any>;
     return {
-      id: profile.id,
-      nickname: profile.nickname,
-      avatarEmoji: profile.avatar_emoji,
+      id: p.id,
+      nickname: p.nickname,
+      avatarEmoji: p.avatar_emoji,
       provider,
-      createdAt: profile.created_at,
-      coins: profile.coins,
+      createdAt: p.created_at,
+      coins: p.coins,
     };
   }
 
   // フォールバック: profilesレコードがまだなければ作成
   const nickname = authUser.user_metadata?.name || authUser.email || 'ユーザー';
-  const { data: newProfile } = await supabase
-    .from('profiles')
+  const { data: newProfile } = await (supabase
+    .from('profiles') as any)
     .upsert({
       id: authUser.id,
       nickname,
@@ -67,13 +68,14 @@ async function sessionToProfile(session: Session): Promise<UserProfile> {
     .select()
     .single();
 
+  const np = newProfile as Record<string, any> | null;
   return {
     id: authUser.id,
-    nickname: newProfile?.nickname || nickname,
-    avatarEmoji: newProfile?.avatar_emoji || '🎾',
+    nickname: np?.nickname || nickname,
+    avatarEmoji: np?.avatar_emoji || '🎾',
     provider,
-    createdAt: newProfile?.created_at || new Date().toISOString(),
-    coins: newProfile?.coins || 20,
+    createdAt: np?.created_at || new Date().toISOString(),
+    coins: np?.coins || 20,
   };
 }
 
@@ -174,7 +176,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (updates.nickname) dbUpdates.nickname = updates.nickname;
       if (updates.avatarEmoji) dbUpdates.avatar_emoji = updates.avatarEmoji;
       if (Object.keys(dbUpdates).length > 0) {
-        supabase.from('profiles').update(dbUpdates).eq('id', user.id).then();
+        (supabase.from('profiles') as any).update(dbUpdates).eq('id', user.id).then();
       }
     }
   };
@@ -185,7 +187,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
     // Supabase DBにも反映（RPC経由で安全に加算）
     if (user) {
-      supabase.rpc('add_coins', { p_user_id: user.id, p_amount: amount }).then();
+      (supabase.rpc('add_coins', { p_user_id: user.id, p_amount: amount }) as any).then();
     }
   };
 

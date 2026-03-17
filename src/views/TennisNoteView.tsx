@@ -70,7 +70,7 @@ export const TennisNoteView: React.FC = () => {
   const { canUseTennisNoteBase, canAskCoachInNote } = useSubscription();
   const { addCoins } = useAuth();
   const { addNotification } = useNotifications();
-  const { notes, setNotes, addNote, publishNote } = useSupabaseNotes();
+  const { notes, addNote, publishNote } = useSupabaseNotes();
   const { goals, setGoals, addGoal: addGoalToDb, deleteGoal: deleteGoalFromDb } = useSupabaseGoals();
   const [expandedNote, setExpandedNote] = useState<string | null>('n-1');
   const [showForm, setShowForm] = useState(false);
@@ -125,17 +125,16 @@ export const TennisNoteView: React.FC = () => {
     if (hasVideo) setMonthlyVideoUsed(prev => prev + 1);
   };
 
-  const handleAddNote = () => {
+  const handleAddNote = async () => {
     if (!newKeep && !newProblem && !newTry) return;
-    setNotes(prev => [{
-      id: `n-${Date.now()}`,
+    await addNote({
       date: selectedDate,
       keep: newKeep, problem: newProblem, tryItem: newTry,
       coachQuestion: newCoachQuestion, other: newOther,
       skills: [...newSkills],
       media: newMedia.length > 0 ? [...newMedia] : undefined,
       published: false,
-    }, ...prev]);
+    });
     setNewKeep(''); setNewProblem(''); setNewTry('');
     setNewCoachQuestion(''); setNewOther('');
     setNewSkills([3,3,3,3,3,3]);
@@ -146,17 +145,17 @@ export const TennisNoteView: React.FC = () => {
   const todayStr = fmtDate(todayDate);
   const alreadyPublishedToday = notes.some(n => n.published && n.date === todayStr);
 
-  const handlePublishNote = (noteId: string) => {
+  const handlePublishNote = async (noteId: string) => {
     const note = notes.find(n => n.id === noteId);
     if (!note || note.date !== todayStr || alreadyPublishedToday) return;
-    setNotes(prev => prev.map(n => n.id === noteId ? { ...n, published: true } : n));
+    await publishNote(noteId);
     addCoins(20);
     addNotification({ type: 'system', title: '公開完了', message: 'ノートを公開して 20コイン 獲得しました！' });
   };
 
-  const handleAddGoal = () => {
+  const handleAddGoal = async () => {
     if (!newGoalText.trim()) return;
-    setGoals(prev => [...prev, { id: `g-${Date.now()}`, text: newGoalText, type: newGoalType, done: false, progress: 0 }]);
+    await addGoalToDb(newGoalText, newGoalType);
     setNewGoalText('');
     setShowGoalForm(false);
   };
@@ -180,7 +179,7 @@ export const TennisNoteView: React.FC = () => {
           g.type === 'short' ? 'bg-blue-50 text-brand-blue' : 'bg-purple-50 text-purple-600'
         }`}>{g.type === 'short' ? '短期' : '中期'}</span>
         <button
-          onClick={() => setGoals(prev => prev.filter(x => x.id !== g.id))}
+          onClick={() => deleteGoalFromDb(g.id)}
           className="text-slate-300 hover:text-red-500 transition-colors shrink-0"
           title="削除"
         >

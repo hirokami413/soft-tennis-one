@@ -1,5 +1,5 @@
 import React, { useState, type ReactNode } from 'react';
-import { Sun, Moon, Bell, Menu as MenuIcon, X, Check, Home, Users, BookOpen, LogOut, FileText, CheckCircle, Target, UserPlus, Clock, Heart, Award, Coins, Edit3, BellOff, Trash2, ShieldCheck, Info } from 'lucide-react';
+import { Sun, Moon, Bell, Check, Home, Users, BookOpen, LogOut, Coins, Edit3, BellOff, Trash2, ShieldCheck, Info } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { useNotifications, type Notification } from '../contexts/NotificationContext';

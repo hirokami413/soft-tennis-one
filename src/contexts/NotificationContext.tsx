@@ -116,7 +116,7 @@ export const NotificationProvider: React.FC<{ children: ReactNode }> = ({ childr
     }
   }, [useDB, user]);
 
-  const toggleNotifications = () => setNotificationsEnabled(prev => !prev);
+  const toggleNotifications = () => setNotificationsEnabled((prev: boolean) => !prev);
 
   return (
     <NotificationContext.Provider value={{
