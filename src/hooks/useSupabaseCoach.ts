@@ -25,10 +25,20 @@ export function useSupabaseCoach() {
   const useDB = isSupabaseConfigured();
 
   const loadConsultations = useCallback(async () => {
-    if (!useDB || !user) {
+    if (!useDB) {
       setLoading(false);
       return;
     }
+    
+    // セッションから直接ユーザーIDを取得（外部stateに依存しない）
+    const { data: { session } } = await supabase.auth.getSession();
+    const currentUserId = session?.user?.id || user?.id;
+    
+    if (!currentUserId) {
+      setLoading(false);
+      return;
+    }
+    
     setLoading(true);
 
     const { data, error } = await supabase
@@ -54,7 +64,7 @@ export function useSupabaseCoach() {
         userRating: row.user_rating,
         questionType: row.question_type,
         category: row.category,
-        isMine: row.user_id === user.id,
+        isMine: row.user_id === currentUserId,
         userNickname: row.profiles?.nickname,
         userAvatar: row.profiles?.avatar_emoji,
         coach: row.coach ? {
@@ -63,7 +73,7 @@ export function useSupabaseCoach() {
           rank: row.coach.coach_rank,
           answerCount: row.coach.coach_answer_count,
           rating: row.coach.coach_avg_rating,
-          specialty: ['全般'] // Currently not stored in DB, fallback
+          specialty: ['全般']
         } : undefined
       }));
       setConsultations(parsed);
@@ -72,7 +82,7 @@ export function useSupabaseCoach() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [useDB, user?.id]);
 
-  // セッション初期化完了後にデータを取得（authLoading=falseを待つ）
+  // セッション初期化完了後にデータを取得
   useEffect(() => {
     if (!authLoading && user?.id) {
       loadConsultations();
@@ -83,11 +93,10 @@ export function useSupabaseCoach() {
   useEffect(() => {
     if (!useDB) return;
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        // セッション確立後に少し待ってからデータ取得（内部伝播を待つ）
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION') {
         setTimeout(() => {
           loadConsultations();
-        }, 100);
+        }, 300);
       }
     });
     return () => subscription.unsubscribe();
