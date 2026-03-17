@@ -66,11 +66,14 @@ export function useSupabaseCoach() {
       setConsultations(parsed);
     }
     setLoading(false);
-  }, [useDB, user]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [useDB, user?.id]);
 
   useEffect(() => {
-    loadConsultations();
-  }, [loadConsultations]);
+    if (user?.id) {
+      loadConsultations();
+    }
+  }, [loadConsultations, user?.id]);
 
   const applyCoachApplication = async (fullName: string, nickname: string, extra?: { yearsExperience?: string; certification?: string; selfIntro?: string }) => {
      if (!useDB || !user) return { error: 'Not configured' };
