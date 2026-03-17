@@ -277,11 +277,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   // ── コイン加算 ──
   const addCoins = async (amount: number) => {
+    // 楽観的にローカル更新
     setUser(prev => prev ? { ...prev, coins: (prev.coins || 0) + amount } : null);
 
-    // Supabase DBにも反映（RPC経由で安全に加算）
+    // Supabase DBに反映し、戻り値（新しいコイン数）で上書き
     if (user) {
-      (supabase.rpc('add_coins', { p_user_id: user.id, p_amount: amount }) as any).then();
+      const { data: newCoins, error } = await supabase.rpc('add_coins', { p_user_id: user.id, p_amount: amount });
+      if (!error && typeof newCoins === 'number') {
+        setUser(prev => prev ? { ...prev, coins: newCoins } : null);
+      } else if (error) {
+        console.error('コイン加算エラー:', error);
+      }
     }
   };
 
@@ -309,6 +315,18 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       console.error('プロフィール再取得失敗:', e);
     }
   };
+
+  // ── タブ復帰時にDBからプロフィールを再取得（デバイス間同期）──
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible' && user) {
+        refreshProfile();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   return (
     <AuthContext.Provider value={{ user, isLoggedIn: !!user, isLoading, login, loginWithOAuth, logout, updateProfile, addCoins, refreshProfile }}>
