@@ -447,7 +447,7 @@ export const CoachSupportView: React.FC = () => {
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${status.cls}`}>
                           {status.label}
                         </span>
-                        <span className="text-[10px] text-slate-400">{c.createdAt}</span>
+                        <span className="text-[10px] text-slate-400">{c.createdAt ? new Date(c.createdAt).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric' }) : ''}</span>
                         {c.category && (
                           <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-indigo-50 text-indigo-600 border border-indigo-100">
                             {{
@@ -540,7 +540,7 @@ export const CoachSupportView: React.FC = () => {
                         </div>
                         <div>
                           <span className="font-bold text-sm text-slate-800">コーチの回答</span>
-                          <p className="text-[10px] text-slate-400">{c.answeredAt ? new Date(c.answeredAt).toLocaleDateString('ja-JP') : ''}</p>
+                          <p className="text-[10px] text-slate-400">{c.answeredAt ? new Date(c.answeredAt).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</p>
                         </div>
                       </div>
                       )}
