@@ -3,7 +3,7 @@ import {
   ShieldCheck, CheckCircle2, 
   ChevronRight, ArrowLeft, Send, Video, Clock, 
   TrendingUp, MessageCircle, Crown, UserPlus, XCircle,
-  Flag, AlertTriangle, Trash2, Ban
+  Flag, AlertTriangle, Trash2, Ban, MessageSquare
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
@@ -71,13 +71,15 @@ export const ProDashboardView: React.FC = () => {
     try { return JSON.parse(localStorage.getItem('pro_dashboard_reviewed') || '[]'); } catch { return []; }
   });
   
-  const [activeTab, setActiveTab] = useState<'pending' | 'reviewed' | 'applications' | 'reports'>('pending');
+  const [activeTab, setActiveTab] = useState<'pending' | 'reviewed' | 'applications' | 'reports' | 'questions'>('pending');
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [adviceText, setAdviceText] = useState('');
   
   const [applications, setApplications] = useState<any[]>([]);
   const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
   const [reports, setReports] = useState<any[]>([]);
+  const [allQuestions, setAllQuestions] = useState<any[]>([]);
+  const [questionFilter, setQuestionFilter] = useState<'all' | 'waiting' | 'answered' | 'resolved'>('all');
   const isAdmin = user?.systemRole === 'admin';
 
   // Fetch Public Notes
@@ -144,6 +146,23 @@ export const ProDashboardView: React.FC = () => {
       if (data && !error) setReports(data);
     };
     fetchReports();
+  }, [isAdmin]);
+
+  // Fetch All Questions (admin only)
+  React.useEffect(() => {
+    if (!isSupabaseConfigured() || !isAdmin) return;
+    const fetchAllQuestions = async () => {
+      const { data, error } = await supabase
+        .from('coach_questions')
+        .select(`
+          *,
+          questioner:user_id(nickname, avatar_emoji),
+          answerer:answered_by(nickname)
+        `)
+        .order('created_at', { ascending: false });
+      if (data && !error) setAllQuestions(data);
+    };
+    fetchAllQuestions();
   }, [isAdmin]);
 
   // Derived
@@ -223,6 +242,18 @@ export const ProDashboardView: React.FC = () => {
     if (!error) alert('ユーザーをBANしました。');
     else alert('エラー: ' + error.message);
   };
+
+  const handleDeleteQuestion = async (id: string) => {
+    if (!window.confirm('この相談を完全に削除しますか？この操作は取り消せません。')) return;
+    const { error } = await supabase.rpc('admin_delete_question', { p_question_id: id });
+    if (!error) {
+      setAllQuestions(prev => prev.filter(q => q.id !== id));
+      setReports(prev => prev.filter(r => r.id !== id));
+      alert('相談を削除しました。');
+    } else alert('エラー: ' + error.message);
+  };
+
+  const filteredQuestions = allQuestions.filter(q => questionFilter === 'all' || q.status === questionFilter);
 
   // --- Render Detail View ---
   if (selectedNote) {
@@ -396,11 +427,85 @@ export const ProDashboardView: React.FC = () => {
             報告 {reports.length > 0 && <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{reports.length}</span>}
           </button>
         )}
+        {isAdmin && (
+          <button 
+            onClick={() => setActiveTab('questions')}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all ${
+              activeTab === 'questions' ? 'bg-slate-800 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'
+            }`}
+          >
+            <MessageSquare size={16} />
+            相談 <span className="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full">{allQuestions.length}</span>
+          </button>
+        )}
       </div>
 
       {/* List */}
       <div className="space-y-3">
-        {activeTab === 'applications' ? (
+        {activeTab === 'questions' ? (
+          <>
+            {/* Status Filter */}
+            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+              {([['all', '全て'], ['waiting', '回答待ち'], ['answered', '回答済'], ['resolved', '解決済']] as const).map(([value, label]) => (
+                <button
+                  key={value}
+                  onClick={() => setQuestionFilter(value)}
+                  className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    questionFilter === value ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {filteredQuestions.length === 0 ? (
+              <div className="bg-slate-50 border border-slate-100 rounded-3xl p-10 flex flex-col items-center justify-center text-center">
+                <CheckCircle2 size={40} className="text-slate-300 mb-3" />
+                <p className="font-bold text-slate-600">該当する相談はありません</p>
+              </div>
+            ) : (
+              filteredQuestions.map(q => {
+                const statusMap: Record<string, { label: string; cls: string }> = {
+                  waiting: { label: '回答待ち', cls: 'bg-amber-100 text-amber-700' },
+                  answered: { label: '回答済', cls: 'bg-blue-100 text-blue-700' },
+                  resolved: { label: '解決済', cls: 'bg-green-100 text-green-700' },
+                  reask: { label: '再質問', cls: 'bg-purple-100 text-purple-700' },
+                };
+                const st = statusMap[q.status] || { label: q.status, cls: 'bg-slate-100 text-slate-600' };
+                return (
+                  <div key={q.id} className="bg-white rounded-2xl shadow-sm border border-slate-100 p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">{q.questioner?.avatar_emoji || '🏐'}</span>
+                        <div>
+                          <p className="text-sm font-bold text-slate-800">{q.questioner?.nickname || '匿名'}</p>
+                          <p className="text-[10px] text-slate-400">{new Date(q.created_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${st.cls}`}>{st.label}</span>
+                        {q.reported && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600">⚠報告あり</span>}
+                      </div>
+                    </div>
+                    <p className="text-sm text-slate-700">{q.question}</p>
+                    {q.answer && (
+                      <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl">
+                        <p className="text-[10px] text-blue-500 font-bold mb-1">💬 回答（{q.answerer?.nickname || '不明'}）</p>
+                        <p className="text-sm text-slate-700 whitespace-pre-wrap line-clamp-3">{q.answer}</p>
+                      </div>
+                    )}
+                    <button
+                      onClick={() => handleDeleteQuestion(q.id)}
+                      className="w-full py-2 bg-red-50 text-red-600 rounded-xl text-xs font-bold hover:bg-red-100 transition-colors flex items-center justify-center gap-1"
+                    >
+                      <Trash2 size={14} /> この相談を削除
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </>
+        ) : activeTab === 'applications' ? (
           applications.length === 0 ? (
             <div className="bg-slate-50 border border-slate-100 rounded-3xl p-10 flex flex-col items-center justify-center text-center">
               <CheckCircle2 size={40} className="text-slate-300 mb-3" />
