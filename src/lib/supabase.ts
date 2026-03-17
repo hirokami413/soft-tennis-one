@@ -14,11 +14,13 @@ export const supabase = createClient(
   supabaseAnonKey || 'placeholder-key',
   {
     auth: {
-      // Navigator.locks APIのロック競合を回避
-      lock: async (_name: string, _opts: any, fn: () => Promise<any>) => {
+      // Navigator.locks APIのロック競合を回避（no-op lock）
+      lock: async (_name: string, _acquireTimeout: number, fn: () => Promise<any>) => {
         return await fn();
       },
-      flowType: 'implicit',
+      storageKey: 'soft-tennis-one-auth',
+      detectSessionInUrl: true,
+      persistSession: true,
     },
   }
 );
