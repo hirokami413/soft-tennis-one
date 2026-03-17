@@ -115,7 +115,7 @@ const fmtDate = (d: Date) => d.toISOString().split('T')[0];
 
 // ── Component ──
 export const TeamView: React.FC = () => {
-  const [myRole, setMyRole] = useState<Role>('admin');
+  const [myRole] = useState<Role>('admin');
   const [subTab, setSubTab] = useState<'team' | 'board' | 'calendar' | 'chat'>('team');
   const [myAttendance, setMyAttendance] = useState<Record<string, string>>({}); // Shared or per-team
   const [toastMsg, setToastMsg] = useState<string | null>(null);
@@ -763,19 +763,6 @@ export const TeamView: React.FC = () => {
 
       {currentTeam ? (
         <>
-          {/* Role Selector (Demo Utility) */}
-          <div className="bg-slate-100 p-2 rounded-xl flex items-center justify-between gap-2">
-        <span className="text-[10px] font-bold text-slate-500 ml-2 uppercase">Role Demo:</span>
-        <div className="flex gap-1">
-          {(['admin', 'captain', 'member', 'parent'] as const).map(r => (
-            <button key={r} onClick={() => setMyRole(r)}
-              className={`px-3 py-1 rounded-lg text-[10px] font-bold transition-all ${
-                myRole === r ? 'bg-white shadow-sm text-brand-blue' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >{roleConfig[r].label}</button>
-          ))}
-        </div>
-      </div>
 
       {/* Sub Tab */}
       <div className="flex bg-white rounded-2xl border border-slate-100 shadow-sm p-1 gap-1">
