@@ -64,27 +64,34 @@ async function sessionToProfile(session: Session): Promise<UserProfile> {
     };
   }
 
-  // フォールバック: profilesレコードがまだなければ作成
+  // フォールバック: profilesレコードがまだなければ作成（既存レコードは上書きしない）
   const nickname = authUser.user_metadata?.name || authUser.email || 'ユーザー';
-  const { data: newProfile } = await (supabase
+  
+  // INSERT (新規のみ、既存は無視)
+  await (supabase
     .from('profiles') as any)
     .upsert({
       id: authUser.id,
       nickname,
       avatar_emoji: '🎾',
       coins: 20,
-    })
-    .select()
+    }, { onConflict: 'id', ignoreDuplicates: true });
+  
+  // 改めてSELECTで取得（既存ユーザーのcoinsは変更されない）
+  const { data: existingProfile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', authUser.id)
     .single();
 
-  const np = newProfile as Record<string, any> | null;
+  const np = existingProfile as Record<string, any> | null;
   return {
     id: authUser.id,
     nickname: np?.nickname || nickname,
     avatarEmoji: np?.avatar_emoji || '🎾',
     provider,
     createdAt: np?.created_at || new Date().toISOString(),
-    coins: np?.coins || 20,
+    coins: np?.coins ?? 20,
     systemRole: np?.system_role || 'user',
     coachRank: np?.coach_rank || 'bronze',
     coachAnswerCount: np?.coach_answer_count || 0,
