@@ -541,7 +541,7 @@ export const CoachSupportView: React.FC = () => {
                           🎾
                         </div>
                         <div>
-                          <span className="font-bold text-sm text-slate-800">コーチからの回答</span>
+                          <span className="font-bold text-sm text-slate-800">コーチの回答</span>
                           <p className="text-[10px] text-slate-400">{c.answeredAt ? new Date(c.answeredAt).toLocaleDateString('ja-JP') : ''}</p>
                         </div>
                       </div>
