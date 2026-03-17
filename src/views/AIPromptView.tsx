@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Sparkles, Users, Clock, Target, Plus } from 'lucide-react';
-import { dummyMenus, type MenuData } from '../data/dummyData';
+import { type MenuData } from '../data/dummyData';
+import { useSupabaseMenus } from '../hooks/useSupabaseMenus';
 import { usePlaylist } from '../contexts/PlaylistContext';
 
 export const AIPromptView: React.FC = () => {
@@ -15,6 +16,7 @@ export const AIPromptView: React.FC = () => {
   const [toastMsg, setToastMsg] = useState<string | null>(null);
   
   const { addToPlaylist, isInPlaylist } = usePlaylist();
+  const { menus } = useSupabaseMenus();
 
   const handleGenerate = () => {
     if (!players || !time || !theme) return;
@@ -31,7 +33,7 @@ export const AIPromptView: React.FC = () => {
       const themeLC = theme.toLowerCase();
       
       // 参加人数で実施可能なメニューだけに絞り込み
-      const eligible = dummyMenus.filter(menu => menu.minPlayers <= playerCount);
+      const eligible = menus.filter(menu => (menu.minPlayers || 1) <= playerCount);
 
       // テーマに関連するメニューをスコアリング（カテゴリ、タグ、説明文でマッチ）
       const scored = eligible.map(menu => {
@@ -66,17 +68,17 @@ export const AIPromptView: React.FC = () => {
       scored.sort((a, b) => b.score - a.score);
 
       for (const { menu } of scored) {
-        if (currentTotal + menu.duration <= targetTime) {
+        if (currentTotal + (menu.duration || 10) <= targetTime) {
           selectedMenus.push(menu);
-          currentTotal += menu.duration;
+          currentTotal += (menu.duration || 10);
         }
       }
 
       // もし1つも入らなかった場合のフォールバック
-      if (selectedMenus.length === 0 && dummyMenus.length > 0) {
-        const smallestMenu = [...dummyMenus].sort((a, b) => a.duration - b.duration)[0];
+      if (selectedMenus.length === 0 && menus.length > 0) {
+        const smallestMenu = [...menus].sort((a, b) => (a.duration || 10) - (b.duration || 10))[0];
         selectedMenus.push(smallestMenu);
-        currentTotal = smallestMenu.duration;
+        currentTotal = smallestMenu.duration || 10;
       }
 
       setSuggestion({
@@ -249,7 +251,7 @@ export const AIPromptView: React.FC = () => {
                  <div className="flex-1 min-w-0">
                    <h4 className="font-bold text-sm text-slate-800 mb-1 truncate">{menu.title}</h4>
                    <div className="flex gap-2 text-xs font-medium text-slate-500">
-                     <span>{menu.duration}分</span>
+                     <span>{menu.duration || 10}分</span>
                      <span className="text-slate-300">|</span>
                      <span>{menu.category}</span>
                    </div>

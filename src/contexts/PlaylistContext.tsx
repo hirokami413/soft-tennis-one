@@ -65,7 +65,7 @@ export const PlaylistProvider: React.FC<{ children: ReactNode }> = ({ children }
   const addToPlaylist = (menu: MenuData) => {
     setPlaylistWithHistory(prev => {
       if (prev.some(m => m.id === menu.id)) return prev;
-      return [...prev, { ...menu, customDuration: menu.duration, customSets: 1 }];
+      return [...prev, { ...menu, customDuration: menu.duration || 10, customSets: 1 }];
     });
   };
 

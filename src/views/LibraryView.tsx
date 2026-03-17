@@ -2,7 +2,8 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Search, ArrowUpDown, Heart } from 'lucide-react';
 import { MenuCard } from '../components/MenuCard';
 import { MenuDetailModal } from '../components/MenuDetailModal';
-import { dummyMenus, type MenuData } from '../data/dummyData';
+import { type MenuData } from '../data/dummyData';
+import { useSupabaseMenus } from '../hooks/useSupabaseMenus';
 import { usePlaylist } from '../contexts/PlaylistContext';
 import { useFavorites } from '../contexts/FavoritesContext';
 
@@ -15,6 +16,7 @@ export const LibraryView: React.FC = () => {
   const [selectedMenu, setSelectedMenu] = useState<MenuData | null>(null);
   const { addToPlaylist, isInPlaylist } = usePlaylist();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
+  const { menus, isLoading } = useSupabaseMenus();
 
   // お気に入りタブ表示時のスナップショット（解除しても即消えない）
   const snapshotRef = useRef<string[]>(favorites);
@@ -34,9 +36,9 @@ export const LibraryView: React.FC = () => {
   const categories = ["すべて", "フォアハンド", "バックハンド", "ボレー", "スマッシュ", "サーブ", "フットワーク", "実戦形式"];
 
   // 全メニューからタグを収集
-  const allTags = Array.from(new Set(dummyMenus.flatMap(m => m.tags || [])));
+  const allTags = Array.from(new Set(menus.flatMap(m => m.tags || [])));
 
-  const filteredMenus = dummyMenus.filter(m => {
+  const filteredMenus = menus.filter(m => {
     // お気に入りフィルタ
     if (viewMode === 'favorites' && !snapshotRef.current.includes(m.id)) return false;
 
@@ -78,6 +80,15 @@ export const LibraryView: React.FC = () => {
   };
 
   const favCount = favorites.length;
+
+  if (isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center p-12 text-center h-[50vh]">
+        <div className="w-8 h-8 border-4 border-slate-200 border-t-brand-blue rounded-full animate-spin mb-4" />
+        <p className="text-sm font-bold text-slate-500">練習メニューを読み込み中...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 py-2">

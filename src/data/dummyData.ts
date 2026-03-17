@@ -3,19 +3,22 @@ export interface MenuData {
   title: string;
   category: string;
   level: string;
-  duration: number; // minutes
-  minPlayers: number;
-  maxPlayers: number;
+  duration?: number; // minutes
+  minPlayers?: number;
+  maxPlayers?: number;
   description: string;
-  steps: string[];
-  advice: string;
+  steps?: string[];
+  advice?: string;
   rating?: number;
   reviewCount?: number;
   imageUrl?: string;
   author?: string;
+  authorAvatar?: string;
+  favoritesCount?: number;
   createdAt: string; // "YYYY-MM-DD"形式
   tags?: string[];
   youtubeUrl?: string;
+  instagramUrl?: string;
 }
 
 export const dummyMenus: MenuData[] = [

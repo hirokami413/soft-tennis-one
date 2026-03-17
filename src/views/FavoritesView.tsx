@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Heart, Search } from 'lucide-react';
-import { dummyMenus, type MenuData } from '../data/dummyData';
+import { type MenuData } from '../data/dummyData';
+import { useSupabaseMenus } from '../hooks/useSupabaseMenus';
 import { useFavorites } from '../contexts/FavoritesContext';
 import { usePlaylist } from '../contexts/PlaylistContext';
 import { MenuCard } from '../components/MenuCard';
@@ -9,6 +10,7 @@ import { MenuDetailModal } from '../components/MenuDetailModal';
 export const FavoritesView: React.FC = () => {
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
   const { addToPlaylist, isInPlaylist } = usePlaylist();
+  const { menus } = useSupabaseMenus();
   const [selectedMenu, setSelectedMenu] = useState<MenuData | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -28,7 +30,7 @@ export const FavoritesView: React.FC = () => {
   const categories = ["すべて", "フォアハンド", "バックハンド", "ボレー", "スマッシュ", "サーブ", "フットワーク", "実戦形式"];
 
   // スナップショットに含まれるメニューを表示（解除してもすぐ消えない）
-  const favoriteMenus = dummyMenus
+  const favoriteMenus = menus
     .filter(menu => snapshotRef.current.includes(menu.id))
     .filter(menu => {
       const active = activeCategory || "すべて";

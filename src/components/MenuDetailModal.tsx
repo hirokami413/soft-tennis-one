@@ -99,11 +99,11 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
               <div className="flex gap-4 text-sm font-medium text-slate-600 bg-slate-50 p-3 rounded-2xl">
                 <div className="flex items-center gap-1.5">
                   <Clock size={16} className="text-slate-400" />
-                  <span>{menu.duration}分</span>
+                  <span>{menu.duration || '-'}分</span>
                 </div>
                 <div className="flex items-center gap-1.5">
                   <Users size={16} className="text-slate-400" />
-                  <span>{menu.minPlayers}〜{menu.maxPlayers}人</span>
+                  <span>{menu.minPlayers || '-'}〜{menu.maxPlayers || '-'}人</span>
                 </div>
                 <div className="flex items-center gap-1.5 ml-auto text-slate-500">
                   <span>{menu.level}</span>
@@ -116,21 +116,23 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
               {menu.description}
             </div>
 
-            {/* Steps */}
-            <div>
-              <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-sm">📋</div>
-                練習手順
-              </h3>
-              <ul className="space-y-3">
-                {menu.steps.map((step, idx) => (
-                  <li key={idx} className="flex gap-3 text-sm text-slate-700">
-                    <span className="font-bold text-brand-blue opacity-50">{idx + 1}.</span>
-                    <span>{step}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            {/* Provider indicator or other missing section fixes shouldn't be here, just handling Steps */}
+            {menu.steps && menu.steps.length > 0 && (
+              <div>
+                <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-sm">📋</div>
+                  練習手順
+                </h3>
+                <ul className="space-y-3">
+                  {menu.steps.map((step, idx) => (
+                    <li key={idx} className="flex gap-3 text-sm text-slate-700">
+                      <span className="font-bold text-brand-blue opacity-50">{idx + 1}.</span>
+                      <span>{step}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
 
             {/* YouTube Video Section */}
             {menu.youtubeUrl && getYoutubeId(menu.youtubeUrl) && (
@@ -152,15 +154,17 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
             )}
 
             {/* Coach Advice */}
-            <div className="bg-blue-50/50 border border-blue-100 p-5 rounded-2xl">
-              <h3 className="text-brand-blue font-bold mb-2 flex items-center gap-2 text-sm">
-                <AlertCircle size={16} />
-                Nexus One コーチより
-              </h3>
-              <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-                {menu.advice.replace('【Nexus One コーチより】\n', '')}
-              </p>
-            </div>
+            {menu.advice && (
+              <div className="bg-blue-50/50 border border-blue-100 p-5 rounded-2xl">
+                <h3 className="text-brand-blue font-bold mb-2 flex items-center gap-2 text-sm">
+                  <AlertCircle size={16} />
+                  Nexus One コーチより
+                </h3>
+                <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
+                  {menu.advice.replace('【Nexus One コーチより】\n', '')}
+                </p>
+              </div>
+            )}
 
             {/* Community Feature (Yattemita Report) */}
             <div className="pt-6 border-t border-slate-100">

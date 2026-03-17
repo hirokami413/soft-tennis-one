@@ -2,10 +2,14 @@ import React, { useState } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Send, Image as ImageIcon, Video, Info, CheckCircle2, Hash, X, Youtube } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSupabaseMenus } from '../hooks/useSupabaseMenus';
 
 export const SubmitView: React.FC = () => {
   const { user } = useAuth();
+  const { submitMenu } = useSupabaseMenus();
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState('');
   const [formData, setFormData] = useLocalStorage('submit_view_form', {
     title: '',
     category: 'フォアハンド',
@@ -54,20 +58,37 @@ export const SubmitView: React.FC = () => {
     setFormData({ ...formData, tags: formData.tags.filter(t => t !== tagToRemove) });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.title || !formData.description) return;
+    if (!formData.title || !formData.description || isSubmitting) return;
     
     // 入力中のタグがあれば確定
     if (tagInput.trim()) {
       commitTag(tagInput);
     }
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      setIsSubmitting(true);
+      setSubmitError('');
+      
+      await submitMenu({
+        title: formData.title,
+        category: formData.category,
+        level: formData.level,
+        description: formData.description,
+        tags: formData.tags,
+        youtubeUrl: formData.youtubeUrl,
+        instagramUrl: formData.instagramUrl
+      });
+
       setIsSubmitted(true);
       window.scrollTo({ top: 0, behavior: 'smooth' });
-    }, 800);
+    } catch (err: any) {
+      console.error('Submit error:', err);
+      setSubmitError(err.message || '投稿に失敗しました');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSubmitted) {
@@ -110,6 +131,11 @@ export const SubmitView: React.FC = () => {
       </div>
 
       <form onSubmit={handleSubmit} className="bg-white p-5 rounded-3xl border border-slate-100 shadow-sm space-y-6">
+        {submitError && (
+          <div className="bg-red-50 text-red-600 p-3 rounded-xl text-sm border border-red-100 mb-4 animate-in fade-in">
+            {submitError}
+          </div>
+        )}
         
         {/* Poster info */}
         {user && (
@@ -283,11 +309,17 @@ export const SubmitView: React.FC = () => {
         {/* Submit */}
         <button 
           type="submit"
-          disabled={!formData.title || !formData.description}
-          className="w-full bg-brand-blue text-white rounded-2xl py-4 font-bold disabled:opacity-50 transition-all flex justify-center items-center gap-2"
+          disabled={!formData.title || !formData.description || isSubmitting}
+          className="w-full bg-brand-blue text-white rounded-2xl py-4 font-bold disabled:opacity-50 transition-all flex justify-center items-center gap-2 hover:bg-brand-blue-hover"
         >
-          <Send size={18} />
-          メニューを投稿する
+          {isSubmitting ? (
+            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          ) : (
+            <>
+              <Send size={18} />
+              メニューを投稿する
+            </>
+          )}
         </button>
       </form>
       
