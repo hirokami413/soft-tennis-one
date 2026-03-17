@@ -245,11 +245,7 @@ export const ProDashboardView: React.FC = () => {
 
   const handleDeleteQuestion = async (id: string) => {
     if (!window.confirm('この相談を削除しますか？')) return;
-    // questionテキストのみ変更（CHECK制約を完全回避）
-    const { error } = await supabase.from('coach_questions').update({
-      question: '[管理者により削除]',
-      reported: false
-    }).eq('id', id);
+    const { error } = await supabase.rpc('admin_delete_question', { p_question_id: id });
     if (!error) {
       setAllQuestions(prev => prev.filter(q => q.id !== id));
       setReports(prev => prev.filter(r => r.id !== id));
