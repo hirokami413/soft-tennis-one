@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { Layout } from './components/Layout';
 import { MenuHubView } from './views/MenuHubView';
@@ -22,6 +22,20 @@ function AppContent() {
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem('app_onboarding_done');
   });
+
+  // Handle invite link if present
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const inviteCode = params.get('invite');
+    if (inviteCode) {
+      sessionStorage.setItem('softtennis_pending_invite', inviteCode);
+      setActiveTab('team');
+      
+      // Clean up URL
+      const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname;
+      window.history.replaceState({ path: newUrl }, '', newUrl);
+    }
+  }, []);
 
   if (!isLoggedIn) {
     return <LoginView />;

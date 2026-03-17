@@ -3,8 +3,9 @@ import {
   Users, Calendar, MessageSquare, Shield, Crown, User, 
   Plus, Check, ChevronLeft, ChevronRight,
   Send, Copy, FileText, X, MapPin, Clock as ClockIcon,
-  Trash2, Edit2, CopyPlus, Repeat, Search, Image, Video, Link
+  Trash2, Edit2, CopyPlus, Repeat, Search, Image, Video, Link, QrCode
 } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 
 import { useAuth } from '../contexts/AuthContext';
 import { useSupabaseTeams } from '../hooks/useSupabaseTeams';
@@ -188,6 +189,17 @@ export const TeamView: React.FC = () => {
   const [calMonth, setCalMonth] = useState(todayDate.getMonth());
   const [calYear, setCalYear] = useState(todayDate.getFullYear());
   const [codeCopied, setCodeCopied] = useState(false);
+  const [showQrModal, setShowQrModal] = useState(false);
+
+  // Check for pending invite code on mount
+  useEffect(() => {
+    const pendingInvite = sessionStorage.getItem('softtennis_pending_invite');
+    if (pendingInvite) {
+      setJoinCodeInput(pendingInvite);
+      setIsJoinTeamMode(true);
+      sessionStorage.removeItem('softtennis_pending_invite');
+    }
+  }, []);
 
   // Voting & Boards
   const [viewingVoters, setViewingVoters] = useState<{optionText: string, voters: {name: string, timestamp?: string}[]} | null>(null);
@@ -415,8 +427,11 @@ export const TeamView: React.FC = () => {
     setEventCommentInput(prev => ({ ...prev, [evId]: '' }));
   };
 
-  const handleCopyCode = () => {
-    navigator.clipboard?.writeText(currentTeam.inviteCode);
+  const handleCopyCode = (isUrl: boolean = false) => {
+    const textToCopy = isUrl 
+      ? `${window.location.origin}?invite=${currentTeam.inviteCode}`
+      : currentTeam.inviteCode;
+    navigator.clipboard?.writeText(textToCopy);
     setCodeCopied(true);
     setTimeout(() => setCodeCopied(false), 2000);
   };
@@ -784,13 +799,25 @@ export const TeamView: React.FC = () => {
               <h2 className="text-xl font-bold mb-1">{currentTeam.name}</h2>
               <p className="text-sm text-blue-200">{members.length}人のメンバー</p>
               <div className="mt-4 flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2.5">
-                <span className="text-xs text-blue-100">招待コード:</span>
-                <span className="font-mono font-bold text-sm flex-1">{currentTeam.inviteCode}</span>
-                <button onClick={handleCopyCode}
-                  className="text-xs bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full font-bold transition-colors flex items-center gap-1"
-                >
-                  {codeCopied ? <><Check size={12}/> 完了</> : <><Copy size={12}/> コピー</>}
-                </button>
+                <span className="text-xs text-blue-100 shrink-0">招待コード:</span>
+                <span className="font-mono font-bold text-sm flex-1 truncate">{currentTeam.inviteCode}</span>
+                <div className="flex gap-1 shrink-0">
+                  <button onClick={() => handleCopyCode()}
+                    className="text-[10px] bg-white/20 hover:bg-white/30 px-2 py-1 rounded-full font-bold transition-colors flex items-center gap-1"
+                  >
+                    {codeCopied ? <><Check size={10}/> 済</> : <><Copy size={10}/> 番号</>}
+                  </button>
+                  <button onClick={() => handleCopyCode(true)}
+                    className="text-[10px] bg-white/20 hover:bg-white/30 px-2 py-1 rounded-full font-bold transition-colors flex items-center gap-1"
+                  >
+                    <Link size={10}/> URL
+                  </button>
+                  <button onClick={() => setShowQrModal(true)}
+                    className="text-[10px] bg-white/20 hover:bg-white/30 px-2 py-1 rounded-full font-bold transition-colors flex items-center gap-1"
+                  >
+                    <QrCode size={10}/> QR
+                  </button>
+                </div>
               </div>
               {myRole === 'admin' && (
                 <button onClick={() => {
@@ -1720,6 +1747,34 @@ export const TeamView: React.FC = () => {
             <button onClick={() => setIsCreateTeamMode(true)} className="px-6 py-3.5 bg-gradient-to-br from-brand-blue to-blue-600 text-white rounded-xl font-bold hover:from-brand-blue-hover hover:to-blue-700 transition-colors shadow-md flex items-center gap-2">
               <Users size={18} /> 新規チーム作成
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* ─── MODAL: QR Code ─── */}
+      {showQrModal && currentTeam && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in" onClick={() => setShowQrModal(false)}>
+          <div className="bg-white w-full max-w-sm rounded-[2rem] p-8 shadow-2xl relative flex flex-col items-center animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+            <button onClick={() => setShowQrModal(false)} className="absolute top-4 right-4 text-slate-400 hover:text-slate-600">
+              <X size={20}/>
+            </button>
+            <h3 className="text-lg font-black text-slate-800 mb-2">チームに招待</h3>
+            <p className="text-xs text-slate-500 mb-4 text-center">以下のQRコードをカメラで読み取って<br/>チームに参加できます</p>
+            
+            <div className="bg-white p-4 rounded-3xl shadow-sm border border-slate-100 flex items-center justify-center">
+              <QRCodeSVG 
+                value={`${window.location.origin}?invite=${currentTeam.inviteCode}`}
+                size={200}
+                bgColor={"#ffffff"}
+                fgColor={"#0f172a"}
+                level={"M"}
+                includeMargin={false}
+              />
+            </div>
+            
+            <p className="mt-4 font-mono font-bold text-brand-blue tracking-widest text-lg bg-blue-50 px-6 py-2 rounded-2xl">
+              {currentTeam.inviteCode}
+            </p>
           </div>
         </div>
       )}
