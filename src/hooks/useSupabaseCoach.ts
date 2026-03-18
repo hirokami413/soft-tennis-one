@@ -147,8 +147,16 @@ export function useSupabaseCoach() {
 
   const applyCoachApplication = async (fullName: string, nickname: string, extra?: { yearsExperience?: string; certification?: string; selfIntro?: string; tournamentResults?: string; idDocumentUrl?: string; resumeUrl?: string }) => {
      if (!useDB || !user) return { error: 'Not configured' };
-     const { error } = await supabase.from('coach_applications').upsert({
-       user_id: user.id,
+
+     // 既存の応募を確認
+     const { data: existing } = await supabase
+       .from('coach_applications')
+       .select('id, status')
+       .eq('user_id', user.id)
+       .limit(1)
+       .single();
+
+     const payload = {
        full_name: fullName,
        nickname: nickname,
        years_experience: extra?.yearsExperience || '',
@@ -157,8 +165,24 @@ export function useSupabaseCoach() {
        tournament_results: extra?.tournamentResults || '',
        id_document_url: extra?.idDocumentUrl || '',
        resume_url: extra?.resumeUrl || '',
-       status: 'pending'
-     }, { onConflict: 'user_id' });
+       status: 'pending',
+       created_at: new Date().toISOString(),
+     };
+
+     let error;
+     if (existing) {
+       // 既存行を更新（rejected → pending に戻す）
+       ({ error } = await supabase
+         .from('coach_applications')
+         .update(payload)
+         .eq('id', existing.id));
+     } else {
+       // 新規追加
+       ({ error } = await supabase
+         .from('coach_applications')
+         .insert({ user_id: user.id, ...payload }));
+     }
+
      return { error };
   };
 
