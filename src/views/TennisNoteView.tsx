@@ -5,6 +5,7 @@ import { useSubscription } from '../hooks/useSubscription';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useSupabaseNotes, useSupabaseGoals } from '../hooks/useSupabaseNotes';
 import type { Goal } from '../hooks/useSupabaseNotes';
+import { uploadFile, generateFilePath } from '../lib/storage';
 import { 
   BookOpen, Plus, Target, TrendingUp, Star, Lock,
   ChevronDown, ChevronUp, Edit3, Check, Crown, Shield, MessageCircle,
@@ -68,7 +69,7 @@ const RadarChart: React.FC<{ skills: number[] }> = ({ skills }) => {
 // ── Component ──
 export const TennisNoteView: React.FC = () => {
   const { canUseTennisNoteBase, canAskCoachInNote } = useSubscription();
-  const { addCoins } = useAuth();
+  const { addCoins, user } = useAuth();
   const { addNotification } = useNotifications();
   const { notes, addNote, publishNote } = useSupabaseNotes();
   const { goals, setGoals, addGoal: addGoalToDb, deleteGoal: deleteGoalFromDb } = useSupabaseGoals();
@@ -95,8 +96,23 @@ export const TennisNoteView: React.FC = () => {
   const [newSkills, setNewSkills] = useLocalStorage('tennis_notes_new_skills', [3, 3, 3, 3, 3, 3]);
   const [newGoalText, setNewGoalText] = useLocalStorage('tennis_notes_new_goal_text', '');
   const [newGoalType, setNewGoalType] = useLocalStorage<'short' | 'mid'>('tennis_notes_new_goal_type', 'short');
-  const [newMedia, setNewMedia] = useState<{ type: 'image' | 'video' | 'url'; name: string }[]>([]);
+  const [newMedia, setNewMedia] = useState<{ type: 'image' | 'video' | 'url'; name: string; url?: string }[]>([]);
   const [newUrlInput, setNewUrlInput] = useState('');
+  const [mediaUploading, setMediaUploading] = useState(false);
+
+  const handleMediaUpload = async (type: 'image' | 'video', file: File) => {
+    if (!user) return;
+    setMediaUploading(true);
+    const folder = type === 'image' ? 'images' : 'videos';
+    const path = generateFilePath(user.id, folder, file.name);
+    const { url, error } = await uploadFile('note-media', path, file);
+    if (error) {
+      alert('アップロードに失敗しました: ' + error);
+    } else if (url) {
+      setNewMedia(prev => [...prev, { type, name: file.name, url }]);
+    }
+    setMediaUploading(false);
+  };
 
   const skillLabels = ['フォア', 'バック', 'ボレー', 'サーブ', 'フットワーク', '戦術'];
 
@@ -455,6 +471,9 @@ export const TennisNoteView: React.FC = () => {
               <ImageIcon size={12}/> 画像・動画・URLの添付
             </label>
             <div className="space-y-2">
+              {mediaUploading && (
+                <div className="text-xs text-indigo-600 font-bold animate-pulse text-center py-1">アップロード中...</div>
+              )}
               {newMedia.length > 0 && (
                 <div className="flex flex-wrap gap-2">
                   {newMedia.map((m, i) => (
@@ -470,21 +489,21 @@ export const TennisNoteView: React.FC = () => {
               )}
               <div className="flex gap-2">
                 {/* 画像は常に無料で添付可能 */}
-                <button
-                  onClick={() => setNewMedia(prev => [...prev, { type: 'image', name: `練習写真_${prev.length + 1}.jpg` }])}
-                  className="flex-1 py-2.5 border-2 border-dashed border-slate-200 rounded-xl text-xs text-slate-500 flex items-center justify-center gap-1.5 hover:border-blue-300 hover:bg-blue-50 transition-colors"
+                <label
+                  className="flex-1 py-2.5 border-2 border-dashed border-slate-200 rounded-xl text-xs text-slate-500 flex items-center justify-center gap-1.5 hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer"
                 >
+                  <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleMediaUpload('image', f); }} />
                   <ImageIcon size={14} /> 画像
                   <span className="text-[8px] text-green-500 font-bold">FREE</span>
-                </button>
+                </label>
                 {/* 動画はプラン限定 */}
                 {advicePlan !== 'none' ? (
-                  <button
-                    onClick={() => setNewMedia(prev => [...prev, { type: 'video', name: `フォーム動画_${prev.length + 1}.mp4` }])}
-                    className="flex-1 py-2.5 border-2 border-dashed border-slate-200 rounded-xl text-xs text-slate-500 flex items-center justify-center gap-1.5 hover:border-purple-300 hover:bg-purple-50 transition-colors"
+                  <label
+                    className="flex-1 py-2.5 border-2 border-dashed border-slate-200 rounded-xl text-xs text-slate-500 flex items-center justify-center gap-1.5 hover:border-purple-300 hover:bg-purple-50 transition-colors cursor-pointer"
                   >
+                    <input type="file" accept="video/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleMediaUpload('video', f); }} />
                     <Film size={14} /> 動画
-                  </button>
+                  </label>
                 ) : (
                   <button disabled className="flex-1 py-2.5 border-2 border-dashed border-slate-200 rounded-xl text-xs text-slate-300 flex items-center justify-center gap-1.5 cursor-not-allowed">
                     <Film size={14} /> 動画
@@ -518,8 +537,8 @@ export const TennisNoteView: React.FC = () => {
             </div>
           </div>
 
-          <button onClick={handleAddNote} className="w-full py-3 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition-colors">
-            ノートを保存する
+          <button onClick={handleAddNote} disabled={mediaUploading} className="w-full py-3 bg-emerald-500 text-white rounded-xl font-bold hover:bg-emerald-600 transition-colors disabled:opacity-40">
+            {mediaUploading ? 'アップロード中...' : 'ノートを保存する'}
           </button>
         </div>
       )}
@@ -602,17 +621,27 @@ export const TennisNoteView: React.FC = () => {
 
                   {/* Media display */}
                   {note.media && note.media.length > 0 && (
-                    <div className="space-y-2">
+                    <div className="space-y-3">
                       <p className="text-[10px] font-bold text-slate-500">📎 添付メディア</p>
-                      <div className="flex flex-wrap gap-2">
-                        {note.media.map((m, i) => (
-                          <div key={i} className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium ${
-                            m.type === 'image' ? 'bg-blue-50 text-blue-600 border border-blue-100' : m.type === 'video' ? 'bg-purple-50 text-purple-600 border border-purple-100' : 'bg-indigo-50 text-indigo-600 border border-indigo-100'
-                          }`}>
-                            {m.type === 'image' ? <ImageIcon size={12} /> : m.type === 'video' ? <Film size={12} /> : <Link size={12} />}
-                            {m.type === 'url' ? (
-                              <a href={m.name} target="_blank" rel="noopener noreferrer" className="underline hover:opacity-70 max-w-[200px] truncate">{m.name}</a>
-                            ) : m.name}
+                      <div className="space-y-2">
+                        {note.media.map((m: any, i: number) => (
+                          <div key={i}>
+                            {m.type === 'image' && m.url ? (
+                              <img src={m.url} alt={m.name} className="w-full rounded-xl border border-slate-200 shadow-sm" />
+                            ) : m.type === 'video' && m.url ? (
+                              <video src={m.url} controls className="w-full rounded-xl border border-slate-200 shadow-sm" />
+                            ) : m.type === 'url' ? (
+                              <a href={m.name} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-600 border border-indigo-100 underline hover:opacity-70">
+                                <Link size={12} /> {m.name}
+                              </a>
+                            ) : (
+                              <div className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium ${
+                                m.type === 'image' ? 'bg-blue-50 text-blue-600 border border-blue-100' : 'bg-purple-50 text-purple-600 border border-purple-100'
+                              }`}>
+                                {m.type === 'image' ? <ImageIcon size={12} /> : <Film size={12} />}
+                                {m.name}
+                              </div>
+                            )}
                           </div>
                         ))}
                       </div>

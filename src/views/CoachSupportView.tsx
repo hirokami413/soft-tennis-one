@@ -10,6 +10,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { useSupabaseCoach } from '../hooks/useSupabaseCoach';
 import { supabase } from '../lib/supabase';
+import { uploadFile, generateFilePath } from '../lib/storage';
 
 // ── Types ──
 interface Coach {
@@ -118,9 +119,24 @@ export const CoachSupportView: React.FC = () => {
     tournamentResults: '',
     certification: '' as string,
     selfIntro: '',
-    idUploaded: false,
-    resumeUploaded: false,
+    idDocumentUrl: '',
+    resumeUrl: '',
   });
+  const [uploading, setUploading] = useState(false);
+
+  const handleFileUpload = async (field: 'idDocumentUrl' | 'resumeUrl', file: File) => {
+    if (!user) return;
+    setUploading(true);
+    const folder = field === 'idDocumentUrl' ? 'id-docs' : 'resumes';
+    const path = generateFilePath(user.id, folder, file.name);
+    const { url, error } = await uploadFile('coach-docs', path, file);
+    if (error) {
+      alert('アップロードに失敗しました: ' + error);
+    } else if (url) {
+      setCoachAppForm(prev => ({ ...prev, [field]: url }));
+    }
+    setUploading(false);
+  };
 
   const questionCost = questionType === 'text' ? 1000 : 2000;
 
@@ -1028,19 +1044,26 @@ export const CoachSupportView: React.FC = () => {
               {/* ID Upload */}
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">身分証明書 <span className="text-red-500">*</span></label>
-                <button
-                  onClick={() => setCoachAppForm({...coachAppForm, idUploaded: true})}
-                  className={`w-full p-4 border-2 border-dashed rounded-xl flex flex-col items-center gap-2 transition-colors ${
-                    coachAppForm.idUploaded ? 'border-green-300 bg-green-50' : 'border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'
+                <label
+                  className={`w-full p-4 border-2 border-dashed rounded-xl flex flex-col items-center gap-2 transition-colors cursor-pointer ${
+                    coachAppForm.idDocumentUrl ? 'border-green-300 bg-green-50' : 'border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'
                   }`}
                 >
-                  {coachAppForm.idUploaded ? (
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload('idDocumentUrl', f); }}
+                  />
+                  {uploading ? (
+                    <><span className="text-xs font-bold text-indigo-600 animate-pulse">アップロード中...</span></>
+                  ) : coachAppForm.idDocumentUrl ? (
                     <><CheckCircle2 size={24} className="text-green-500" /><span className="text-xs font-bold text-green-600">アップロード済み</span></>
                   ) : (
                     <><Upload size={24} className="text-slate-400" /><span className="text-xs text-slate-500">クリックして身分証をアップロード</span></>
                   )}
-                </button>
-                <p className="text-[10px] text-slate-400">運転免許証、マイナンバーカード等（本人確認用・公開されません）</p>
+                </label>
+                <p className="text-[10px] text-slate-400">運転免許証、マイナンバーカード等（画像ファイル・本人確認用・公開されません）</p>
               </div>
 
               {/* Experience Years */}
@@ -1091,18 +1114,23 @@ export const CoachSupportView: React.FC = () => {
               {/* Resume Upload */}
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">競技歴書類（任意）</label>
-                <button
-                  onClick={() => setCoachAppForm({...coachAppForm, resumeUploaded: true})}
-                  className={`w-full p-3 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 transition-colors text-xs ${
-                    coachAppForm.resumeUploaded ? 'border-green-300 bg-green-50 text-green-600 font-bold' : 'border-slate-200 text-slate-500 hover:border-indigo-300'
+                <label
+                  className={`w-full p-3 border-2 border-dashed rounded-xl flex items-center justify-center gap-2 transition-colors text-xs cursor-pointer ${
+                    coachAppForm.resumeUrl ? 'border-green-300 bg-green-50 text-green-600 font-bold' : 'border-slate-200 text-slate-500 hover:border-indigo-300'
                   }`}
                 >
-                  {coachAppForm.resumeUploaded ? (
+                  <input
+                    type="file"
+                    accept="image/*,.pdf"
+                    className="hidden"
+                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileUpload('resumeUrl', f); }}
+                  />
+                  {coachAppForm.resumeUrl ? (
                     <><CheckCircle2 size={14} /> アップロード済み</>
                   ) : (
                     <><Upload size={14} /> 資格証明書・経歴書をアップロード</>
                   )}
-                </button>
+                </label>
               </div>
 
               {/* Self Introduction */}
@@ -1122,12 +1150,14 @@ export const CoachSupportView: React.FC = () => {
                     yearsExperience: coachAppForm.yearsExperience,
                     certification: coachAppForm.certification,
                     selfIntro: coachAppForm.selfIntro,
-                    tournamentResults: coachAppForm.tournamentResults
+                    tournamentResults: coachAppForm.tournamentResults,
+                    idDocumentUrl: coachAppForm.idDocumentUrl,
+                    resumeUrl: coachAppForm.resumeUrl
                   });
                   setCoachAppStatus('pending');
                   setShowCoachApplication(false);
                 }}
-                disabled={!coachAppForm.idUploaded || !coachAppForm.yearsExperience || !coachAppForm.fullName.trim() || !coachAppForm.nickname.trim()}
+                disabled={!coachAppForm.idDocumentUrl || !coachAppForm.yearsExperience || !coachAppForm.fullName.trim() || !coachAppForm.nickname.trim() || uploading}
                 className="w-full py-3.5 bg-indigo-600 text-white rounded-xl font-bold text-sm disabled:opacity-40 transition-all hover:bg-indigo-700 flex items-center justify-center gap-2"
               >
                 <Send size={16} />

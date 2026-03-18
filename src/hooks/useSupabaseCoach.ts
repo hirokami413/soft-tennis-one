@@ -145,7 +145,7 @@ export function useSupabaseCoach() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [consultations]);
 
-  const applyCoachApplication = async (fullName: string, nickname: string, extra?: { yearsExperience?: string; certification?: string; selfIntro?: string; tournamentResults?: string }) => {
+  const applyCoachApplication = async (fullName: string, nickname: string, extra?: { yearsExperience?: string; certification?: string; selfIntro?: string; tournamentResults?: string; idDocumentUrl?: string; resumeUrl?: string }) => {
      if (!useDB || !user) return { error: 'Not configured' };
      const { error } = await supabase.from('coach_applications').upsert({
        user_id: user.id,
@@ -155,6 +155,8 @@ export function useSupabaseCoach() {
        certification: extra?.certification || '',
        self_intro: extra?.selfIntro || '',
        tournament_results: extra?.tournamentResults || '',
+       id_document_url: extra?.idDocumentUrl || '',
+       resume_url: extra?.resumeUrl || '',
        status: 'pending'
      }, { onConflict: 'user_id' });
      return { error };

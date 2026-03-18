@@ -600,6 +600,22 @@ export const ProDashboardView: React.FC = () => {
                             <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap leading-relaxed">{app.self_intro}</p>
                           </div>
                         )}
+                        {app.id_document_url && (
+                          <div className="col-span-2 bg-slate-50 rounded-xl p-3 border border-slate-200">
+                            <p className="text-[10px] text-slate-500 font-medium mb-2">📄 身分証明書</p>
+                            <img src={app.id_document_url} alt="身分証" className="w-full max-h-48 object-contain rounded-lg border border-slate-200" />
+                          </div>
+                        )}
+                        {app.resume_url && (
+                          <div className="col-span-2 bg-slate-50 rounded-xl p-3 border border-slate-200">
+                            <p className="text-[10px] text-slate-500 font-medium mb-2">📄 経歴書・資格証明</p>
+                            {app.resume_url.endsWith('.pdf') ? (
+                              <a href={app.resume_url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 underline">PDFを開く</a>
+                            ) : (
+                              <img src={app.resume_url} alt="経歴書" className="w-full max-h-48 object-contain rounded-lg border border-slate-200" />
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="flex gap-2">
                         <button onClick={() => handleApproveApp(app.id, app.user_id)} className="flex-1 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-xl font-bold text-sm flex justify-center items-center gap-2 shadow-sm transition-transform hover:scale-[1.02]">
