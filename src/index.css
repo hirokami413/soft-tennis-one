@@ -76,3 +76,35 @@
 .animate-shimmer {
   animation: shimmer 1.5s infinite;
 }
+
+/* Print styles for PDF export */
+@media print {
+  /* Hide navigation, header, bottom nav */
+  nav, header, footer,
+  [data-print-hide],
+  .print\:hidden {
+    display: none !important;
+  }
+
+  /* Reset background and colors */
+  body {
+    background: white !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* Remove shadows and rounded corners for cleaner print */
+  * {
+    box-shadow: none !important;
+  }
+
+  /* Full width layout */
+  .max-w-md, .max-w-lg, .max-w-xl, .max-w-2xl {
+    max-width: 100% !important;
+  }
+
+  /* Page margins */
+  @page {
+    margin: 15mm;
+  }
+}

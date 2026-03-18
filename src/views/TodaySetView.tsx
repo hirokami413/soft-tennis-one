@@ -194,8 +194,14 @@ export const TodaySetView: React.FC = () => {
 
   return (
     <div className="flex flex-col gap-6 py-2">
+      {/* Print Header (only visible when printing) */}
+      <div className="hidden print:block mb-6">
+        <h1 className="text-xl font-bold text-slate-800">今日の練習メニュー</h1>
+        <p className="text-sm text-slate-500">{playlist.length}個のメニュー ・ 合計 {totalDuration}分</p>
+      </div>
+
       {/* Header Info */}
-      <div className="bg-brand-blue text-white p-6 rounded-3xl shadow-sm relative overflow-hidden">
+      <div className="bg-brand-blue text-white p-6 rounded-3xl shadow-sm relative overflow-hidden print:hidden">
         {/* Background Decoration */}
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl pointer-events-none" />
         
@@ -212,7 +218,7 @@ export const TodaySetView: React.FC = () => {
       </div>
 
       {/* Save & Load Sets */}
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden print:hidden">
         <div className="flex">
           {/* Save Button */}
           <button
