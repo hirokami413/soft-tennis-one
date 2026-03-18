@@ -157,8 +157,10 @@ export const CoachSupportView: React.FC = () => {
     alert('報告を送信しました。管理者が確認し対応いたします。');
   };
 
-  // Coach Handlers
-  const waitingConsultations = consultations.filter(c => c.status === 'waiting');
+  // コーチ回答タブに表示: waitingは全コーチ、reaskは元のコーチのみ
+  const waitingConsultations = consultations.filter(c =>
+    c.status === 'waiting' || (c.status === 'reask' && c.answeredBy === user?.id)
+  );
 
   const goToNextQuestion = () => {
     setCurrentQuestionIndex(prev => prev + 1);
