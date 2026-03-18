@@ -187,27 +187,27 @@ export const MenuCard: React.FC<MenuCardProps> = ({ menu, onClick, onAdd, isAdde
           </div>
         )}
 
-        <div className="flex items-center gap-2 text-[10px] font-medium text-slate-500 flex-wrap">
+        <div className="flex items-center gap-1.5 text-[10px] font-medium text-slate-500 overflow-hidden">
           {menu.duration && (
-            <div className="flex items-center gap-1">
-              <Clock size={12} />
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              <Clock size={11} />
               <span>{menu.duration}分</span>
             </div>
           )}
           {menu.minPlayers && menu.maxPlayers && (
-            <div className="flex items-center gap-1">
-              <Users size={12} />
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              <Users size={11} />
               <span>{menu.minPlayers}〜{menu.maxPlayers}人</span>
             </div>
           )}
           {(menu.reviewCount ?? 0) > 0 && (
-            <div className="flex items-center gap-1">
-              <Star size={11} className="text-yellow-400 fill-current" />
+            <div className="flex items-center gap-0.5 flex-shrink-0">
+              <Star size={10} className="text-yellow-400 fill-current" />
               <span className="text-yellow-600 font-bold">{menu.rating}</span>
               <span className="text-slate-400">({menu.reviewCount})</span>
             </div>
           )}
-          <div className="flex items-center gap-1 bg-slate-100 px-1.5 py-0.5 rounded text-[9px] ml-auto">
+          <div className="flex items-center gap-1 bg-slate-100 px-1.5 py-0.5 rounded text-[9px] ml-auto flex-shrink-0 whitespace-nowrap">
              {menu.level}
           </div>
         </div>
