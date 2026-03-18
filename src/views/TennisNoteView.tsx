@@ -6,6 +6,7 @@ import { useNotifications } from '../contexts/NotificationContext';
 import { useSupabaseNotes, useSupabaseGoals } from '../hooks/useSupabaseNotes';
 import type { Goal } from '../hooks/useSupabaseNotes';
 import { uploadFile, generateFilePath } from '../lib/storage';
+import { compressImage } from '../lib/imageCompress';
 import { supabase } from '../lib/supabase';
 import { useNoteComments } from '../hooks/useNoteComments';
 import { 
@@ -119,23 +120,25 @@ export const TennisNoteView: React.FC = () => {
   const [mediaUploading, setMediaUploading] = useState(false);
 
   const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
-  const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
 
-  const handleMediaUpload = async (type: 'image' | 'video', file: File) => {
+  const handleMediaUpload = async (_type: 'image', file: File) => {
     if (!user) return;
-    const maxSize = type === 'image' ? MAX_IMAGE_SIZE : MAX_VIDEO_SIZE;
-    if (file.size > maxSize) {
-      alert(`ファイルサイズが大きすぎます。${type === 'image' ? '画像は5MB' : '動画は50MB'}以下のファイルを選択してください。\n現在のサイズ: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
+    if (file.size > MAX_IMAGE_SIZE) {
+      alert(`ファイルサイズが大きすぎます。画像は5MB以下のファイルを選択してください。\n現在のサイズ: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
       return;
     }
     setMediaUploading(true);
-    const folder = type === 'image' ? 'images' : 'videos';
-    const path = generateFilePath(user.id, folder, file.name);
-    const { url, error } = await uploadFile('note-media', path, file);
-    if (error) {
-      alert('アップロードに失敗しました: ' + error);
-    } else if (url) {
-      setNewMedia(prev => [...prev, { type, name: file.name, url }]);
+    try {
+      const compressed = await compressImage(file);
+      const path = generateFilePath(user.id, 'images', compressed.name);
+      const { url, error } = await uploadFile('note-media', path, compressed);
+      if (error) {
+        alert('アップロードに失敗しました: ' + error);
+      } else if (url) {
+        setNewMedia(prev => [...prev, { type: 'image', name: file.name, url }]);
+      }
+    } catch {
+      alert('画像の処理に失敗しました');
     }
     setMediaUploading(false);
   };
@@ -588,23 +591,9 @@ export const TennisNoteView: React.FC = () => {
                   className="flex-1 py-2.5 border-2 border-dashed border-slate-200 rounded-xl text-xs text-slate-500 flex items-center justify-center gap-1.5 hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer"
                 >
                   <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleMediaUpload('image', f); }} />
-                  <ImageIcon size={14} /> 画像
+                  <ImageIcon size={14} /> 画像を添付
                   <span className="text-[8px] text-green-500 font-bold">FREE</span>
                 </label>
-                {/* 動画はプラン限定 */}
-                {advicePlan !== 'none' ? (
-                  <label
-                    className="flex-1 py-2.5 border-2 border-dashed border-slate-200 rounded-xl text-xs text-slate-500 flex items-center justify-center gap-1.5 hover:border-purple-300 hover:bg-purple-50 transition-colors cursor-pointer"
-                  >
-                    <input type="file" accept="video/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) handleMediaUpload('video', f); }} />
-                    <Film size={14} /> 動画
-                  </label>
-                ) : (
-                  <button disabled className="flex-1 py-2.5 border-2 border-dashed border-slate-200 rounded-xl text-xs text-slate-300 flex items-center justify-center gap-1.5 cursor-not-allowed">
-                    <Film size={14} /> 動画
-                    <Lock size={10} />
-                  </button>
-                )}
               </div>
               {/* URL入力はプラン限定 */}
               {advicePlan !== 'none' ? (
@@ -1545,23 +1534,12 @@ export const TennisNoteView: React.FC = () => {
                       if (!file || !user) return;
                       if (file.size > 5 * 1024 * 1024) { alert('5MB以下の画像を選択してください'); return; }
                       setEditMediaUploading(true);
-                      const path = generateFilePath(user.id, 'note-edit', file.name);
-                      const { url, error } = await uploadFile('note-media', path, file);
-                      if (!error && url) setEditMedia(prev => [...prev, { type: 'image', name: file.name, url }]);
-                      setEditMediaUploading(false);
-                      e.target.value = '';
-                    }} />
-                  </label>
-                  <label className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 text-purple-600 rounded-xl text-xs font-bold cursor-pointer hover:bg-purple-100 transition-colors">
-                    <Video size={12} /> 動画
-                    <input type="file" accept="video/*" className="hidden" onChange={async e => {
-                      const file = e.target.files?.[0];
-                      if (!file || !user) return;
-                      if (file.size > 50 * 1024 * 1024) { alert('50MB以下の動画を選択してください'); return; }
-                      setEditMediaUploading(true);
-                      const path = generateFilePath(user.id, 'note-edit', file.name);
-                      const { url, error } = await uploadFile('note-media', path, file);
-                      if (!error && url) setEditMedia(prev => [...prev, { type: 'video', name: file.name, url }]);
+                      try {
+                        const compressed = await compressImage(file);
+                        const path = generateFilePath(user.id, 'note-edit', compressed.name);
+                        const { url, error } = await uploadFile('note-media', path, compressed);
+                        if (!error && url) setEditMedia(prev => [...prev, { type: 'image', name: file.name, url }]);
+                      } catch { /* ignore */ }
                       setEditMediaUploading(false);
                       e.target.value = '';
                     }} />

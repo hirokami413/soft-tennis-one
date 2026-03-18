@@ -11,6 +11,7 @@ import { supabase } from '../lib/supabase';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { useNoteComments, type ReportedUser } from '../hooks/useNoteComments';
 import { uploadFile, generateFilePath } from '../lib/storage';
+import { compressImage } from '../lib/imageCompress';
 
 // --- Types ---
 interface SubmittedNote {
@@ -219,19 +220,21 @@ export const ProDashboardView: React.FC = () => {
     setVideoUrlInput('');
   };
 
-  const handleAdviceMediaUpload = async (file: File, type: 'image' | 'video') => {
+  const handleAdviceMediaUpload = async (file: File) => {
     if (!user) return;
-    const maxSize = type === 'image' ? 5 * 1024 * 1024 : 50 * 1024 * 1024;
-    if (file.size > maxSize) {
-      alert(`ファイルサイズが大きすぎます。${type === 'image' ? '5MB' : '50MB'}以下のファイルを選択してください。`);
+    if (file.size > 5 * 1024 * 1024) {
+      alert('ファイルサイズが大きすぎます。5MB以下の画像を選択してください。');
       return;
     }
     setAdviceMediaUploading(true);
-    const path = generateFilePath(user.id, 'coach-advice', file.name);
-    const { url, error } = await uploadFile('note-media', path, file);
-    if (!error && url) {
-      setAdviceMedia(prev => [...prev, { type, name: file.name, url }]);
-    }
+    try {
+      const compressed = await compressImage(file);
+      const path = generateFilePath(user.id, 'coach-advice', compressed.name);
+      const { url, error } = await uploadFile('note-media', path, compressed);
+      if (!error && url) {
+        setAdviceMedia(prev => [...prev, { type: 'image', name: file.name, url }]);
+      }
+    } catch { /* ignore */ }
     setAdviceMediaUploading(false);
   };
 
@@ -487,21 +490,11 @@ export const ProDashboardView: React.FC = () => {
             
             <div className="flex items-center justify-between">
               <div className="flex gap-2">
-                {/* Image Upload */}
                 <label className="p-2.5 bg-white/10 rounded-xl text-slate-300 hover:text-white hover:bg-white/20 transition-colors cursor-pointer" title="画像を添付">
                   <ImageIcon size={16} />
                   <input type="file" accept="image/*" className="hidden" onChange={e => {
                     const file = e.target.files?.[0];
-                    if (file) handleAdviceMediaUpload(file, 'image');
-                    e.target.value = '';
-                  }} />
-                </label>
-                {/* Video Upload */}
-                <label className="p-2.5 bg-white/10 rounded-xl text-slate-300 hover:text-white hover:bg-white/20 transition-colors cursor-pointer" title="動画を添付">
-                  <Video size={16} />
-                  <input type="file" accept="video/*" className="hidden" onChange={e => {
-                    const file = e.target.files?.[0];
-                    if (file) handleAdviceMediaUpload(file, 'video');
+                    if (file) handleAdviceMediaUpload(file);
                     e.target.value = '';
                   }} />
                 </label>

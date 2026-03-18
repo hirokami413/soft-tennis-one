@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { X, Edit3, Camera, Loader2 } from 'lucide-react';
 import { uploadFile, generateFilePath } from '../lib/storage';
+import { compressImage } from '../lib/imageCompress';
 
 const AVATAR_EMOJIS = [
   '🎾', '🏸', '⭐', '🔥', '💪', '🌟', '🎯', '🏆',
@@ -30,12 +31,17 @@ export const ProfileEditModal: React.FC<ProfileEditModalProps> = ({ onClose }) =
       return;
     }
     setUploading(true);
-    const path = generateFilePath(user.id, 'avatars', file.name);
-    const { url, error } = await uploadFile('profile-avatars', path, file);
-    if (error) {
-      alert('アップロードに失敗しました: ' + error);
-    } else if (url) {
-      setAvatarUrl(url);
+    try {
+      const compressed = await compressImage(file);
+      const path = generateFilePath(user.id, 'avatars', compressed.name);
+      const { url, error } = await uploadFile('profile-avatars', path, compressed);
+      if (error) {
+        alert('アップロードに失敗しました: ' + error);
+      } else if (url) {
+        setAvatarUrl(url);
+      }
+    } catch {
+      alert('画像の処理に失敗しました');
     }
     setUploading(false);
   };
