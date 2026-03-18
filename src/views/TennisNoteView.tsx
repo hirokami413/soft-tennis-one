@@ -322,6 +322,34 @@ export const TennisNoteView: React.FC = () => {
                         <p className="text-xs text-slate-700">{n.other}</p>
                       </div>
                     )}
+                    {n.coachQuestion && (
+                      <div className="bg-indigo-50 p-3 rounded-xl border-l-3 border-indigo-400">
+                        <p className="text-[10px] font-bold text-indigo-600 mb-0.5">💬 監督・指導者への相談</p>
+                        <p className="text-xs text-slate-700">{n.coachQuestion}</p>
+                      </div>
+                    )}
+                    {n.media && n.media.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-bold text-slate-500">📎 添付メディア</p>
+                        {n.media.map((m: any, i: number) => (
+                          <div key={i}>
+                            {m.type === 'image' && m.url ? (
+                              <img src={m.url} alt={m.name} className="w-full rounded-xl border border-slate-200 shadow-sm" />
+                            ) : m.type === 'video' && m.url ? (
+                              <video src={m.url} controls className="w-full rounded-xl border border-slate-200 shadow-sm" />
+                            ) : m.type === 'url' ? (
+                              <a href={m.name} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-600 border border-indigo-100 underline">
+                                <Link size={12} /> {m.name}
+                              </a>
+                            ) : (
+                              <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-slate-50 text-slate-600 border border-slate-100">
+                                {m.type === 'image' ? <ImageIcon size={12} /> : <Film size={12} />} {m.name}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
                     <div className="pt-2">
                       <RadarChart skills={n.skills} />
                     </div>
@@ -933,6 +961,40 @@ export const TennisNoteView: React.FC = () => {
                         <div className="bg-blue-50 p-3 rounded-xl border-l-3 border-blue-400">
                           <p className="text-[10px] font-bold text-blue-600 mb-0.5">🚀 Try</p>
                           <p className="text-xs text-slate-700">{n.tryItem}</p>
+                        </div>
+                      )}
+                      {n.other && (
+                        <div className="bg-slate-50 p-3 rounded-xl">
+                          <p className="text-[10px] font-bold text-slate-500 mb-0.5">📝 その他</p>
+                          <p className="text-xs text-slate-700">{n.other}</p>
+                        </div>
+                      )}
+                      {n.coachQuestion && (
+                        <div className="bg-indigo-50 p-3 rounded-xl border-l-3 border-indigo-400">
+                          <p className="text-[10px] font-bold text-indigo-600 mb-0.5">💬 監督・指導者への相談</p>
+                          <p className="text-xs text-slate-700">{n.coachQuestion}</p>
+                        </div>
+                      )}
+                      {n.media && n.media.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-bold text-slate-500">📎 添付メディア</p>
+                          {n.media.map((m: any, i: number) => (
+                            <div key={i}>
+                              {m.type === 'image' && m.url ? (
+                                <img src={m.url} alt={m.name} className="w-full rounded-xl border border-slate-200 shadow-sm" />
+                              ) : m.type === 'video' && m.url ? (
+                                <video src={m.url} controls className="w-full rounded-xl border border-slate-200 shadow-sm" />
+                              ) : m.type === 'url' ? (
+                                <a href={m.name} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-indigo-50 text-indigo-600 border border-indigo-100 underline">
+                                  <Link size={12} /> {m.name}
+                                </a>
+                              ) : (
+                                <div className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium bg-slate-50 text-slate-600 border border-slate-100">
+                                  {m.type === 'image' ? <ImageIcon size={12} /> : <Film size={12} />} {m.name}
+                                </div>
+                              )}
+                            </div>
+                          ))}
                         </div>
                       )}
                       <div className="pt-2">
