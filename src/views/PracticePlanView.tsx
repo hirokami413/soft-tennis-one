@@ -9,7 +9,7 @@ export const PracticePlanView: React.FC = () => {
   return (
     <div className="flex flex-col gap-6 py-2">
       {/* Sub Tab Toggle */}
-      <div className="flex bg-white rounded-2xl border border-slate-100 shadow-sm p-1 gap-1 print:hidden">
+      <div data-print-hide className="flex bg-white rounded-2xl border border-slate-100 shadow-sm p-1 gap-1 print:hidden">
         <button
           onClick={() => setSubTab('today')}
           className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-bold transition-all ${

@@ -16,7 +16,7 @@ export const MenuHubView: React.FC = () => {
   return (
     <div className="flex flex-col gap-4 py-2">
       {/* Sub Tab Navigation */}
-      <div className="flex bg-white rounded-2xl border border-slate-100 shadow-sm p-1 gap-1 print:hidden">
+      <div data-print-hide className="flex bg-white rounded-2xl border border-slate-100 shadow-sm p-1 gap-1 print:hidden">
         {tabs.map(tab => {
           const Icon = tab.icon;
           const isActive = subTab === tab.id;

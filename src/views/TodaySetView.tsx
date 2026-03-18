@@ -201,7 +201,7 @@ export const TodaySetView: React.FC = () => {
       </div>
 
       {/* Header Info */}
-      <div className="bg-brand-blue text-white p-6 rounded-3xl shadow-sm relative overflow-hidden print:hidden">
+      <div data-print-hide className="bg-brand-blue text-white p-6 rounded-3xl shadow-sm relative overflow-hidden print:hidden">
         {/* Background Decoration */}
         <div className="absolute -top-12 -right-12 w-48 h-48 bg-white opacity-5 rounded-full blur-2xl pointer-events-none" />
         
@@ -218,7 +218,7 @@ export const TodaySetView: React.FC = () => {
       </div>
 
       {/* Save & Load Sets */}
-      <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden print:hidden">
+      <div data-print-hide className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden print:hidden">
         <div className="flex">
           {/* Save Button */}
           <button
