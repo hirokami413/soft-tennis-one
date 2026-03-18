@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { Send, Info, CheckCircle2, Hash, X, Youtube } from 'lucide-react';
+import { Send, Info, CheckCircle2, Hash, X, Youtube, ImageIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSupabaseMenus } from '../hooks/useSupabaseMenus';
+import { uploadFile, generateFilePath } from '../lib/storage';
+import { compressImage } from '../lib/imageCompress';
 
 export const SubmitView: React.FC = () => {
   const { user } = useAuth();
@@ -20,6 +22,8 @@ export const SubmitView: React.FC = () => {
     instagramUrl: '',
   });
   const [tagInput, setTagInput] = useLocalStorage('submit_view_tag_input', '');
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
 
   // タグ入力欄から確定する処理
   const commitTag = (raw: string) => {
@@ -71,6 +75,15 @@ export const SubmitView: React.FC = () => {
       setIsSubmitting(true);
       setSubmitError('');
       
+      let imageUrl = '';
+      if (thumbnailFile && user) {
+        const compressed = await compressImage(thumbnailFile);
+        const path = generateFilePath(user.id, 'menu-thumbnails', compressed.name);
+        const { url, error: uploadError } = await uploadFile('note-media', path, compressed);
+        if (uploadError) throw new Error('サムネイルのアップロードに失敗: ' + uploadError);
+        imageUrl = url || '';
+      }
+
       await submitMenu({
         title: formData.title,
         category: formData.category,
@@ -78,7 +91,8 @@ export const SubmitView: React.FC = () => {
         description: formData.description,
         tags: formData.tags,
         youtubeUrl: formData.youtubeUrl,
-        instagramUrl: formData.instagramUrl
+        instagramUrl: formData.instagramUrl,
+        imageUrl: imageUrl || undefined,
       });
 
       setIsSubmitted(true);
@@ -106,6 +120,8 @@ export const SubmitView: React.FC = () => {
             setIsSubmitted(false);
             setFormData({ title: '', category: 'フォアハンド', level: '初級', description: '', tags: [], youtubeUrl: '', instagramUrl: '' });
             setTagInput('');
+            setThumbnailFile(null);
+            setThumbnailPreview(null);
           }}
           className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-8 rounded-full transition-colors"
         >
@@ -162,6 +178,44 @@ export const SubmitView: React.FC = () => {
             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
             placeholder="例: V字ボレー・スマッシュ連携"
           />
+        </div>
+
+        {/* Thumbnail Upload */}
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5">
+            <ImageIcon size={14} className="text-brand-blue" />
+            サムネイル画像（任意）
+          </label>
+          {thumbnailPreview ? (
+            <div className="relative w-full h-40 rounded-xl overflow-hidden border border-slate-200">
+              <img src={thumbnailPreview} alt="preview" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => { setThumbnailFile(null); setThumbnailPreview(null); }}
+                className="absolute top-2 right-2 w-7 h-7 bg-black/60 text-white rounded-full flex items-center justify-center hover:bg-black/80"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ) : (
+            <label className="flex flex-col items-center justify-center w-full h-32 bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl cursor-pointer hover:bg-slate-100 hover:border-slate-300 transition-all">
+              <ImageIcon size={28} className="text-slate-400 mb-2" />
+              <span className="text-xs text-slate-500 font-medium">タップして画像を選択</span>
+              <span className="text-[10px] text-slate-400 mt-0.5">未登録の場合はメニュー名が表示されます</span>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setThumbnailFile(file);
+                    setThumbnailPreview(URL.createObjectURL(file));
+                  }
+                }}
+              />
+            </label>
+          )}
         </div>
 
         {/* Category & Level */}

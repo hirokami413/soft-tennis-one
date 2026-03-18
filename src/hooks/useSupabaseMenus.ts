@@ -40,6 +40,7 @@ export function useSupabaseMenus() {
           tags: row.tags || [],
           youtubeUrl: row.youtube_url,
           instagramUrl: row.instagram_url,
+          imageUrl: row.image_url || undefined,
           author: row.author_nickname,
           authorAvatar: row.author_avatar,
           authorId: row.author_id,
@@ -80,6 +81,7 @@ export function useSupabaseMenus() {
           tags: menuData.tags || [],
           youtube_url: menuData.youtubeUrl || '',
           instagram_url: menuData.instagramUrl || '',
+          image_url: menuData.imageUrl || '',
           author_id: user.id
         })
         .select()
@@ -114,6 +116,7 @@ export function useSupabaseMenus() {
           tags: menuData.tags,
           youtube_url: menuData.youtubeUrl,
           instagram_url: menuData.instagramUrl,
+          image_url: menuData.imageUrl || '',
         })
         .eq('id', id)
         .eq('author_id', user.id) // セキュリティのため念押し

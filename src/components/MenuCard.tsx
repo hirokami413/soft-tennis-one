@@ -39,18 +39,38 @@ export const MenuCard: React.FC<MenuCardProps> = ({ menu, onClick, onAdd, isAdde
 
       {/* Thumbnail Area */}
       <div className="relative h-32 w-full bg-slate-200">
-        {/* Skeleton placeholder */}
-        {!imageLoaded && (
-          <div className="absolute inset-0 bg-slate-200 animate-pulse">
-            <div className="absolute inset-0 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 animate-shimmer" />
+        {menu.imageUrl ? (
+          <>
+            {/* Skeleton placeholder */}
+            {!imageLoaded && (
+              <div className="absolute inset-0 bg-slate-200 animate-pulse">
+                <div className="absolute inset-0 bg-gradient-to-r from-slate-200 via-slate-100 to-slate-200 animate-shimmer" />
+              </div>
+            )}
+            <img 
+              src={menu.imageUrl} 
+              alt={menu.title}
+              className={`w-full h-full object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+              onLoad={() => setImageLoaded(true)}
+            />
+          </>
+        ) : (
+          <div className={`absolute inset-0 flex items-center justify-center p-4 ${
+            {
+              'フォアハンド': 'bg-gradient-to-br from-blue-400 to-blue-600',
+              'バックハンド': 'bg-gradient-to-br from-violet-400 to-violet-600',
+              'ボレー': 'bg-gradient-to-br from-emerald-400 to-emerald-600',
+              'スマッシュ': 'bg-gradient-to-br from-orange-400 to-orange-600',
+              'サーブ': 'bg-gradient-to-br from-rose-400 to-rose-600',
+              'フットワーク': 'bg-gradient-to-br from-cyan-400 to-cyan-600',
+              '実戦形式': 'bg-gradient-to-br from-amber-400 to-amber-600',
+            }[menu.category] || 'bg-gradient-to-br from-slate-400 to-slate-600'
+          }`}>
+            <span className="text-white font-bold text-base text-center leading-snug drop-shadow-md line-clamp-3">
+              {menu.title}
+            </span>
           </div>
         )}
-        <img 
-          src={menu.imageUrl} 
-          alt={menu.title}
-          className={`w-full h-full object-cover transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-          onLoad={() => setImageLoaded(true)}
-        />
         {/* Gradient Overlay for Top Badges */}
         <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-black/40 to-transparent p-4 flex justify-between items-start">
           <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-white text-xs font-semibold shadow-sm">
