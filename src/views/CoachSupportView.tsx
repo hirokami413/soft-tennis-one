@@ -762,10 +762,18 @@ export const CoachSupportView: React.FC = () => {
           ) : (
             <div 
               key={waitingConsultations[currentQuestionIndex].id} // Force re-render for animation on index change
-              className="bg-white rounded-3xl border border-slate-100 shadow-lg overflow-hidden flex flex-col min-h-[400px] animate-in slide-in-from-bottom-8 fade-in duration-500"
+              className={`bg-white rounded-3xl border shadow-lg overflow-hidden flex flex-col min-h-[400px] animate-in slide-in-from-bottom-8 fade-in duration-500 ${waitingConsultations[currentQuestionIndex].status === 'reask' ? 'border-purple-300' : 'border-slate-100'}`}
             >
               {/* Card Content (Question) */}
               <div className="p-6 flex-1 flex flex-col justify-center space-y-4">
+                {waitingConsultations[currentQuestionIndex].status === 'reask' && (
+                  <div className="bg-purple-50 border border-purple-200 rounded-xl px-3 py-2 animate-in fade-in duration-300">
+                    <span className="text-[11px] font-bold text-purple-600">🔄 再質問 — あなたの前回の回答に対する追加質問です</span>
+                    {waitingConsultations[currentQuestionIndex].answer && (
+                      <p className="text-xs text-purple-500 mt-1 line-clamp-3">前回の回答: {waitingConsultations[currentQuestionIndex].answer}</p>
+                    )}
+                  </div>
+                )}
                 <div className="flex items-center gap-2 text-slate-400">
                   <Clock size={14} />
                   <span className="text-xs font-medium">{waitingConsultations[currentQuestionIndex].createdAt}</span>
