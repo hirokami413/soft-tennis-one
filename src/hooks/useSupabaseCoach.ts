@@ -2,14 +2,23 @@ import { useState, useEffect, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 
+export interface CoachAnswer {
+  id: string;
+  coachId: string;
+  coachName: string;
+  coachAvatar: string;
+  coachRank: string;
+  answer: string;
+  createdAt: string;
+  isBestAnswer: boolean;
+}
+
 export interface CoachConsultation {
   id: string;
   question: string;
-  status: 'waiting' | 'answered' | 'resolved' | 'reask';
+  status: 'waiting' | 'answered' | 'resolved';
   createdAt: string;
-  coach?: any;
-  answer?: string;
-  answeredAt?: string;
+  answers: CoachAnswer[];
   userRating?: number;
   isMine?: boolean;
   userNickname?: string;
@@ -17,7 +26,11 @@ export interface CoachConsultation {
   questionType?: 'text' | 'video';
   category?: string;
   report_reason?: string | null;
+  // 後方互換: 旧answerフィールド（単一回答）
+  answer?: string;
   answeredBy?: string;
+  answeredAt?: string;
+  coach?: any;
 }
 
 export function useSupabaseCoach() {
@@ -33,42 +46,69 @@ export function useSupabaseCoach() {
     }
     setLoading(true);
 
+    // 質問データ取得
     const { data, error } = await supabase
       .from('coach_questions')
       .select(`
         *,
-        profiles:user_id(nickname, avatar_emoji),
-        coach:answered_by(nickname, avatar_emoji, coach_rank, coach_answer_count, coach_avg_rating)
+        profiles:user_id(nickname, avatar_emoji)
       `)
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error('相談データ取得エラー:', error.message, error);
     }
+
+    // 回答データ取得（coach_answersテーブルから）
+    const { data: answersData, error: answersError } = await supabase
+      .from('coach_answers')
+      .select(`
+        *,
+        coach:coach_id(nickname, avatar_emoji, coach_rank)
+      `)
+      .order('created_at', { ascending: true });
+
+    if (answersError) {
+      console.error('回答データ取得エラー:', answersError.message);
+    }
+
+    // 回答をquestion_idでグルーピング
+    const answersByQuestion: Record<string, CoachAnswer[]> = {};
+    if (answersData) {
+      for (const row of answersData) {
+        const qid = row.question_id;
+        if (!answersByQuestion[qid]) answersByQuestion[qid] = [];
+        answersByQuestion[qid].push({
+          id: row.id,
+          coachId: row.coach_id,
+          coachName: row.coach?.nickname || '不明',
+          coachAvatar: row.coach?.avatar_emoji || '🏐',
+          coachRank: row.coach?.coach_rank || 'bronze',
+          answer: row.answer,
+          createdAt: row.created_at,
+          isBestAnswer: row.is_best_answer,
+        });
+      }
+    }
+
     if (data && !error) {
       const parsed: CoachConsultation[] = data.map(row => ({
         id: row.id,
         question: row.question,
-        status: row.status,
+        status: row.status === 'reask' ? 'waiting' : row.status, // reask→waiting に変換
         createdAt: row.created_at,
-        answer: row.answer,
-        answeredAt: row.answered_at,
+        answers: answersByQuestion[row.id] || [],
         userRating: row.user_rating,
         questionType: row.question_type,
         category: row.category,
         report_reason: row.report_reason,
+        // 後方互換: 旧データ（coach_questions.answerに直接入っているもの）
+        answer: row.answer,
         answeredBy: row.answered_by,
+        answeredAt: row.answered_at,
         isMine: row.user_id === user.id,
         userNickname: row.profiles?.nickname,
         userAvatar: row.profiles?.avatar_emoji,
-        coach: row.coach ? {
-          name: row.coach.nickname,
-          avatar: row.coach.avatar_emoji,
-          rank: row.coach.coach_rank,
-          answerCount: row.coach.coach_answer_count,
-          rating: row.coach.coach_avg_rating,
-          specialty: ['全般'] // Currently not stored in DB, fallback
-        } : undefined
       }));
       setConsultations(parsed);
     }
@@ -82,9 +122,6 @@ export function useSupabaseCoach() {
       loadConsultations();
     }
   }, [loadConsultations, user?.id, authLoading]);
-
-
-
 
   const applyCoachApplication = async (fullName: string, nickname: string, extra?: { yearsExperience?: string; certification?: string; selfIntro?: string }) => {
      if (!useDB || !user) return { error: 'Not configured' };
@@ -115,20 +152,28 @@ export function useSupabaseCoach() {
     }
   };
 
-  const answerQuestion = async (id: string, answer: string) => {
+  // コーチが回答を送信（coach_answersテーブルにINSERT）
+  const answerQuestion = async (questionId: string, answer: string) => {
     if (!useDB || !user) return false;
-    const { error } = await supabase.from('coach_questions').update({
+
+    // coach_answersにINSERT
+    const { error } = await supabase.from('coach_answers').insert({
+      question_id: questionId,
+      coach_id: user.id,
       answer: answer,
-      status: 'answered',
-      answered_by: user.id,
-      answered_at: new Date().toISOString()
-    }).eq('id', id);
+    });
 
     if (error) {
       console.error('回答の保存に失敗しました:', error.message, error);
       alert('回答の保存に失敗しました: ' + error.message);
       return false;
     }
+
+    // 質問のステータスをansweredに更新（まだwaitingの場合のみ）
+    await supabase.from('coach_questions').update({
+      status: 'answered',
+    }).eq('id', questionId).eq('status', 'waiting');
+
     await loadConsultations();
     return true;
   };
@@ -148,9 +193,83 @@ export function useSupabaseCoach() {
   };
   const BASE_REWARD = 700;
 
+  // ベストアンサーを選択 → 選ばれたコーチにコイン付与
+  const selectBestAnswer = async (answerId: string, questionId: string) => {
+    if (!useDB || !user) return;
+
+    // ベストアンサーをセット
+    const { error } = await supabase.from('coach_answers')
+      .update({ is_best_answer: true })
+      .eq('id', answerId);
+
+    if (error) {
+      console.error('ベストアンサー設定失敗:', error);
+      alert('ベストアンサーの設定に失敗しました: ' + error.message);
+      return;
+    }
+
+    // 質問をresolvedに
+    await supabase.from('coach_questions')
+      .update({ status: 'resolved' })
+      .eq('id', questionId);
+
+    // ベストアンサーのコーチIDを取得
+    const { data: bestAnswer } = await supabase.from('coach_answers')
+      .select('coach_id')
+      .eq('id', answerId)
+      .single();
+
+    if (!bestAnswer?.coach_id) {
+      await loadConsultations();
+      return;
+    }
+
+    // コーチにコイン報酬を付与
+    try {
+      const { data: coachProfile } = await supabase
+        .from('profiles')
+        .select('coach_rank, coach_answer_count, coach_avg_rating')
+        .eq('id', bestAnswer.coach_id)
+        .single();
+
+      const rank = coachProfile?.coach_rank || 'bronze';
+      const config = RANK_CONFIG[rank] || RANK_CONFIG.bronze;
+      const reward = Math.floor(BASE_REWARD * config.multiplier);
+
+      // コイン付与
+      const { error: coinErr } = await supabase.rpc('add_coins', { p_user_id: bestAnswer.coach_id, p_amount: reward });
+      if (coinErr) {
+        console.error('コイン付与失敗:', coinErr);
+      } else {
+        console.log(`コーチ ${bestAnswer.coach_id} に ${reward}コイン付与成功`);
+      }
+
+      // 回答数+1
+      await supabase.rpc('increment_coach_answer_count', { p_coach_id: bestAnswer.coach_id });
+
+      // ランクアップ判定
+      if (coachProfile) {
+        const newCount = (coachProfile.coach_answer_count || 0) + 1;
+        const avgRating = coachProfile.coach_avg_rating || 0;
+        const condition = RANK_UP_CONDITIONS[rank];
+
+        if (condition?.next && newCount >= condition.answers && avgRating >= condition.rating) {
+          await supabase.rpc('update_coach_rank', { p_coach_id: bestAnswer.coach_id, p_new_rank: condition.next });
+          const bonus = RANK_CONFIG[condition.next]?.rankUpBonus || 0;
+          if (bonus > 0) {
+            await supabase.rpc('add_coins', { p_user_id: bestAnswer.coach_id, p_amount: bonus });
+          }
+        }
+      }
+    } catch (e) {
+      console.error('コイン付与処理でエラー:', e);
+    }
+
+    await loadConsultations();
+  };
+
   const updateQuestionStatus = async (id: string, status: string, rating?: number) => {
      if (!useDB || !user) return;
-     // 'rated' = 評価のみ保存（ステータスは変更しない、コイン付与もしない）
      const updates: any = status === 'rated' ? {} : { status };
      if (rating !== undefined) updates.user_rating = rating;
      
@@ -158,72 +277,6 @@ export function useSupabaseCoach() {
      if (error) {
        console.error('ステータス更新失敗:', error);
        return;
-     }
-     
-     // resolved時: コーチにコイン報酬を付与 + ランクアップ判定
-     if (status === 'resolved') {
-       try {
-         const { data: question, error: qErr } = await supabase
-           .from('coach_questions')
-           .select('answered_by')
-           .eq('id', id)
-           .single();
-         
-         if (qErr || !question?.answered_by) {
-           console.error('回答者情報取得失敗:', qErr, question);
-           await loadConsultations();
-           return;
-         }
-
-         // コーチのプロフィールを取得
-         const { data: coachProfile, error: pErr } = await supabase
-           .from('profiles')
-           .select('coach_rank, coach_answer_count, coach_avg_rating')
-           .eq('id', question.answered_by)
-           .single();
-         
-         if (pErr) {
-           console.error('コーチプロフィール取得失敗:', pErr);
-         }
-         
-         const rank = coachProfile?.coach_rank || 'bronze';
-         const config = RANK_CONFIG[rank] || RANK_CONFIG.bronze;
-         const reward = Math.floor(BASE_REWARD * config.multiplier);
-         
-         // コーチにランクベースのコイン付与
-         const { error: coinErr } = await supabase.rpc('add_coins', { p_user_id: question.answered_by, p_amount: reward });
-         if (coinErr) {
-           console.error('コイン付与失敗:', coinErr);
-           alert('コイン付与に失敗しました: ' + coinErr.message);
-         } else {
-           console.log(`コーチ ${question.answered_by} に ${reward}コイン付与成功`);
-         }
-         
-         // コーチの回答数を+1
-         const { error: countErr } = await supabase.rpc('increment_coach_answer_count', { p_coach_id: question.answered_by });
-         if (countErr) {
-           console.error('回答数更新失敗:', countErr);
-         }
-         
-         // ランクアップ判定
-         if (coachProfile) {
-           const newCount = (coachProfile.coach_answer_count || 0) + 1;
-           const avgRating = coachProfile.coach_avg_rating || 0;
-           const condition = RANK_UP_CONDITIONS[rank];
-           
-           if (condition?.next && newCount >= condition.answers && avgRating >= condition.rating) {
-             const { error: rankErr } = await supabase.rpc('update_coach_rank', { p_coach_id: question.answered_by, p_new_rank: condition.next });
-             if (rankErr) console.error('ランクアップ失敗:', rankErr);
-             
-             const bonus = RANK_CONFIG[condition.next]?.rankUpBonus || 0;
-             if (bonus > 0) {
-               await supabase.rpc('add_coins', { p_user_id: question.answered_by, p_amount: bonus });
-             }
-           }
-         }
-       } catch (e) {
-         console.error('コイン付与処理でエラー:', e);
-       }
      }
      await loadConsultations();
   };
@@ -251,6 +304,7 @@ export function useSupabaseCoach() {
     applyCoachApplication,
     askQuestion,
     answerQuestion,
+    selectBestAnswer,
     updateQuestionStatus,
     reportQuestion
   };

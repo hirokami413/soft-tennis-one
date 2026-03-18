@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { 
-  ShieldCheck, Send, Star, MessageCircle, CheckCircle2, 
+  ShieldCheck, Send, Star, MessageCircle, CheckCircle2, Trophy, 
   AlertTriangle, Clock, ChevronDown, ChevronUp,
   Award, Zap, Crown, Gem, Flag, ThumbsUp, X, Search, Video,
   Image as ImageIcon, Link, ArrowRightLeft, ShoppingCart, Banknote,
@@ -52,11 +52,9 @@ const coinPackages = [
 
 export const CoachSupportView: React.FC = () => {
   const { user, refreshProfile, addCoins } = useAuth();
-  const { consultations, loading: consultationsLoading, askQuestion, answerQuestion, updateQuestionStatus, applyCoachApplication, reportQuestion } = useSupabaseCoach();
+  const { consultations, loading: consultationsLoading, askQuestion, answerQuestion, selectBestAnswer, updateQuestionStatus, applyCoachApplication, reportQuestion } = useSupabaseCoach();
   const [newQuestion, setNewQuestion] = useLocalStorage('coach_support_new_question', '');
   const [expandedId, setExpandedId] = useState<string | null>('c-1');
-  const [reaskText, setReaskText] = useState('');
-  const [showReaskInput, setShowReaskInput] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useLocalStorage<'list' | 'new' | 'coach'>('coach_support_active_tab', 'list');
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -125,24 +123,17 @@ export const CoachSupportView: React.FC = () => {
   };
 
   // Resolve → コーチにコインを付与（DB処理はuseSupabaseCoachで実行）
-  const handleResolve = async (id: string) => {
-    await updateQuestionStatus(id, 'resolved');
-    // DB処理完了後にプロフィール更新（コインが変わった場合UIに反映）
+  // ベストアンサー選択
+  const handleSelectBestAnswer = async (answerId: string, questionId: string) => {
+    if (!window.confirm('この回答をベストアンサーに選びますか？\n選ばれたコーチにコインが付与されます。')) return;
+    await selectBestAnswer(answerId, questionId);
     await refreshProfile();
   };
 
-  // Rate → 評価のみ保存（resolvedのコイン付与は上のhandleResolveで済み）
+  // Rate → 評価のみ保存
   const handleRate = async (id: string, rating: number) => {
     await updateQuestionStatus(id, 'rated', rating);
     await refreshProfile();
-  };
-
-  // Re-ask → 同じコーチに再質問が戻る
-  const handleReask = (id: string) => {
-    if (!reaskText.trim()) return;
-    updateQuestionStatus(id, 'reask');
-    setShowReaskInput(null);
-    setReaskText('');
   };
 
   // Report → 報告理由を入力してDBに保存
@@ -157,10 +148,9 @@ export const CoachSupportView: React.FC = () => {
     alert('報告を送信しました。管理者が確認し対応いたします。');
   };
 
-  // コーチ回答タブに表示: waitingは全コーチ、reaskは元のコーチのみ（再質問を優先表示）
+  // コーチ回答タブ: waitingのみ表示（自分が既に回答済みの質問は除く）
   const waitingConsultations = consultations
-    .filter(c => c.status === 'waiting' || (c.status === 'reask' && c.answeredBy === user?.id))
-    .sort((a, b) => (a.status === 'reask' ? -1 : 0) - (b.status === 'reask' ? -1 : 0));
+    .filter(c => c.status === 'waiting' && !c.answers.some(a => a.coachId === user?.id));
 
   const goToNextQuestion = () => {
     setCurrentQuestionIndex(prev => prev + 1);
@@ -189,7 +179,7 @@ export const CoachSupportView: React.FC = () => {
     waiting: { label: '回答待ち', cls: 'bg-slate-100 text-slate-600 border-slate-200' },
     answered: { label: '回答あり', cls: 'bg-brand-blue text-white border-blue-600' },
     resolved: { label: '解決済み', cls: 'bg-green-100 text-green-700 border-green-200' },
-    reask: { label: '再質問中', cls: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
+
   };
 
   // Filtered list for display
@@ -483,7 +473,7 @@ export const CoachSupportView: React.FC = () => {
                 <div className="border-t border-slate-100 animate-in fade-in duration-200">
                   
                   {/* Waiting State */}
-                  {c.status === 'waiting' && (
+                  {c.status === 'waiting' && c.answers.length === 0 && (
                     <div className="p-5 flex flex-col items-center text-center text-slate-400 gap-2">
                       <Clock size={28} className="text-slate-300" />
                       <p className="text-sm font-medium">コーチからの回答をお待ちください...</p>
@@ -491,178 +481,118 @@ export const CoachSupportView: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Re-ask State */}
-                  {c.status === 'reask' && (
-                    <div className="p-5 flex flex-col items-center text-center text-yellow-600 gap-2">
-                      <Clock size={28} className="text-yellow-400" />
-                      <p className="text-sm font-medium">再質問を同じコーチに送信しました</p>
-                      <p className="text-[11px] text-slate-400">担当コーチからの追加回答をお待ちください</p>
+                  {/* Answers List (Multiple Coaches) */}
+                  {c.answers.length > 0 && (
+                    <div className="p-4 space-y-3">
+                      <p className="text-[11px] font-bold text-slate-500">💬 回答一覧（{c.answers.length}件）</p>
+                      {c.answers.map(a => (
+                        <div key={a.id} className={`border rounded-xl p-3 space-y-2 ${a.isBestAnswer ? 'border-yellow-400 bg-yellow-50' : 'border-slate-200 bg-white'}`}>
+                          {/* Best Answer Badge */}
+                          {a.isBestAnswer && (
+                            <div className="flex items-center gap-1.5 text-yellow-600 text-[11px] font-bold">
+                              <Trophy size={14} /> ベストアンサー
+                            </div>
+                          )}
+                          {/* Coach Info */}
+                          <div className="flex items-center gap-2">
+                            <div className="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-white text-xs shrink-0">
+                              {a.coachAvatar}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-xs text-slate-800">{a.coachName}</span>
+                                {(() => {
+                                  const rc = rankConfig[a.coachRank as keyof typeof rankConfig] || rankConfig.bronze;
+                                  const RankIcon = rc.icon;
+                                  return (
+                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border ${rc.color} flex items-center gap-0.5`}>
+                                      <RankIcon size={8} /> {rc.label}
+                                    </span>
+                                  );
+                                })()}
+                              </div>
+                              <p className="text-[10px] text-slate-400">{new Date(a.createdAt).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
+                            </div>
+                          </div>
+                          {/* Answer Text */}
+                          <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{a.answer}</p>
+                          {/* Best Answer Button */}
+                          {c.isMine && c.status === 'answered' && !c.answers.some(ans => ans.isBestAnswer) && (
+                            <button
+                              onClick={() => handleSelectBestAnswer(a.id, c.id)}
+                              className="w-full py-2 bg-yellow-50 text-yellow-700 border border-yellow-300 rounded-lg text-xs font-bold hover:bg-yellow-100 transition-colors flex items-center justify-center gap-1.5"
+                            >
+                              <Trophy size={14} /> この回答をベストアンサーに選ぶ
+                            </button>
+                          )}
+                        </div>
+                      ))}
+
+                      {/* まだ回答待ちの場合 */}
+                      {c.status === 'waiting' && (
+                        <div className="text-center text-[11px] text-slate-400 py-2">
+                          他のコーチからの回答も受付中...
+                        </div>
+                      )}
                     </div>
                   )}
 
-                  {/* Answer */}
-                  {(c.status === 'answered' || c.status === 'resolved') && c.answer && (
+                  {/* Legacy: 旧データ（coach_questions.answerに直接保存されたもの） */}
+                  {c.answers.length === 0 && (c.status === 'answered' || c.status === 'resolved') && c.answer && (
                     <div className="p-4 space-y-4">
-                      
-                      {/* Coach Profile */}
-                      {c.coach ? (
                       <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl">
-                        <div className="w-10 h-10 bg-slate-900 rounded-full flex items-center justify-center text-white font-black text-sm shrink-0">
-                          {c.coach.avatar}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-0.5">
-                            <span className="font-bold text-sm text-slate-800">{c.coach.name}</span>
-                            {(() => {
-                              const rc = rankConfig[c.coach!.rank as keyof typeof rankConfig] || rankConfig.bronze;
-                              const RankIcon = rc.icon;
-                              return (
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${rc.color} flex items-center gap-1`}>
-                                  <RankIcon size={10} /> {rc.label}
-                                </span>
-                              );
-                            })()}
-                          </div>
-                          <div className="flex flex-wrap gap-1">
-                            {c.coach.specialty.map((s: string) => (
-                              <span key={s} className="text-[10px] text-slate-500 bg-white px-2 py-0.5 rounded-full border border-slate-200">
-                                {s}
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                        <div className="text-right shrink-0">
-                          <div className="flex items-center gap-0.5 text-xs font-bold text-slate-600">
-                            <Star size={12} className="text-yellow-400 fill-current" />
-                            {c.coach.rating}
-                          </div>
-                          <span className="text-[10px] text-slate-400">{c.coach.answerCount}回答</span>
-                        </div>
-                      </div>
-                      ) : (
-                      <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-xl">
-                        <div className="w-10 h-10 bg-brand-blue rounded-full flex items-center justify-center text-white font-black text-sm shrink-0">
-                          🎾
-                        </div>
+                        <div className="w-10 h-10 bg-brand-blue rounded-full flex items-center justify-center text-white font-black text-sm shrink-0">🎾</div>
                         <div>
                           <span className="font-bold text-sm text-slate-800">コーチの回答</span>
                           <p className="text-[10px] text-slate-400">{c.answeredAt ? new Date(c.answeredAt).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : ''}</p>
                         </div>
                       </div>
-                      )}
-
-                      {/* Answer Content */}
                       <div className="bg-blue-50/50 border border-blue-100 p-4 rounded-xl">
-                        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">
-                          {c.answer}
-                        </p>
+                        <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{c.answer}</p>
                       </div>
+                    </div>
+                  )}
 
-                      {/* Actions */}
-                      {c.status === 'answered' && c.isMine && (
-                        <div className="space-y-3">
-                          {/* Auto-resolve notice */}
-                          {c.answeredAt && (
-                            <div className="bg-amber-50 border border-amber-100 px-3 py-2 rounded-xl flex items-center gap-2">
-                              <Clock size={12} className="text-amber-500 shrink-0" />
-                              <p className="text-[10px] text-amber-600">
-                                {(() => {
-                                  const remaining = 24 * 60 * 60 * 1000 - (Date.now() - new Date(c.answeredAt).getTime());
-                                  if (remaining <= 0) return '自動解決処理中...';
-                                  const hours = Math.floor(remaining / (60 * 60 * 1000));
-                                  const mins = Math.floor((remaining % (60 * 60 * 1000)) / (60 * 1000));
-                                  return `${hours}時間${mins}分以内に操作がない場合、自動で解決済みになりコーチにコインが付与されます`;
-                                })()}
-                              </p>
-                            </div>
-                          )}
-                          {/* Resolve + Re-ask */}
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleResolve(c.id)}
-                              className="flex-1 py-3 bg-brand-blue text-white rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-brand-blue-hover transition-colors"
-                            >
-                              <CheckCircle2 size={16} />
-                              解決した！
-                            </button>
-                            <button
-                              onClick={() => setShowReaskInput(showReaskInput === c.id ? null : c.id)}
-                              className="flex-1 py-3 bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-xl font-bold text-sm flex items-center justify-center gap-2 hover:bg-yellow-100 transition-colors"
-                            >
-                              <MessageCircle size={16} />
-                              再質問する
-                            </button>
-                          </div>
-
-                          {/* Re-ask input */}
-                          {showReaskInput === c.id && (
-                            <div className="space-y-2 animate-in fade-in duration-200">
-                              <textarea
-                                value={reaskText}
-                                onChange={(e) => setReaskText(e.target.value)}
-                                placeholder="追加で聞きたいことを入力..."
-                                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm h-20 resize-none focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue"
-                              />
-                              <button
-                                onClick={() => handleReask(c.id)}
-                                disabled={!reaskText.trim()}
-                                className="w-full py-2.5 bg-yellow-500 text-white rounded-xl text-sm font-bold disabled:opacity-50 transition-colors hover:bg-yellow-600"
-                              >
-                                再質問を送信（同じコーチへ・無料1回）
-                              </button>
-                            </div>
-                          )}
-
-                          {/* Report → 別コーチに再振分 */}
-                          <button
-                            onClick={() => handleReport(c.id)}
-                            className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-slate-400 hover:text-red-500 transition-colors"
-                          >
-                            <Flag size={12} />
-                            回答に問題がある場合（別のコーチに再振分）
-                          </button>
-                        </div>
-                      )}
-
-                      {/* Resolved → Rating */}
-                      {c.status === 'resolved' && (
-                        <div className="space-y-3">
-                          <div className="bg-green-50 border border-green-100 px-4 py-3 rounded-xl flex items-center gap-2">
-                            <ThumbsUp size={16} className="text-green-500" />
-                            <span className="text-sm font-bold text-green-700">この相談は解決済みです</span>
-                          </div>
-                          
-                          {/* Star Rating */}
-                          {!c.userRating ? (
-                            c.isMine && (
-                              <div className="text-center space-y-2">
-                                <p className="text-xs font-medium text-slate-500">このコーチの回答を評価してください</p>
-                                <div className="flex justify-center gap-1">
-                                  {[1,2,3,4,5].map(star => (
-                                    <button
-                                      key={star}
-                                      onClick={() => handleRate(c.id, star)}
-                                      className="p-1 hover:scale-125 transition-transform"
-                                    >
-                                      <Star size={28} className="text-slate-300 hover:text-yellow-400 hover:fill-current transition-colors" />
-                                    </button>
-                                  ))}
-                                </div>
-                              </div>
-                            )
-                          ) : (
-                            <div className="flex justify-center gap-0.5">
+                  {/* Resolved → Rating */}
+                  {c.status === 'resolved' && (
+                    <div className="p-4 space-y-3">
+                      <div className="bg-green-50 border border-green-100 px-4 py-3 rounded-xl flex items-center gap-2">
+                        <ThumbsUp size={16} className="text-green-500" />
+                        <span className="text-sm font-bold text-green-700">この相談は解決済みです</span>
+                      </div>
+                      {!c.userRating ? (
+                        c.isMine && (
+                          <div className="text-center space-y-2">
+                            <p className="text-xs font-medium text-slate-500">ベストアンサーのコーチを評価してください</p>
+                            <div className="flex justify-center gap-1">
                               {[1,2,3,4,5].map(star => (
-                                <Star
-                                  key={star}
-                                  size={20}
-                                  className={star <= c.userRating! ? 'text-yellow-400 fill-current' : 'text-slate-200'}
-                                />
+                                <button key={star} onClick={() => handleRate(c.id, star)} className="p-1 hover:scale-125 transition-transform">
+                                  <Star size={28} className="text-slate-300 hover:text-yellow-400 hover:fill-current transition-colors" />
+                                </button>
                               ))}
                             </div>
-                          )}
+                          </div>
+                        )
+                      ) : (
+                        <div className="flex justify-center gap-0.5">
+                          {[1,2,3,4,5].map(star => (
+                            <Star key={star} size={20} className={star <= c.userRating! ? 'text-yellow-400 fill-current' : 'text-slate-200'} />
+                          ))}
                         </div>
                       )}
+                    </div>
+                  )}
+
+                  {/* Report */}
+                  {c.isMine && c.status !== 'resolved' && c.answers.length > 0 && (
+                    <div className="px-4 pb-3">
+                      <button
+                        onClick={() => handleReport(c.id)}
+                        className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-slate-400 hover:text-red-500 transition-colors"
+                      >
+                        <Flag size={12} />
+                        回答に問題がある場合（別のコーチに再振分）
+                      </button>
                     </div>
                   )}
                 </div>
@@ -761,19 +691,11 @@ export const CoachSupportView: React.FC = () => {
             )
           ) : (
             <div 
-              key={waitingConsultations[currentQuestionIndex].id} // Force re-render for animation on index change
-              className={`bg-white rounded-3xl border shadow-lg overflow-hidden flex flex-col min-h-[400px] animate-in slide-in-from-bottom-8 fade-in duration-500 ${waitingConsultations[currentQuestionIndex].status === 'reask' ? 'border-purple-300' : 'border-slate-100'}`}
+              key={waitingConsultations[currentQuestionIndex].id}
+              className="bg-white rounded-3xl border border-slate-100 shadow-lg overflow-hidden flex flex-col min-h-[400px] animate-in slide-in-from-bottom-8 fade-in duration-500"
             >
               {/* Card Content (Question) */}
               <div className="p-6 flex-1 flex flex-col justify-center space-y-4">
-                {waitingConsultations[currentQuestionIndex].status === 'reask' && (
-                  <div className="bg-purple-50 border border-purple-200 rounded-xl px-3 py-2 animate-in fade-in duration-300">
-                    <span className="text-[11px] font-bold text-purple-600">🔄 再質問 — あなたの前回の回答に対する追加質問です</span>
-                    {waitingConsultations[currentQuestionIndex].answer && (
-                      <p className="text-xs text-purple-500 mt-1 line-clamp-3">前回の回答: {waitingConsultations[currentQuestionIndex].answer}</p>
-                    )}
-                  </div>
-                )}
                 <div className="flex items-center gap-2 text-slate-400">
                   <Clock size={14} />
                   <span className="text-xs font-medium">{waitingConsultations[currentQuestionIndex].createdAt}</span>
@@ -786,8 +708,7 @@ export const CoachSupportView: React.FC = () => {
               {/* Action Area */}
               <div className="p-4 bg-slate-50 border-t border-slate-100 space-y-3">
                 {!showCoachAnswerInput ? (
-                  <div className={`grid gap-3 ${waitingConsultations[currentQuestionIndex].status === 'reask' ? 'grid-cols-1' : 'grid-cols-2'}`}>
-                    {waitingConsultations[currentQuestionIndex].status !== 'reask' && (
+                  <div className="grid grid-cols-2 gap-3">
                     <button
                       onClick={handleSkipQuestion}
                       className="flex flex-col items-center justify-center gap-1.5 py-4 bg-white border-2 border-slate-200 text-slate-500 font-bold rounded-2xl hover:bg-slate-100 hover:border-slate-300 transition-all"
@@ -797,7 +718,6 @@ export const CoachSupportView: React.FC = () => {
                         飛ばす <span className="font-mono text-[10px] text-yellow-600 bg-yellow-50 px-1 py-0.5 rounded">-50🪙</span>
                       </span>
                     </button>
-                    )}
                     <button
                       onClick={() => setShowCoachAnswerInput(true)}
                       className="flex flex-col items-center justify-center gap-1.5 py-4 bg-brand-blue text-white font-bold rounded-2xl shadow-md hover:bg-brand-blue-hover transition-all"
