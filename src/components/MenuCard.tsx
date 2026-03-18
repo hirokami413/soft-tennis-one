@@ -89,14 +89,16 @@ export const MenuCard: React.FC<MenuCardProps> = ({ menu, onClick, onAdd, isAdde
                 />
               </button>
             )}
-            {menu.rating && (
-              <div className="flex items-center gap-1 bg-white/90 backdrop-blur-md px-2 py-1 rounded-full shadow-sm">
-                <Star size={12} className="text-yellow-400 fill-current" />
-                <span className="text-xs font-bold text-slate-700">{menu.rating}</span>
-              </div>
-            )}
           </div>
         </div>
+        {/* Review Badge - Bottom Right */}
+        {(menu.reviewCount ?? 0) > 0 && (
+          <div className="absolute bottom-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm px-2 py-1 rounded-full shadow-sm">
+            <Star size={11} className="text-yellow-400 fill-current" />
+            <span className="text-[11px] font-bold text-white">{menu.rating}</span>
+            <span className="text-[10px] text-white/70">({menu.reviewCount})</span>
+          </div>
+        )}
       </div>
 
       {/* Content Area */}
@@ -198,13 +200,6 @@ export const MenuCard: React.FC<MenuCardProps> = ({ menu, onClick, onAdd, isAdde
             <div className="flex items-center gap-0.5 flex-shrink-0">
               <Users size={11} />
               <span>{menu.minPlayers}〜{menu.maxPlayers}人</span>
-            </div>
-          )}
-          {(menu.reviewCount ?? 0) > 0 && (
-            <div className="flex items-center gap-0.5 flex-shrink-0">
-              <Star size={10} className="text-yellow-400 fill-current" />
-              <span className="text-yellow-600 font-bold">{menu.rating}</span>
-              <span className="text-slate-400">({menu.reviewCount})</span>
             </div>
           )}
           <div className="flex items-center gap-1 bg-slate-100 px-1.5 py-0.5 rounded text-[9px] ml-auto flex-shrink-0 whitespace-nowrap">
