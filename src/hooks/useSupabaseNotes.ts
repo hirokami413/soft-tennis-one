@@ -12,7 +12,7 @@ export interface NoteEntry {
   coachQuestion: string;
   other: string;
   skills: number[]; // [フォア, バック, ボレー, サーブ, フットワーク, 戦術] 1-5
-  media?: { type: 'image' | 'video' | 'url'; name: string }[];
+  media?: { type: 'image' | 'video' | 'url'; name: string; url?: string }[];
   published?: boolean;
   userId?: string;
 }
@@ -36,6 +36,7 @@ function dbRowToNote(row: Record<string, unknown>): NoteEntry {
     coachQuestion: (row.coach_question as string) || '',
     other: (row.other as string) || '',
     skills: (row.skills as number[]) || [3, 3, 3, 3, 3, 3],
+    media: (row.media as any[]) || undefined,
     published: (row.published as boolean) || false,
     userId: row.user_id as string,
   };
@@ -170,6 +171,7 @@ export function useSupabaseNotes() {
           coach_question: note.coachQuestion,
           other: note.other,
           skills: note.skills,
+          media: note.media || null,
           published: false,
         })
         .select()

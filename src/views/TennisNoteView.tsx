@@ -8,7 +8,7 @@ import type { Goal } from '../hooks/useSupabaseNotes';
 import { uploadFile, generateFilePath } from '../lib/storage';
 import { 
   BookOpen, Plus, Target, TrendingUp, Star, Lock,
-  ChevronDown, ChevronUp, Edit3, Check, Crown, Shield, MessageCircle,
+  ChevronDown, ChevronUp, Edit3, Check, Crown, MessageCircle,
   Video, CheckCircle2, ChevronLeft, ChevronRight, CalendarDays, Send,
   Image as ImageIcon, X, Film, Link, Trash2, Globe, Coins, Users
 } from 'lucide-react';
@@ -656,23 +656,7 @@ export const TennisNoteView: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Coach Comment Section */}
-                  <div className="mt-4 pt-4 border-t border-slate-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Shield size={12} className="text-brand-blue" />
-                      <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Coach's Advice</span>
-                    </div>
-                    <div className="bg-white border border-blue-50 p-3 rounded-2xl relative">
-                      <div className="absolute top-0 left-4 w-2 h-2 bg-white border-t border-l border-blue-50 -translate-y-1/2 rotate-45" />
-                      <p className="text-xs text-slate-600 leading-relaxed italic">
-                        {note.id === 'n-1' ? "動画でも確認しましたが、テイクバックがコンパクトになっていて非常に良いです！次はインパクト後のフォロースルーを意識しましょう。" : "最近フットワークが安定してきましたね。特に戻りの一歩目が速くなっています。"}
-                      </p>
-                      <div className="flex items-center justify-end mt-2 gap-1.5">
-                        <div className="w-4 h-4 bg-slate-900 rounded-full flex items-center justify-center text-[8px] text-white">N</div>
-                        <span className="text-[9px] font-bold text-slate-400">上見 宏彰 指導員</span>
-                      </div>
-                    </div>
-                  </div>
+
                   <RadarChart skills={note.skills} />
 
                   {/* Send to Coach Button */}
