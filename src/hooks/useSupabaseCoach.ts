@@ -199,6 +199,22 @@ export function useSupabaseCoach() {
       status: 'answered',
     }).eq('id', questionId).eq('status', 'waiting');
 
+    // 質問者に通知を送信
+    const { data: questionData } = await supabase
+      .from('coach_questions')
+      .select('user_id')
+      .eq('id', questionId)
+      .single();
+
+    if (questionData?.user_id) {
+      await supabase.from('notifications').insert({
+        user_id: questionData.user_id,
+        type: 'coach',
+        title: '🎓 コーチが質問に回答しました',
+        message: `${user.nickname || 'コーチ'}があなたの質問に回答しました。コーチ相談を確認してください。`,
+      });
+    }
+
     await loadConsultations();
     return true;
   };

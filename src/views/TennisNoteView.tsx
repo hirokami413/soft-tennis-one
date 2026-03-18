@@ -12,7 +12,7 @@ import {
   BookOpen, Plus, Target, TrendingUp, Star, Lock,
   ChevronDown, ChevronUp, Edit3, Check, Crown, MessageCircle,
   Video, CheckCircle2, ChevronLeft, ChevronRight, CalendarDays, Send,
-  Image as ImageIcon, X, Film, Link, Trash2, Globe, Coins, Users, Flag, MessageSquare
+  Image as ImageIcon, X, Film, Link, Trash2, Globe, Coins, Users, Flag, MessageSquare, ShieldCheck
 } from 'lucide-react';
 
 // ── Radar Chart (SVG) ──
@@ -83,7 +83,8 @@ export const TennisNoteView: React.FC = () => {
   const [reportReason, setReportReason] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
-  const [noteTab, setNoteTab] = useState<'write' | 'history' | 'community' | 'goals'>('write');
+  const [noteTab, setNoteTab] = useState<'write' | 'history' | 'community' | 'goals' | 'advice'>('write');
+  const [coachAdvices, setCoachAdvices] = useState<any[]>([]);
   const [noteSearchQuery, setNoteSearchQuery] = useState('');
 
   // Calendar State
@@ -256,6 +257,7 @@ export const TennisNoteView: React.FC = () => {
           { id: 'write' as const, label: 'ノート', icon: BookOpen },
           { id: 'history' as const, label: 'ノート一覧', icon: Star },
           { id: 'community' as const, label: 'みんなのノート', icon: Users },
+          { id: 'advice' as const, label: 'アドバイス', icon: ShieldCheck },
           { id: 'goals' as const, label: '目標管理', icon: Target },
         ].map(tab => {
           const Icon = tab.icon;
@@ -1260,6 +1262,91 @@ export const TennisNoteView: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Advice Tab */}
+      {noteTab === 'advice' && (
+        <div className="bg-white rounded-3xl border border-slate-100 shadow-sm p-5 space-y-4">
+          <h3 className="font-bold text-slate-800 text-sm flex items-center gap-2">
+            <ShieldCheck size={16} className="text-yellow-500" /> コーチからのアドバイス
+          </h3>
+
+          {coachAdvices.length === 0 ? (
+            <div className="text-center py-8">
+              <ShieldCheck size={32} className="text-slate-200 mx-auto mb-2" />
+              <p className="text-sm text-slate-400">アドバイスはまだありません</p>
+              <p className="text-[10px] text-slate-400 mt-1">ノートをプロコーチに送信すると、アドバイスが届きます</p>
+              <button
+                onClick={async () => {
+                  if (!user) return;
+                  const { data } = await supabase
+                    .from('coach_advices')
+                    .select('*, profiles!coach_advices_coach_id_fkey(nickname, avatar_emoji, avatar_url)')
+                    .eq('student_id', user.id)
+                    .order('created_at', { ascending: false });
+                  if (data) setCoachAdvices(data);
+                }}
+                className="mt-3 text-xs text-brand-blue font-bold hover:underline"
+              >
+                データを読み込む
+              </button>
+            </div>
+          ) : (
+            coachAdvices.map((a: any) => {
+              const coachName = a.profiles?.nickname || 'コーチ';
+              const coachEmoji = a.profiles?.avatar_emoji || '🎓';
+              const coachAvatarUrl = a.profiles?.avatar_url;
+              const media = a.media || [];
+              const matchingNote = notes.find((n: any) => n.id === a.note_id);
+              return (
+                <div key={a.id} className="bg-gradient-to-br from-yellow-50 to-amber-50 border border-yellow-200 rounded-2xl p-4 space-y-3">
+                  <div className="flex items-center gap-2">
+                    {coachAvatarUrl ? (
+                      <img src={coachAvatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-yellow-200 flex items-center justify-center text-base">{coachEmoji}</div>
+                    )}
+                    <div>
+                      <p className="text-xs font-bold text-slate-700">{coachName} コーチ</p>
+                      <p className="text-[9px] text-slate-400">{new Date(a.created_at).toLocaleDateString('ja-JP')}</p>
+                    </div>
+                  </div>
+
+                  {matchingNote && (
+                    <div className="bg-white/60 rounded-xl p-3 text-[10px] text-slate-500">
+                      <p className="font-bold mb-1">対象ノート: {matchingNote.date}</p>
+                      <p>良かった点: {matchingNote.keep?.slice(0, 30) || 'なし'}...</p>
+                    </div>
+                  )}
+
+                  <div className="bg-white rounded-xl p-4">
+                    <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">{a.content}</p>
+                  </div>
+
+                  {media.length > 0 && (
+                    <div className="space-y-2">
+                      {media.map((m: any, i: number) => (
+                        <div key={i}>
+                          {m.type === 'image' && m.url && (
+                            <img src={m.url} alt="" className="w-full rounded-xl max-h-60 object-cover" />
+                          )}
+                          {m.type === 'video' && m.url && (
+                            <video src={m.url} controls className="w-full rounded-xl max-h-60" />
+                          )}
+                          {m.type === 'url' && m.url && (
+                            <a href={m.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-brand-blue hover:underline bg-blue-50 p-3 rounded-xl">
+                              <Link size={14} /> {m.name || m.url}
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
       )}
 

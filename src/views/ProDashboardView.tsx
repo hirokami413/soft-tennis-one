@@ -3,12 +3,14 @@ import {
   ShieldCheck, CheckCircle2, 
   ChevronRight, ArrowLeft, Send, Video, Clock, 
   TrendingUp, MessageCircle, Crown, UserPlus, XCircle,
-  Flag, AlertTriangle, Trash2, Ban, MessageSquare
+  Flag, AlertTriangle, Trash2, Ban, MessageSquare,
+  Image as ImageIcon, Link, Loader2, X
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { isSupabaseConfigured } from '../lib/supabase';
 import { useNoteComments, type ReportedUser } from '../hooks/useNoteComments';
+import { uploadFile, generateFilePath } from '../lib/storage';
 
 // --- Types ---
 interface SubmittedNote {
@@ -27,37 +29,66 @@ interface SubmittedNote {
     coachQuestion?: string;
   };
   coachAdvice?: string;
+  userId?: string;
 }
 
 // Data will be fetched from Supabase tennis_notes (published=true)
 
 // --- Radar Chart ---
+const SKILL_LABELS = ['フォア', 'バック', 'ボレー', 'サーブ', 'フットワーク', '戦術'];
+
 const SmallRadarChart: React.FC<{ skills: number[] }> = ({ skills }) => {
-  const size = 100;
+  const size = 220;
   const cx = size / 2;
   const cy = size / 2;
-  const maxR = 40;
+  const maxR = 80;
 
   const getPoint = (index: number, value: number) => {
     const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2;
-    const r = (value / 5) * maxR;
+    const r = (value / 10) * maxR;
+    return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
+  };
+
+  const getLabelPos = (index: number) => {
+    const angle = (Math.PI * 2 * index) / 6 - Math.PI / 2;
+    const r = maxR + 18;
     return { x: cx + r * Math.cos(angle), y: cy + r * Math.sin(angle) };
   };
 
   return (
-    <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[120px] mx-auto opacity-80">
-      <polygon
-        points={skills.map((_, i) => `${getPoint(i, 5).x},${getPoint(i, 5).y}`).join(' ')}
-        fill="none" stroke="#e2e8f0" strokeWidth={1}
-      />
-      <polygon
-        points={skills.map((_, i) => `${getPoint(i, 3).x},${getPoint(i, 3).y}`).join(' ')}
-        fill="none" stroke="#e2e8f0" strokeWidth={1}
-      />
+    <svg viewBox={`0 0 ${size} ${size}`} className="w-full max-w-[220px] mx-auto">
+      {/* Grid lines: 2, 4, 6, 8, 10 */}
+      {[2, 4, 6, 8, 10].map(level => (
+        <polygon
+          key={level}
+          points={skills.map((_, i) => `${getPoint(i, level).x},${getPoint(i, level).y}`).join(' ')}
+          fill="none" stroke={level === 10 ? '#cbd5e1' : '#e2e8f0'} strokeWidth={level === 10 ? 1.5 : 0.5}
+        />
+      ))}
+      {/* Axes */}
+      {skills.map((_, i) => (
+        <line key={i} x1={cx} y1={cy} x2={getPoint(i, 10).x} y2={getPoint(i, 10).y} stroke="#e2e8f0" strokeWidth={0.5} />
+      ))}
+      {/* Data polygon */}
       <polygon
         points={skills.map((v, i) => { const p = getPoint(i, v); return `${p.x},${p.y}`; }).join(' ')}
-        fill="rgba(59, 130, 246, 0.2)" stroke="#3b82f6" strokeWidth={1.5}
+        fill="rgba(59, 130, 246, 0.2)" stroke="#3b82f6" strokeWidth={2}
       />
+      {/* Data points */}
+      {skills.map((v, i) => {
+        const p = getPoint(i, v);
+        return <circle key={i} cx={p.x} cy={p.y} r={3} fill="#3b82f6" />;
+      })}
+      {/* Labels */}
+      {SKILL_LABELS.map((label, i) => {
+        const pos = getLabelPos(i);
+        return (
+          <text key={i} x={pos.x} y={pos.y} textAnchor="middle" dominantBaseline="middle"
+            fontSize={10} fontWeight="bold" fill="#475569">
+            {label}({skills[i] || 0})
+          </text>
+        );
+      })}
     </svg>
   );
 };
@@ -77,6 +108,9 @@ export const ProDashboardView: React.FC = () => {
   const [reportedUsers, setReportedUsers] = useState<ReportedUser[]>([]);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [adviceText, setAdviceText] = useState('');
+  const [adviceMedia, setAdviceMedia] = useState<{ type: 'image' | 'video' | 'url'; name: string; url?: string }[]>([]);
+  const [adviceMediaUploading, setAdviceMediaUploading] = useState(false);
+  const [videoUrlInput, setVideoUrlInput] = useState('');
   
   const [applications, setApplications] = useState<any[]>([]);
   const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
@@ -93,7 +127,7 @@ export const ProDashboardView: React.FC = () => {
       const { data, error } = await supabase
         .from('tennis_notes')
         .select(`
-          id, date, keep, problem, try_item, coach_question, skills, created_at,
+          id, date, keep, problem, try_item, coach_question, skills, created_at, user_id, coach_reviewed,
           profiles ( nickname )
         `)
         .eq('sent_to_coach', true)
@@ -107,7 +141,8 @@ export const ProDashboardView: React.FC = () => {
           studentGrade: '一般',
           teamName: 'チーム未登録',
           submittedAt: n.created_at,
-          status: reviewedIds.includes(n.id) ? 'reviewed' : 'pending',
+          status: (n.coach_reviewed || reviewedIds.includes(n.id)) ? 'reviewed' : 'pending',
+          userId: n.user_id,
           content: {
             keep: n.keep || 'なし',
             problem: n.problem || 'なし',
@@ -178,26 +213,71 @@ export const ProDashboardView: React.FC = () => {
     const note = inbox.find(n => n.id === id);
     if (note && note.coachAdvice) setAdviceText(note.coachAdvice);
     else setAdviceText('');
+    setAdviceMedia([]);
+    setVideoUrlInput('');
   };
 
-  const handleSubmitAdvice = () => {
-    if (!selectedNoteId || !adviceText.trim()) return;
+  const handleAdviceMediaUpload = async (file: File, type: 'image' | 'video') => {
+    if (!user) return;
+    const maxSize = type === 'image' ? 5 * 1024 * 1024 : 50 * 1024 * 1024;
+    if (file.size > maxSize) {
+      alert(`ファイルサイズが大きすぎます。${type === 'image' ? '5MB' : '50MB'}以下のファイルを選択してください。`);
+      return;
+    }
+    setAdviceMediaUploading(true);
+    const path = generateFilePath(user.id, 'coach-advice', file.name);
+    const { url, error } = await uploadFile('note-media', path, file);
+    if (!error && url) {
+      setAdviceMedia(prev => [...prev, { type, name: file.name, url }]);
+    }
+    setAdviceMediaUploading(false);
+  };
 
-    setInbox(prev => prev.map(note => 
-      note.id === selectedNoteId 
-        ? { ...note, status: 'reviewed', coachAdvice: adviceText }
-        : note
+  const handleSubmitAdvice = async () => {
+    if (!selectedNoteId || !adviceText.trim() || !user) return;
+    const note = inbox.find(n => n.id === selectedNoteId);
+    if (!note) return;
+
+    // DBにアドバイスを保存
+    const studentUserId = (note as any).userId;
+    await supabase.from('coach_advices').insert({
+      note_id: selectedNoteId,
+      coach_id: user.id,
+      student_id: studentUserId,
+      content: adviceText.trim(),
+      media: adviceMedia.length > 0 ? adviceMedia : [],
+    });
+
+    // ノートをreviewedに
+    await supabase.from('tennis_notes').update({ coach_reviewed: true }).eq('id', selectedNoteId);
+
+    // 生徒に通知を送信
+    if (studentUserId) {
+      await supabase.from('notifications').insert({
+        user_id: studentUserId,
+        type: 'coach',
+        title: '🎓 コーチからアドバイスが届きました',
+        message: `${user.nickname}コーチがあなたのノートにアドバイスを送信しました。テニスノートの「アドバイス」タブを確認してください。`,
+      });
+    }
+
+    setInbox(prev => prev.map(n =>
+      n.id === selectedNoteId
+        ? { ...n, status: 'reviewed', coachAdvice: adviceText }
+        : n
     ));
-    
+
     const nextReviewedIds = [...reviewedIds, selectedNoteId];
     setReviewedIds(nextReviewedIds);
     localStorage.setItem('pro_dashboard_reviewed', JSON.stringify(nextReviewedIds));
-    
-    alert('アドバイスを送信しました！(ダミー)');
-    
+
+    alert('アドバイスを送信しました！');
+
     setTimeout(() => {
       setSelectedNoteId(null);
       setAdviceText('');
+      setAdviceMedia([]);
+      setVideoUrlInput('');
       setActiveTab('pending');
     }, 500);
   };
@@ -334,19 +414,10 @@ export const ProDashboardView: React.FC = () => {
 
             <div className="flex flex-col gap-4">
               {/* Radar Chart Summary */}
-              <div className="bg-slate-50 p-4 rounded-2xl flex flex-col items-center justify-center h-48">
-                <p className="text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-wider">Skill Self-Assessment</p>
+              <div className="bg-slate-50 p-4 rounded-2xl flex flex-col items-center justify-center">
+                <p className="text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-wider">スキル自己評価（10段階）</p>
                 <SmallRadarChart skills={selectedNote.content.skills} />
               </div>
-
-              {/* Video Attachment Placeholder */}
-              {selectedNote.content.coachQuestion?.includes('動画') && (
-                <div className="bg-slate-900 rounded-2xl aspect-video flex flex-col items-center justify-center text-slate-500 shadow-inner">
-                  <Video size={32} className="mb-2 opacity-50"/>
-                  <span className="text-xs font-bold">添付された動画 (0:45)</span>
-                  <button className="mt-3 bg-white/10 hover:bg-white/20 px-4 py-1.5 rounded-full text-xs text-white transition-colors">再生する</button>
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -368,18 +439,76 @@ export const ProDashboardView: React.FC = () => {
               className="w-full h-40 bg-white/5 border border-white/10 rounded-2xl p-4 text-sm text-white placeholder-slate-400 focus:outline-none focus:border-brand-blue focus:bg-white/10 transition-colors resize-none disabled:opacity-50"
               placeholder="改善点や次のアクションについて、具体的なアドバイスを入力してください..."
             />
+
+            {/* Media Attachments Preview */}
+            {adviceMedia.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {adviceMedia.map((m, i) => (
+                  <div key={i} className="bg-white/10 rounded-xl px-3 py-2 text-xs text-white flex items-center gap-2">
+                    {m.type === 'image' ? <ImageIcon size={12} /> : m.type === 'video' ? <Video size={12} /> : <Link size={12} />}
+                    <span className="max-w-[120px] truncate">{m.name}</span>
+                    <button onClick={() => setAdviceMedia(prev => prev.filter((_, j) => j !== i))} className="text-slate-400 hover:text-red-400">
+                      <X size={12} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {adviceMediaUploading && (
+              <div className="flex items-center gap-2 text-xs text-slate-400">
+                <Loader2 size={14} className="animate-spin" /> アップロード中...
+              </div>
+            )}
             
             <div className="flex items-center justify-between">
               <div className="flex gap-2">
-                <button className="p-2.5 bg-white/10 rounded-xl text-slate-300 hover:text-white hover:bg-white/20 transition-colors" title="動画を添付して解説">
+                {/* Image Upload */}
+                <label className="p-2.5 bg-white/10 rounded-xl text-slate-300 hover:text-white hover:bg-white/20 transition-colors cursor-pointer" title="画像を添付">
+                  <ImageIcon size={16} />
+                  <input type="file" accept="image/*" className="hidden" onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) handleAdviceMediaUpload(file, 'image');
+                    e.target.value = '';
+                  }} />
+                </label>
+                {/* Video Upload */}
+                <label className="p-2.5 bg-white/10 rounded-xl text-slate-300 hover:text-white hover:bg-white/20 transition-colors cursor-pointer" title="動画を添付">
                   <Video size={16} />
-                </button>
+                  <input type="file" accept="video/*" className="hidden" onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) handleAdviceMediaUpload(file, 'video');
+                    e.target.value = '';
+                  }} />
+                </label>
+                {/* Video URL */}
+                <div className="flex items-center gap-1">
+                  <input
+                    type="url"
+                    value={videoUrlInput}
+                    onChange={e => setVideoUrlInput(e.target.value)}
+                    placeholder="動画URL..."
+                    className="bg-white/5 border border-white/10 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 w-40 focus:outline-none focus:border-brand-blue"
+                  />
+                  <button
+                    onClick={() => {
+                      if (videoUrlInput.trim()) {
+                        setAdviceMedia(prev => [...prev, { type: 'url', name: videoUrlInput.trim(), url: videoUrlInput.trim() }]);
+                        setVideoUrlInput('');
+                      }
+                    }}
+                    disabled={!videoUrlInput.trim()}
+                    className="p-2.5 bg-white/10 rounded-xl text-slate-300 hover:text-white hover:bg-white/20 transition-colors disabled:opacity-30"
+                  >
+                    <Link size={16} />
+                  </button>
+                </div>
               </div>
               
               {selectedNote.status !== 'reviewed' && (
                 <button 
                   onClick={handleSubmitAdvice}
-                  disabled={!adviceText.trim()}
+                  disabled={!adviceText.trim() || adviceMediaUploading}
                   className="bg-brand-blue hover:bg-blue-600 disabled:bg-slate-700 disabled:text-slate-400 text-white font-bold py-2.5 px-6 rounded-xl flex items-center gap-2 transition-colors"
                 >
                   <Send size={16} /> 返答を送信する
