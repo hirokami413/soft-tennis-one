@@ -13,6 +13,8 @@ import { useNoteComments, type ReportedUser } from '../hooks/useNoteComments';
 import { uploadFile, generateFilePath } from '../lib/storage';
 import { compressImage } from '../lib/imageCompress';
 import { useSupabaseMenus } from '../hooks/useSupabaseMenus';
+import { MenuDetailModal } from '../components/MenuDetailModal';
+import { type MenuData } from '../types/menu';
 
 // publicUrlからStorageパスを抽出するヘルパー
 function extractStoragePath(publicUrl: string, bucket: string): string | null {
@@ -135,6 +137,7 @@ export const ProDashboardView: React.FC = () => {
   const [allQuestions, setAllQuestions] = useState<any[]>([]);
   const [questionFilter, setQuestionFilter] = useState<'all' | 'waiting' | 'answered' | 'resolved'>('all');
   const { menus: allMenus, toggleFeatured } = useSupabaseMenus();
+  const [featuredSelectedMenu, setFeaturedSelectedMenu] = useState<MenuData | null>(null);
 
   // 管理者以外はアクセス不可（hooksの後に配置）
   if (!authLoading && !isAdmin) {
@@ -1015,6 +1018,7 @@ export const ProDashboardView: React.FC = () => {
           </div>
           </>
         ) : activeTab === 'featured' ? (
+          <>
           <div className="space-y-3">
             <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-4">
               <p className="text-sm text-amber-800 font-medium">⭐ 一押しメニューを選択すると、ライブラリの上部に「一押し練習メニュー」として表示されます。</p>
@@ -1038,8 +1042,8 @@ export const ProDashboardView: React.FC = () => {
                       </div>
                     )}
                   </div>
-                  {/* Info */}
-                  <div className="flex-1 min-w-0">
+                  {/* Info - clickable */}
+                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => setFeaturedSelectedMenu(menu)}>
                     <p className="text-sm font-bold text-slate-800 truncate">{menu.title}</p>
                     <p className="text-[10px] text-slate-400">{menu.category} ・ {menu.level}</p>
                   </div>
@@ -1058,6 +1062,17 @@ export const ProDashboardView: React.FC = () => {
               ))
             )}
           </div>
+          {/* Menu Detail Modal for Featured */}
+          {featuredSelectedMenu && (
+            <MenuDetailModal
+              menu={featuredSelectedMenu}
+              isOpen={!!featuredSelectedMenu}
+              onClose={() => setFeaturedSelectedMenu(null)}
+              onAdd={() => {}}
+              isAdded={false}
+            />
+          )}
+          </>
         ) : (
           filteredNotes.length === 0 ? (
             <div className="bg-slate-50 border border-slate-100 rounded-3xl p-10 flex flex-col items-center justify-center text-center">
