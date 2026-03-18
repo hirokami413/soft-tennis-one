@@ -124,6 +124,9 @@ export function useSupabaseMenus() {
           youtube_url: menuData.youtubeUrl,
           instagram_url: menuData.instagramUrl,
           image_url: menuData.imageUrl || '',
+          duration: menuData.duration || null,
+          min_players: menuData.minPlayers || null,
+          max_players: menuData.maxPlayers || null,
         })
         .eq('id', id)
         .eq('author_id', user.id) // セキュリティのため念押し

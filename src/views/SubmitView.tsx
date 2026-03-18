@@ -225,80 +225,77 @@ export const SubmitView: React.FC = () => {
         </div>
 
         {/* Category & Level */}
-        <div className="flex gap-4">
-          <div className="flex-1 space-y-2">
+        <div className="space-y-4">
+          <div className="space-y-2">
             <label className="text-sm font-bold text-slate-700 block">カテゴリ</label>
-            <div className="relative">
-              <select 
-                value={formData.category}
-                onChange={(e) => setFormData({...formData, category: e.target.value})}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue appearance-none transition-all"
-              >
-                <option>フォアハンド</option>
-                <option>バックハンド</option>
-                <option>ボレー</option>
-                <option>スマッシュ</option>
-                <option>サーブ</option>
-                <option>フットワーク</option>
-                <option>トレーニング</option>
-                <option>実戦形式</option>
-                <option>その他</option>
-              </select>
-            </div>
+            <select 
+              value={formData.category}
+              onChange={(e) => setFormData({...formData, category: e.target.value})}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue appearance-none transition-all"
+            >
+              <option>フォアハンド</option>
+              <option>バックハンド</option>
+              <option>ボレー</option>
+              <option>スマッシュ</option>
+              <option>サーブ</option>
+              <option>フットワーク</option>
+              <option>トレーニング</option>
+              <option>実戦形式</option>
+              <option>その他</option>
+            </select>
           </div>
           
-          <div className="flex-1 space-y-2">
+          <div className="space-y-2">
             <label className="text-sm font-bold text-slate-700 block">推奨レベル</label>
-            <div className="relative">
-              <select 
-                value={formData.level}
-                onChange={(e) => setFormData({...formData, level: e.target.value})}
-                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue appearance-none transition-all"
-              >
-                <option>初級</option>
-                <option>初級〜中級</option>
-                <option>中級</option>
-                <option>上級</option>
-              </select>
-            </div>
-          </div>
-
-        {/* Duration & Players */}
-        <div className="flex gap-4">
-          <div className="flex-1 space-y-2">
-            <label className="text-sm font-bold text-slate-700 block">練習時間（分）</label>
-            <input
-              type="number"
-              min="1"
-              value={formData.duration}
-              onChange={(e) => setFormData({...formData, duration: e.target.value})}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
-              placeholder="例: 15"
-            />
-          </div>
-          <div className="flex-1 space-y-2">
-            <label className="text-sm font-bold text-slate-700 block">最少人数</label>
-            <input
-              type="number"
-              min="1"
-              value={formData.minPlayers}
-              onChange={(e) => setFormData({...formData, minPlayers: e.target.value})}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
-              placeholder="例: 2"
-            />
-          </div>
-          <div className="flex-1 space-y-2">
-            <label className="text-sm font-bold text-slate-700 block">最大人数</label>
-            <input
-              type="number"
-              min="1"
-              value={formData.maxPlayers}
-              onChange={(e) => setFormData({...formData, maxPlayers: e.target.value})}
-              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
-              placeholder="例: 6"
-            />
+            <select 
+              value={formData.level}
+              onChange={(e) => setFormData({...formData, level: e.target.value})}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue appearance-none transition-all"
+            >
+              <option>初級</option>
+              <option>初級〜中級</option>
+              <option>中級</option>
+              <option>中級〜上級</option>
+              <option>上級</option>
+            </select>
           </div>
         </div>
+
+        {/* Duration & Players */}
+        <div className="space-y-2">
+          <label className="text-sm font-bold text-slate-700 block">練習時間・人数</label>
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <input
+                type="number"
+                min="1"
+                value={formData.duration}
+                onChange={(e) => setFormData({...formData, duration: e.target.value})}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
+                placeholder="時間（分）"
+              />
+            </div>
+            <div className="flex-1">
+              <input
+                type="number"
+                min="1"
+                value={formData.minPlayers}
+                onChange={(e) => setFormData({...formData, minPlayers: e.target.value})}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
+                placeholder="最少人数"
+              />
+            </div>
+            <div className="flex-1">
+              <input
+                type="number"
+                min="1"
+                value={formData.maxPlayers}
+                onChange={(e) => setFormData({...formData, maxPlayers: e.target.value})}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
+                placeholder="最大人数"
+              />
+            </div>
+          </div>
         </div>
 
         {/* Description & Steps */}

@@ -21,6 +21,9 @@ export const EditMenuModal: React.FC<EditMenuModalProps> = ({ menu, onClose }) =
     tags: menu.tags || [],
     youtubeUrl: menu.youtubeUrl || '',
     instagramUrl: menu.instagramUrl || '',
+    duration: menu.duration || '',
+    minPlayers: menu.minPlayers || '',
+    maxPlayers: menu.maxPlayers || '',
   });
   
   const [tagInput, setTagInput] = useState('');
@@ -65,7 +68,12 @@ export const EditMenuModal: React.FC<EditMenuModalProps> = ({ menu, onClose }) =
     try {
       setIsSubmitting(true);
       setSubmitError('');
-      await updateMenu(menu.id, formData);
+      await updateMenu(menu.id, {
+        ...formData,
+        duration: formData.duration ? Number(formData.duration) : undefined,
+        minPlayers: formData.minPlayers ? Number(formData.minPlayers) : undefined,
+        maxPlayers: formData.maxPlayers ? Number(formData.maxPlayers) : undefined,
+      });
       onClose(); // Successfully updated
     } catch (err: any) {
       console.error('Update error:', err);
@@ -116,6 +124,16 @@ export const EditMenuModal: React.FC<EditMenuModalProps> = ({ menu, onClose }) =
                 <select value={formData.level} onChange={(e) => setFormData({...formData, level: e.target.value})} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue appearance-none">
                   <option>初級</option><option>初級〜中級</option><option>中級</option><option>上級</option><option>全レベル</option>
                 </select>
+              </div>
+            </div>
+
+            {/* Duration & Players */}
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 block">練習時間・人数</label>
+              <div className="flex gap-3">
+                <input type="number" min="1" value={formData.duration} onChange={(e) => setFormData({...formData, duration: e.target.value})} className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue" placeholder="時間（分）" />
+                <input type="number" min="1" value={formData.minPlayers} onChange={(e) => setFormData({...formData, minPlayers: e.target.value})} className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue" placeholder="最少人数" />
+                <input type="number" min="1" value={formData.maxPlayers} onChange={(e) => setFormData({...formData, maxPlayers: e.target.value})} className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue" placeholder="最大人数" />
               </div>
             </div>
 
