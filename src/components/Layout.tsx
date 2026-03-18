@@ -32,7 +32,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
     { id: 'note', label: 'テニスノート', icon: BookOpen },
     { id: 'coach', label: 'コーチ相談', icon: ShieldCheck },
     ...(isProCoach ? [{ id: 'pro-dashboard', label: 'プロ管理', icon: ShieldCheck }] : []),
-    { id: 'about', label: 'Nexus One', icon: Info },
+    { id: 'about', label: 'ソフトテニス One', icon: Info },
   ];
 
   const formatTime = (iso: string) => {
@@ -52,7 +52,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
         <div className="flex items-center gap-3">
           <img src="/logo.png" alt="ソフトテニス One" className="w-8 h-8 rounded-full object-cover shadow-sm bg-white" />
           <h1 className={`text-xl font-bold flex flex-col ${isDark ? 'text-white' : 'text-slate-800'}`}>
-            <span className={`text-[10px] font-medium leading-none mb-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>ソフトテニス総合プラットフォーム</span>
+            <span className={`text-[10px] font-medium leading-none mb-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>ソフトテニス練習支援アプリ</span>
             <span>ソフトテニス One</span>
           </h1>
         </div>
@@ -176,7 +176,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
           <h1 className={`text-lg font-bold tracking-tight flex items-center gap-2 ${isDark ? 'text-white' : 'text-slate-900'}`}>
             <img src="/logo.png" alt="ソフトテニス One" className="w-6 h-6 rounded-full object-cover shadow-sm bg-white" />
             <div className="flex flex-col">
-              <span className={`text-[9px] font-medium leading-none mb-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>ソフトテニス総合プラットフォーム</span>
+              <span className={`text-[9px] font-medium leading-none mb-0.5 ${isDark ? 'text-slate-400' : 'text-slate-500'}`}>ソフトテニス練習支援アプリ</span>
               <span className="leading-none">ソフトテニス One</span>
             </div>
           </h1>
