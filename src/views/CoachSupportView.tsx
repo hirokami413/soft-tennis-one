@@ -169,6 +169,10 @@ export const CoachSupportView: React.FC = () => {
 
   const handleCoachAnswerSubmit = (consultationId: string) => {
     if (!coachAnswerText.trim()) return;
+    if (coachAnswerText.trim().length < 100) {
+      alert('回答は100文字以上で入力してください。');
+      return;
+    }
     answerQuestion(consultationId, coachAnswerText);
     goToNextQuestion();
   };
@@ -765,12 +769,15 @@ export const CoachSupportView: React.FC = () => {
                       </button>
                       <button
                         onClick={() => { handleCoachAnswerSubmit(waitingConsultations[currentQuestionIndex].id); setCoachAnswerUrl(''); }}
-                        disabled={!coachAnswerText.trim()}
-                        className="flex-1 py-3 bg-brand-blue text-white rounded-xl text-sm font-bold flex justify-center items-center gap-2 hover:bg-brand-blue-hover"
+                        disabled={coachAnswerText.trim().length < 100}
+                        className="flex-1 py-3 bg-brand-blue text-white rounded-xl text-sm font-bold flex justify-center items-center gap-2 hover:bg-brand-blue-hover disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Send size={16} /> 送信して +{getReward()}🪙
                       </button>
                     </div>
+                    <p className={`text-right text-[10px] ${coachAnswerText.trim().length < 100 ? 'text-red-400' : 'text-green-500'}`}>
+                      {coachAnswerText.trim().length}/100文字以上
+                    </p>
                   </div>
                 )}
               </div>

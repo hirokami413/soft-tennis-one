@@ -123,6 +123,28 @@ export function useSupabaseCoach() {
     }
   }, [loadConsultations, user?.id, authLoading]);
 
+  // 24時間経過した質問の最初の回答者を自動ベストアンサーにする
+  useEffect(() => {
+    if (!useDB || !user || consultations.length === 0) return;
+    const now = Date.now();
+    const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+
+    for (const c of consultations) {
+      // answeredステータスで、回答が1つ以上あり、ベストアンサーがまだ選ばれていない場合
+      if (c.status === 'answered' && c.answers.length > 0 && !c.answers.some(a => a.isBestAnswer)) {
+        // 最初の回答の投稿日時から24時間経過しているか
+        const firstAnswer = c.answers[0]; // answers are sorted by created_at ascending
+        const elapsed = now - new Date(firstAnswer.createdAt).getTime();
+        if (elapsed >= TWENTY_FOUR_HOURS) {
+          console.log(`24時間経過: 質問 ${c.id} の最初の回答者 ${firstAnswer.coachId} を自動ベストアンサーに選定`);
+          selectBestAnswer(firstAnswer.id, c.id);
+          break; // 1回のロードで1つだけ処理（連鎖を防ぐ）
+        }
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [consultations]);
+
   const applyCoachApplication = async (fullName: string, nickname: string, extra?: { yearsExperience?: string; certification?: string; selfIntro?: string }) => {
      if (!useDB || !user) return { error: 'Not configured' };
      const { error } = await supabase.from('coach_applications').upsert({
