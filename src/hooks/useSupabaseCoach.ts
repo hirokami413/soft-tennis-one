@@ -213,7 +213,7 @@ export function useSupabaseCoach() {
     gold:     { answers: 250, rating: 4.6, next: 'platinum' },
     platinum: { answers: Infinity, rating: 5.0, next: null },
   };
-  const BASE_REWARD = 700;
+  const BASE_REWARD = 600;
 
   // ベストアンサーを選択 → 選ばれたコーチにコイン付与
   const selectBestAnswer = async (answerId: string, questionId: string) => {
