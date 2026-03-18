@@ -433,8 +433,8 @@ export const ProDashboardView: React.FC = () => {
                       {m.type === 'video' && m.url && (
                         <video src={m.url} controls className="w-full rounded-xl max-h-60" />
                       )}
-                      {m.type === 'url' && m.url && (
-                        <a href={m.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-brand-blue hover:underline bg-blue-50 p-3 rounded-xl">
+                      {m.type === 'url' && (m.url || m.name) && (
+                        <a href={m.url || m.name} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-brand-blue hover:underline bg-blue-50 p-3 rounded-xl">
                           <Link size={14} /> {m.name || m.url}
                         </a>
                       )}
