@@ -226,29 +226,50 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
             )}
 
             {/* Instagram Section */}
-            {menu.instagramUrl && (
-              <div className="mt-2">
-                <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
-                  <span className="text-lg">📸</span>
-                  Instagram動画
-                </h3>
-                <a
-                  href={menu.instagramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-2xl hover:shadow-md transition-all group"
-                >
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 rounded-xl flex items-center justify-center flex-shrink-0">
-                    <span className="text-white text-lg">📸</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold text-slate-800 group-hover:text-purple-700 transition-colors">Instagramで見る</p>
-                    <p className="text-[10px] text-slate-400 truncate">{menu.instagramUrl}</p>
-                  </div>
-                  <span className="text-purple-400 group-hover:translate-x-1 transition-transform">→</span>
-                </a>
-              </div>
-            )}
+            {menu.instagramUrl && (() => {
+              // Instagram URLから埋め込みURLを生成
+              const getInstagramEmbedUrl = (url: string): string | null => {
+                const match = url.match(/instagram\.com\/(p|reel|tv)\/([A-Za-z0-9_-]+)/);
+                if (match) return `https://www.instagram.com/${match[1]}/${match[2]}/embed/`;
+                return null;
+              };
+              const embedUrl = getInstagramEmbedUrl(menu.instagramUrl);
+              return (
+                <div className="mt-2">
+                  <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                    <span className="text-lg">📸</span>
+                    Instagram動画
+                  </h3>
+                  {embedUrl ? (
+                    <div className="relative w-full overflow-hidden rounded-2xl bg-slate-100 shadow-sm border border-slate-100" style={{ minHeight: '480px' }}>
+                      <iframe
+                        src={embedUrl}
+                        className="w-full border-0"
+                        style={{ minHeight: '480px' }}
+                        allowFullScreen
+                        scrolling="no"
+                      />
+                    </div>
+                  ) : (
+                    <a
+                      href={menu.instagramUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-2xl hover:shadow-md transition-all group"
+                    >
+                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <span className="text-white text-lg">📸</span>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-slate-800 group-hover:text-purple-700 transition-colors">Instagramで見る</p>
+                        <p className="text-[10px] text-slate-400 truncate">{menu.instagramUrl}</p>
+                      </div>
+                      <span className="text-purple-400 group-hover:translate-x-1 transition-transform">→</span>
+                    </a>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Coach Advice */}
             {menu.advice && (
