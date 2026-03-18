@@ -20,6 +20,9 @@ export const SubmitView: React.FC = () => {
     tags: [] as string[],
     youtubeUrl: '',
     instagramUrl: '',
+    duration: '' as string | number,
+    minPlayers: '' as string | number,
+    maxPlayers: '' as string | number,
   });
   const [tagInput, setTagInput] = useLocalStorage('submit_view_tag_input', '');
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
@@ -93,6 +96,9 @@ export const SubmitView: React.FC = () => {
         youtubeUrl: formData.youtubeUrl,
         instagramUrl: formData.instagramUrl,
         imageUrl: imageUrl || undefined,
+        duration: formData.duration ? Number(formData.duration) : undefined,
+        minPlayers: formData.minPlayers ? Number(formData.minPlayers) : undefined,
+        maxPlayers: formData.maxPlayers ? Number(formData.maxPlayers) : undefined,
       });
 
       setIsSubmitted(true);
@@ -118,7 +124,7 @@ export const SubmitView: React.FC = () => {
         <button 
           onClick={() => {
             setIsSubmitted(false);
-            setFormData({ title: '', category: 'フォアハンド', level: '初級', description: '', tags: [], youtubeUrl: '', instagramUrl: '' });
+            setFormData({ title: '', category: 'フォアハンド', level: '初級', description: '', tags: [], youtubeUrl: '', instagramUrl: '', duration: '', minPlayers: '', maxPlayers: '' });
             setTagInput('');
             setThumbnailFile(null);
             setThumbnailPreview(null);
@@ -256,6 +262,43 @@ export const SubmitView: React.FC = () => {
               </select>
             </div>
           </div>
+
+        {/* Duration & Players */}
+        <div className="flex gap-4">
+          <div className="flex-1 space-y-2">
+            <label className="text-sm font-bold text-slate-700 block">練習時間（分）</label>
+            <input
+              type="number"
+              min="1"
+              value={formData.duration}
+              onChange={(e) => setFormData({...formData, duration: e.target.value})}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
+              placeholder="例: 15"
+            />
+          </div>
+          <div className="flex-1 space-y-2">
+            <label className="text-sm font-bold text-slate-700 block">最少人数</label>
+            <input
+              type="number"
+              min="1"
+              value={formData.minPlayers}
+              onChange={(e) => setFormData({...formData, minPlayers: e.target.value})}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
+              placeholder="例: 2"
+            />
+          </div>
+          <div className="flex-1 space-y-2">
+            <label className="text-sm font-bold text-slate-700 block">最大人数</label>
+            <input
+              type="number"
+              min="1"
+              value={formData.maxPlayers}
+              onChange={(e) => setFormData({...formData, maxPlayers: e.target.value})}
+              className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
+              placeholder="例: 6"
+            />
+          </div>
+        </div>
         </div>
 
         {/* Description & Steps */}

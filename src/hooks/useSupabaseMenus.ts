@@ -42,6 +42,9 @@ export function useSupabaseMenus() {
           instagramUrl: row.instagram_url,
           imageUrl: row.image_url || undefined,
           isFeatured: row.is_featured || false,
+          duration: row.duration || undefined,
+          minPlayers: row.min_players || undefined,
+          maxPlayers: row.max_players || undefined,
           author: row.author_nickname,
           authorAvatar: row.author_avatar,
           authorId: row.author_id,
@@ -83,6 +86,9 @@ export function useSupabaseMenus() {
           youtube_url: menuData.youtubeUrl || '',
           instagram_url: menuData.instagramUrl || '',
           image_url: menuData.imageUrl || '',
+          duration: menuData.duration || null,
+          min_players: menuData.minPlayers || null,
+          max_players: menuData.maxPlayers || null,
           author_id: user.id
         })
         .select()
