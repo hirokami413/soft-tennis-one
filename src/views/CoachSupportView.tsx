@@ -786,7 +786,8 @@ export const CoachSupportView: React.FC = () => {
               {/* Action Area */}
               <div className="p-4 bg-slate-50 border-t border-slate-100 space-y-3">
                 {!showCoachAnswerInput ? (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className={`grid gap-3 ${waitingConsultations[currentQuestionIndex].status === 'reask' ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                    {waitingConsultations[currentQuestionIndex].status !== 'reask' && (
                     <button
                       onClick={handleSkipQuestion}
                       className="flex flex-col items-center justify-center gap-1.5 py-4 bg-white border-2 border-slate-200 text-slate-500 font-bold rounded-2xl hover:bg-slate-100 hover:border-slate-300 transition-all"
@@ -796,6 +797,7 @@ export const CoachSupportView: React.FC = () => {
                         飛ばす <span className="font-mono text-[10px] text-yellow-600 bg-yellow-50 px-1 py-0.5 rounded">-50🪙</span>
                       </span>
                     </button>
+                    )}
                     <button
                       onClick={() => setShowCoachAnswerInput(true)}
                       className="flex flex-col items-center justify-center gap-1.5 py-4 bg-brand-blue text-white font-bold rounded-2xl shadow-md hover:bg-brand-blue-hover transition-all"
