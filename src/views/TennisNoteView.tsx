@@ -71,9 +71,10 @@ export const TennisNoteView: React.FC = () => {
   const { canUseTennisNoteBase, canAskCoachInNote } = useSubscription();
   const { addCoins, user } = useAuth();
   const { addNotification } = useNotifications();
-  const { notes, addNote, publishNote, deleteNote } = useSupabaseNotes();
+  const { notes, addNote, publishNote, deleteNote, communityNotes } = useSupabaseNotes();
   const { goals, setGoals, addGoal: addGoalToDb, deleteGoal: deleteGoalFromDb } = useSupabaseGoals();
   const [expandedNote, setExpandedNote] = useState<string | null>('n-1');
+  const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [noteTab, setNoteTab] = useState<'write' | 'history' | 'community' | 'goals'>('write');
@@ -926,34 +927,38 @@ export const TennisNoteView: React.FC = () => {
             <p className="text-xs text-slate-500 mt-1">全国のプレイヤーが公開した練習ノートを見て、一緒に強くなろう！</p>
           </div>
 
-          {notes.filter(n => n.published).length === 0 ? (
+          {communityNotes.length === 0 ? (
             <div className="text-center py-10 text-slate-400 bg-white rounded-2xl border border-slate-100">
               <Users size={40} className="mx-auto mb-3 opacity-20" />
               <p className="text-sm font-bold">まだ公開ノートがありません</p>
               <p className="text-xs mt-1">ノートを書いて「オンラインに公開する」を押してみよう</p>
             </div>
           ) : (
-            notes.filter(n => n.published).map(n => {
-              const avatars = ['🎾', '🏸', '💪', '⭐', '🔥', '🌟', '🎯', '🏆'];
-              const names = ['テニス太郎', 'ラケット少年', 'ボレー職人', 'サーブマスター', 'ストローカー', 'ネットプレイヤー', '粘りの後衛', '攻めの前衛'];
-              const hash = n.id.split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-              const avatar = avatars[hash % avatars.length];
-              const name = names[hash % names.length];
+            communityNotes.map(n => {
+              const displayName = n.username || '匿名プレイヤー';
+              const initial = displayName.charAt(0);
+              const isOwn = user?.id === n.userId;
 
               return (
                 <div key={n.id} className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                  <button onClick={() => setExpandedNote(expandedNote === n.id ? null : n.id)} className="w-full p-4 text-left">
-                    <div className="flex items-center gap-3 mb-2">
-                      <span className="text-lg">{avatar}</span>
-                      <div className="flex-1">
-                        <span className="text-xs font-bold text-slate-700">{name}</span>
-                        <span className="text-[10px] text-slate-400 ml-2">{n.date}</span>
+                  <div className="flex items-center gap-3 p-4 pb-0">
+                    <button
+                      onClick={() => setSelectedProfile(n.userId || null)}
+                      className="flex items-center gap-2 hover:opacity-70 transition-opacity"
+                    >
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-blue to-indigo-500 flex items-center justify-center text-white text-xs font-bold shrink-0">{initial}</div>
+                      <div>
+                        <span className="text-xs font-bold text-slate-700">{displayName}</span>
+                        {isOwn && <span className="ml-1.5 text-[8px] font-bold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">あなた</span>}
                       </div>
-                      <ChevronDown size={14} className={`text-slate-400 transition-transform ${expandedNote === n.id ? 'rotate-180' : ''}`} />
-                    </div>
+                    </button>
+                    <span className="text-[10px] text-slate-400 ml-auto">{n.date}</span>
+                  </div>
+                  <button onClick={() => setExpandedNote(expandedNote === n.id ? null : n.id)} className="w-full p-4 pt-2 text-left">
                     <p className={`text-sm text-slate-600 ${expandedNote === n.id ? '' : 'line-clamp-2'}`}>
                       {n.keep || n.problem || n.tryItem}
                     </p>
+                    <ChevronDown size={14} className={`text-slate-400 transition-transform mx-auto mt-1 ${expandedNote === n.id ? 'rotate-180' : ''}`} />
                   </button>
                   {expandedNote === n.id && (
                     <div className="px-4 pb-4 space-y-2 border-t border-slate-50 pt-3">
@@ -1012,12 +1017,106 @@ export const TennisNoteView: React.FC = () => {
                       <div className="pt-2">
                         <RadarChart skills={n.skills} />
                       </div>
+                      {isOwn && (
+                        <button
+                          onClick={() => {
+                            if (!user || (user.coins || 0) < 20) {
+                              alert('コインが不足しています（20コイン必要）');
+                              return;
+                            }
+                            if (confirm('この公開ノートを削除しますか？\n20コインが消費されます。')) {
+                              addCoins(-20);
+                              deleteNote(n.id);
+                            }
+                          }}
+                          className="w-full mt-2 py-2 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                        >
+                          <Trash2 size={12} /> 公開ノートを削除（20コイン消費）
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
               );
             })
           )}
+        </div>
+      )}
+
+      {/* User Profile Modal */}
+      {selectedProfile && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => setSelectedProfile(null)}>
+          <div className="bg-white rounded-3xl w-full max-w-md max-h-[80vh] overflow-y-auto shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-slate-100">
+              <div className="flex items-center justify-between">
+                <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                  <Users size={16} className="text-brand-blue" /> プレイヤープロフィール
+                </h3>
+                <button onClick={() => setSelectedProfile(null)} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+              </div>
+            </div>
+            <div className="p-5 space-y-4">
+              {(() => {
+                const profileNotes = communityNotes.filter(cn => cn.userId === selectedProfile);
+                const profileName = profileNotes[0]?.username || '匿名プレイヤー';
+                const initial = profileName.charAt(0);
+
+                // 連続アップロード日数の計算
+                const sortedDates = [...new Set(profileNotes.map(pn => pn.date))].sort().reverse();
+                let streak = 0;
+                if (sortedDates.length > 0) {
+                  const today = new Date();
+                  let checkDate = new Date(sortedDates[0]);
+                  // 最新が今日か昨日なら開始
+                  const diffMs = today.getTime() - checkDate.getTime();
+                  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+                  if (diffDays <= 1) {
+                    streak = 1;
+                    for (let i = 1; i < sortedDates.length; i++) {
+                      const prev = new Date(sortedDates[i - 1]);
+                      const curr = new Date(sortedDates[i]);
+                      const gap = Math.floor((prev.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24));
+                      if (gap === 1) streak++;
+                      else break;
+                    }
+                  }
+                }
+
+                return (
+                  <>
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-blue to-indigo-500 flex items-center justify-center text-white text-lg font-bold">{initial}</div>
+                      <div>
+                        <p className="font-bold text-slate-800">{profileName}</p>
+                        <p className="text-xs text-slate-400">公開ノート {profileNotes.length}件</p>
+                      </div>
+                    </div>
+
+                    {/* 連続日数 */}
+                    <div className="bg-gradient-to-r from-amber-50 to-yellow-50 border border-amber-200 p-4 rounded-2xl text-center">
+                      <p className="text-[10px] font-bold text-amber-600 uppercase tracking-wider">連続アップロード</p>
+                      <p className="text-3xl font-black text-amber-500 mt-1">{streak}<span className="text-sm font-bold text-amber-400 ml-1">日</span></p>
+                    </div>
+
+                    {/* 公開ノート一覧 */}
+                    <div>
+                      <p className="text-xs font-bold text-slate-500 mb-2">📝 公開ノート</p>
+                      <div className="space-y-2 max-h-48 overflow-y-auto">
+                        {profileNotes.length > 0 ? profileNotes.map(pn => (
+                          <div key={pn.id} className="bg-slate-50 p-3 rounded-xl">
+                            <p className="text-[10px] font-bold text-brand-blue mb-1">{pn.date}</p>
+                            <p className="text-xs text-slate-700 line-clamp-2">{pn.keep || pn.problem || pn.tryItem}</p>
+                          </div>
+                        )) : (
+                          <p className="text-xs text-slate-400 text-center py-4">まだ公開ノートがありません</p>
+                        )}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
         </div>
       )}
 

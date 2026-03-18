@@ -15,6 +15,7 @@ export interface NoteEntry {
   media?: { type: 'image' | 'video' | 'url'; name: string; url?: string }[];
   published?: boolean;
   userId?: string;
+  username?: string;
 }
 
 export interface Goal {
@@ -39,6 +40,7 @@ function dbRowToNote(row: Record<string, unknown>): NoteEntry {
     media: (row.media as any[]) || undefined,
     published: (row.published as boolean) || false,
     userId: row.user_id as string,
+    username: (row as any).profiles?.nickname || (row as any).username || undefined,
   };
 }
 
@@ -124,7 +126,7 @@ export function useSupabaseNotes() {
   const loadCommunityNotes = async () => {
     const { data, error } = await supabase
       .from('tennis_notes')
-      .select('*')
+      .select('*, profiles!tennis_notes_user_id_fkey(nickname)')
       .eq('published', true)
       .order('created_at', { ascending: false })
       .limit(50);
