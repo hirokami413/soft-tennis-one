@@ -241,11 +241,11 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
                     Instagram動画
                   </h3>
                   {embedUrl ? (
-                    <div className="relative w-full overflow-hidden rounded-2xl bg-slate-100 shadow-sm border border-slate-100" style={{ minHeight: '480px' }}>
+                    <div className="relative w-full overflow-hidden rounded-2xl bg-slate-100 shadow-sm border border-slate-100" style={{ minHeight: '750px' }}>
                       <iframe
                         src={embedUrl}
                         className="w-full border-0"
-                        style={{ minHeight: '480px' }}
+                        style={{ minHeight: '750px' }}
                         allowFullScreen
                         scrolling="no"
                       />
