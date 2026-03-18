@@ -12,7 +12,7 @@ export const LibraryView: React.FC = () => {
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [sortBy, setSortBy] = useState<"newest" | "rating">("newest");
+  const [sortBy, setSortBy] = useState<"newest" | "rating" | "reviews">("newest");
   const [selectedMenu, setSelectedMenu] = useState<MenuData | null>(null);
   const { addToPlaylist, isInPlaylist } = usePlaylist();
   const { favorites, toggleFavorite, isFavorite } = useFavorites();
@@ -60,10 +60,17 @@ export const LibraryView: React.FC = () => {
   }).sort((a, b) => {
     if (sortBy === "newest") {
       return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-    } else {
+    } else if (sortBy === "rating") {
       const ratingA = a.rating || 0;
       const ratingB = b.rating || 0;
-      return ratingB - ratingA;
+      if (ratingB !== ratingA) return ratingB - ratingA;
+      return (b.reviewCount || 0) - (a.reviewCount || 0);
+    } else {
+      // reviews
+      const countA = a.reviewCount || 0;
+      const countB = b.reviewCount || 0;
+      if (countB !== countA) return countB - countA;
+      return (b.rating || 0) - (a.rating || 0);
     }
   });
 
@@ -133,10 +140,11 @@ export const LibraryView: React.FC = () => {
             <select
               value={sortBy}
               className="bg-transparent text-xs font-semibold text-slate-700 outline-none cursor-pointer"
-              onChange={(e) => setSortBy(e.target.value as "newest" | "rating")}
+              onChange={(e) => setSortBy(e.target.value as "newest" | "rating" | "reviews")}
             >
               <option value="newest">新着順</option>
-              <option value="rating">レビュー順</option>
+              <option value="rating">評価順</option>
+              <option value="reviews">レポート数順</option>
             </select>
           </div>
         </div>
