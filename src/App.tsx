@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { Layout } from './components/Layout';
 import { MenuHubView } from './views/MenuHubView';
@@ -22,7 +22,12 @@ function AppContent() {
     return !localStorage.getItem('app_onboarding_done');
   });
 
-  // Invite link handling removed
+  // admin以外がpro-dashboardにいる場合は自動リダイレクト
+  useEffect(() => {
+    if (user && activeTab === 'pro-dashboard' && user.systemRole !== 'admin') {
+      setActiveTab('menu');
+    }
+  }, [user, activeTab, setActiveTab]);
 
   if (!isLoggedIn) {
     return <LoginView />;
