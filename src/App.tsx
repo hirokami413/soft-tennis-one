@@ -16,7 +16,7 @@ import { NotificationProvider } from './contexts/NotificationContext';
 import { ToastProvider } from './components/Toast';
 
 function AppContent() {
-  const { isLoggedIn } = useAuth();
+  const { isLoggedIn, user } = useAuth();
   const [activeTab, setActiveTab] = useLocalStorage('app_active_tab', 'menu');
   const [showOnboarding, setShowOnboarding] = useState(() => {
     return !localStorage.getItem('app_onboarding_done');
@@ -37,7 +37,7 @@ function AppContent() {
       case 'coach':
         return <CoachSupportView />;
       case 'pro-dashboard':
-        return <ProDashboardView />;
+        return user?.systemRole === 'admin' ? <ProDashboardView /> : <div className="p-8 text-center text-slate-400">アクセス権限がありません</div>;
       case 'about':
         return <AboutView />;
       default:
