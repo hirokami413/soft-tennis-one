@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { 
   ShieldCheck, Send, Star, MessageCircle, CheckCircle2, Trophy, 
@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSupabaseCoach } from '../hooks/useSupabaseCoach';
+import { supabase } from '../lib/supabase';
 
 // ── Types ──
 interface Coach {
@@ -89,6 +90,26 @@ export const CoachSupportView: React.FC = () => {
   // Coach Application States
   const [showCoachApplication, setShowCoachApplication] = useState(false);
   const [coachAppStatus, setCoachAppStatus] = useLocalStorage<'none' | 'pending' | 'approved' | 'rejected'>('coach_app_status', 'none');
+
+  // DBからコーチ応募ステータスを同期（localStorageとDBの差分を解消）
+  useEffect(() => {
+    if (!user?.id) return;
+    (async () => {
+      const { data } = await supabase
+        .from('coach_applications')
+        .select('status')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single();
+      if (data) {
+        setCoachAppStatus(data.status as any);
+      } else {
+        setCoachAppStatus('none');
+      }
+    })();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const [coachAppForm, setCoachAppForm] = useState({
     fullName: '',
