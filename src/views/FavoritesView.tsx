@@ -27,7 +27,7 @@ export const FavoritesView: React.FC = () => {
     }
   }, [favorites]);
 
-  const categories = ["すべて", "フォアハンド", "バックハンド", "ボレー", "スマッシュ", "サーブ", "フットワーク", "実戦形式"];
+  const categories = ["すべて", "フォアハンド", "バックハンド", "ボレー", "スマッシュ", "サーブ", "フットワーク", "トレーニング", "実戦形式"];
 
   // スナップショットに含まれるメニューを表示（解除してもすぐ消えない）
   const favoriteMenus = menus

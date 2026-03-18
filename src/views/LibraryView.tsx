@@ -33,7 +33,7 @@ export const LibraryView: React.FC = () => {
     }
   }, [favorites, viewMode]);
 
-  const categories = ["すべて", "フォアハンド", "バックハンド", "ボレー", "スマッシュ", "サーブ", "フットワーク", "実戦形式"];
+  const categories = ["すべて", "フォアハンド", "バックハンド", "ボレー", "スマッシュ", "サーブ", "フットワーク", "トレーニング", "実戦形式"];
 
   // 全メニューからタグを収集
   const allTags = Array.from(new Set(menus.flatMap(m => m.tags || [])));

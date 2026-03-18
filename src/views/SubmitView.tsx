@@ -234,6 +234,7 @@ export const SubmitView: React.FC = () => {
                 <option>スマッシュ</option>
                 <option>サーブ</option>
                 <option>フットワーク</option>
+                <option>トレーニング</option>
                 <option>実戦形式</option>
                 <option>その他</option>
               </select>

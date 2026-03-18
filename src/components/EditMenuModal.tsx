@@ -108,7 +108,7 @@ export const EditMenuModal: React.FC<EditMenuModalProps> = ({ menu, onClose }) =
               <div className="flex-1 space-y-2">
                 <label className="text-sm font-bold text-slate-700 block">カテゴリ</label>
                 <select value={formData.category} onChange={(e) => setFormData({...formData, category: e.target.value})} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue appearance-none">
-                  <option>フォアハンド</option><option>バックハンド</option><option>ボレー</option><option>スマッシュ</option><option>サーブ</option><option>フットワーク</option><option>実戦形式</option><option>その他</option>
+                  <option>フォアハンド</option><option>バックハンド</option><option>ボレー</option><option>スマッシュ</option><option>サーブ</option><option>フットワーク</option><option>トレーニング</option><option>実戦形式</option><option>その他</option>
                 </select>
               </div>
               <div className="flex-1 space-y-2">

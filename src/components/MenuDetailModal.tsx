@@ -101,6 +101,7 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
                 'スマッシュ': 'bg-gradient-to-br from-orange-400 to-orange-600',
                 'サーブ': 'bg-gradient-to-br from-rose-400 to-rose-600',
                 'フットワーク': 'bg-gradient-to-br from-cyan-400 to-cyan-600',
+                'トレーニング': 'bg-gradient-to-br from-lime-400 to-lime-600',
                 '実戦形式': 'bg-gradient-to-br from-amber-400 to-amber-600',
               } as Record<string, string>)[menu.category] || 'bg-gradient-to-br from-slate-400 to-slate-600'
             }`}>
