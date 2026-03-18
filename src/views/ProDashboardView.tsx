@@ -117,7 +117,10 @@ export const ProDashboardView: React.FC = () => {
     try { return JSON.parse(localStorage.getItem('pro_dashboard_reviewed') || '[]'); } catch { return []; }
   });
   
-  const [activeTab, setActiveTab] = useState<'pending' | 'reviewed' | 'applications' | 'reports' | 'questions'>('pending');
+  const isAdmin = user?.systemRole === 'admin';
+  const isCoach = user?.systemRole === 'coach';
+  
+  const [activeTab, setActiveTab] = useState<'pending' | 'reviewed' | 'applications' | 'reports' | 'questions'>(isAdmin ? 'pending' : 'questions');
   const { loadReportedUsers } = useNoteComments();
   const [reportedUsers, setReportedUsers] = useState<ReportedUser[]>([]);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
@@ -131,7 +134,6 @@ export const ProDashboardView: React.FC = () => {
   const [reports, setReports] = useState<any[]>([]);
   const [allQuestions, setAllQuestions] = useState<any[]>([]);
   const [questionFilter, setQuestionFilter] = useState<'all' | 'waiting' | 'answered' | 'resolved'>('all');
-  const isAdmin = user?.systemRole === 'admin';
 
   // Fetch Public Notes
   React.useEffect(() => {
@@ -330,8 +332,15 @@ export const ProDashboardView: React.FC = () => {
       alert('承認処理でエラーが発生しました: ' + error.message + '\n\nSupabaseで 020_admin_update_profiles.sql を実行してください。');
       return;
     }
+    // 採用通知を送信
+    await supabase.from('notifications').insert({
+      user_id: userId,
+      type: 'system',
+      title: '🎉 コーチ採用おめでとうございます！',
+      message: 'あなたのコーチ応募が承認されました。コーチ機能が利用可能になりました。',
+    });
     setApplications(prev => prev.filter(a => a.id !== id));
-    alert('コーチとして承認しました！対象ユーザーはコーチ機能が利用可能になります。');
+    alert('コーチとして承認しました！対象ユーザーに通知が送信されました。');
   };
 
   const handleRejectApp = async (id: string) => {
@@ -592,23 +601,27 @@ export const ProDashboardView: React.FC = () => {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-2">
-        <button 
-          onClick={() => setActiveTab('pending')}
-          className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all ${
-            activeTab === 'pending' ? 'bg-slate-800 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-50'
-          }`}
-        >
-          未対応 <span className="bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full">{inbox.filter(n => n.status === 'pending').length}</span>
-        </button>
-        <button 
-          onClick={() => setActiveTab('reviewed')}
-          className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all ${
-            activeTab === 'reviewed' ? 'bg-slate-800 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-50'
-          }`}
-        >
-          対応済 <span className="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full">{inbox.filter(n => n.status === 'reviewed').length}</span>
-        </button>
+      <div className="flex gap-2 flex-wrap">
+        {isAdmin && (
+          <button 
+            onClick={() => setActiveTab('pending')}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all ${
+              activeTab === 'pending' ? 'bg-slate-800 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            未対応 <span className="bg-rose-500 text-white text-[10px] px-2 py-0.5 rounded-full">{inbox.filter(n => n.status === 'pending').length}</span>
+          </button>
+        )}
+        {isAdmin && (
+          <button 
+            onClick={() => setActiveTab('reviewed')}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all ${
+              activeTab === 'reviewed' ? 'bg-slate-800 text-white shadow-md' : 'bg-white text-slate-600 hover:bg-slate-50'
+            }`}
+          >
+            対応済 <span className="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full">{inbox.filter(n => n.status === 'reviewed').length}</span>
+          </button>
+        )}
         {isAdmin && (
           <button 
             onClick={() => setActiveTab('applications')}
@@ -631,7 +644,7 @@ export const ProDashboardView: React.FC = () => {
             報告 {reports.length > 0 && <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{reports.length}</span>}
           </button>
         )}
-        {isAdmin && (
+        {(isAdmin || isCoach) && (
           <button 
             onClick={() => setActiveTab('questions')}
             className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all ${
