@@ -203,17 +203,10 @@ export const MenuCard: React.FC<MenuCardProps> = ({ menu, onClick, onAdd, isAdde
 
       {/* Bottom Action Area */}
       <div className="border-t border-slate-50 px-3 py-2 bg-slate-50/50 flex items-center justify-between">
-        <div className="flex flex-col gap-0.5">
-          {menu.advice && (
-            <p className="text-[9px] text-brand-blue font-medium flex items-center gap-1">
-              コーチアドバイスあり
-            </p>
-          )}
-          <p className="text-[8px] text-slate-400 font-medium flex items-center gap-1">
-            <Calendar size={9} />
-            {menu.createdAt.replace(/-/g, '/')}
-          </p>
-        </div>
+        <p className="text-[8px] text-slate-400 font-medium flex items-center gap-1">
+          <Calendar size={9} />
+          {menu.createdAt.replace(/-/g, '/')}
+        </p>
         <ChevronRight size={14} className="text-slate-400" />
       </div>
     </div>

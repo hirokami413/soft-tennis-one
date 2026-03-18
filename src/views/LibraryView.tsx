@@ -221,6 +221,31 @@ export const LibraryView: React.FC = () => {
         </div>
       )}
 
+      {/* ⭐ 一押しメニュー */}
+      {viewMode === 'all' && menus.filter(m => m.isFeatured).length > 0 && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <span className="text-lg">⭐</span>
+            <h3 className="text-base font-bold text-slate-800">一押し練習メニュー</h3>
+          </div>
+          <div className="flex overflow-x-auto no-scrollbar gap-3 pb-1">
+            {menus.filter(m => m.isFeatured).map(menu => (
+              <div key={menu.id} className="w-[200px] flex-shrink-0">
+                <MenuCard
+                  menu={menu}
+                  onClick={() => setSelectedMenu(menu)}
+                  onAdd={(e) => handleAdd(e, menu)}
+                  isAdded={isInPlaylist(menu.id)}
+                  onToggleFavorite={() => toggleFavorite(menu.id)}
+                  isFavorite={isFavorite(menu.id)}
+                  onTagClick={handleTagClick}
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Menu List */}
       {(viewMode === 'all' || favorites.length > 0) && (
         <div className="grid grid-cols-2 gap-4">

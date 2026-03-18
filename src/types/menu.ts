@@ -20,4 +20,5 @@ export interface MenuData {
   tags?: string[];
   youtubeUrl?: string;
   instagramUrl?: string;
+  isFeatured?: boolean;
 }

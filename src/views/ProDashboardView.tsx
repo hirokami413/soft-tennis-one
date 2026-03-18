@@ -12,6 +12,7 @@ import { isSupabaseConfigured } from '../lib/supabase';
 import { useNoteComments, type ReportedUser } from '../hooks/useNoteComments';
 import { uploadFile, generateFilePath } from '../lib/storage';
 import { compressImage } from '../lib/imageCompress';
+import { useSupabaseMenus } from '../hooks/useSupabaseMenus';
 
 // publicUrlからStorageパスを抽出するヘルパー
 function extractStoragePath(publicUrl: string, bucket: string): string | null {
@@ -119,7 +120,7 @@ export const ProDashboardView: React.FC = () => {
     try { return JSON.parse(localStorage.getItem('pro_dashboard_reviewed') || '[]'); } catch { return []; }
   });
   
-  const [activeTab, setActiveTab] = useState<'pending' | 'reviewed' | 'applications' | 'reports' | 'questions'>(isAdmin ? 'pending' : 'questions');
+  const [activeTab, setActiveTab] = useState<'pending' | 'reviewed' | 'applications' | 'reports' | 'questions' | 'featured'>(isAdmin ? 'pending' : 'questions');
   const { loadReportedUsers } = useNoteComments();
   const [reportedUsers, setReportedUsers] = useState<ReportedUser[]>([]);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
@@ -133,6 +134,7 @@ export const ProDashboardView: React.FC = () => {
   const [reports, setReports] = useState<any[]>([]);
   const [allQuestions, setAllQuestions] = useState<any[]>([]);
   const [questionFilter, setQuestionFilter] = useState<'all' | 'waiting' | 'answered' | 'resolved'>('all');
+  const { menus: allMenus, toggleFeatured } = useSupabaseMenus();
 
   // 管理者以外はアクセス不可（hooksの後に配置）
   if (!authLoading && !isAdmin) {
@@ -663,6 +665,16 @@ export const ProDashboardView: React.FC = () => {
             相談 <span className="bg-slate-200 text-slate-600 text-[10px] px-2 py-0.5 rounded-full">{allQuestions.length}</span>
           </button>
         )}
+        {isAdmin && (
+          <button 
+            onClick={() => setActiveTab('featured')}
+            className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all ${
+              activeTab === 'featured' ? 'bg-amber-500 text-white shadow-md' : 'bg-white text-amber-600 border border-amber-200 hover:bg-amber-50'
+            }`}
+          >
+            ⭐ 一押し
+          </button>
+        )}
       </div>
 
       {/* List */}
@@ -1002,6 +1014,50 @@ export const ProDashboardView: React.FC = () => {
             )}
           </div>
           </>
+        ) : activeTab === 'featured' ? (
+          <div className="space-y-3">
+            <div className="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-4">
+              <p className="text-sm text-amber-800 font-medium">⭐ 一押しメニューを選択すると、ライブラリの上部に「一押し練習メニュー」として表示されます。</p>
+            </div>
+            {allMenus.length === 0 ? (
+              <div className="bg-slate-50 border border-slate-100 rounded-3xl p-10 text-center">
+                <p className="font-bold text-slate-600">メニューがありません</p>
+              </div>
+            ) : (
+              allMenus.map(menu => (
+                <div key={menu.id} className={`flex items-center gap-3 p-4 rounded-2xl border transition-all ${
+                  menu.isFeatured ? 'bg-amber-50 border-amber-200 shadow-sm' : 'bg-white border-slate-100'
+                }`}>
+                  {/* Thumbnail */}
+                  <div className="w-12 h-12 rounded-xl overflow-hidden flex-shrink-0 bg-slate-200">
+                    {menu.imageUrl ? (
+                      <img src={menu.imageUrl} alt={menu.title} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                        <span className="text-white text-[8px] font-bold text-center leading-tight px-0.5">{menu.title.slice(0, 4)}</span>
+                      </div>
+                    )}
+                  </div>
+                  {/* Info */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-800 truncate">{menu.title}</p>
+                    <p className="text-[10px] text-slate-400">{menu.category} ・ {menu.level}</p>
+                  </div>
+                  {/* Toggle */}
+                  <button
+                    onClick={() => toggleFeatured(menu.id, !menu.isFeatured)}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${
+                      menu.isFeatured
+                        ? 'bg-amber-500 text-white hover:bg-amber-600'
+                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                    }`}
+                  >
+                    {menu.isFeatured ? '⭐ 一押し中' : '選択'}
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
         ) : (
           filteredNotes.length === 0 ? (
             <div className="bg-slate-50 border border-slate-100 rounded-3xl p-10 flex flex-col items-center justify-center text-center">

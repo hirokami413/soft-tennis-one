@@ -41,6 +41,7 @@ export function useSupabaseMenus() {
           youtubeUrl: row.youtube_url,
           instagramUrl: row.instagram_url,
           imageUrl: row.image_url || undefined,
+          isFeatured: row.is_featured || false,
           author: row.author_nickname,
           authorAvatar: row.author_avatar,
           authorId: row.author_id,
@@ -153,6 +154,22 @@ export function useSupabaseMenus() {
     }
   };
 
+  // 一押しメニューの切り替え
+  const toggleFeatured = async (id: string, isFeatured: boolean) => {
+    if (!user || !isSupabaseConfigured()) return;
+    try {
+      const { error } = await supabase
+        .from('menus')
+        .update({ is_featured: isFeatured })
+        .eq('id', id);
+      if (error) throw error;
+      await fetchMenus();
+    } catch (err) {
+      console.error('Error toggling featured:', err);
+      throw err;
+    }
+  };
+
   return {
     menus,
     isLoading,
@@ -161,5 +178,6 @@ export function useSupabaseMenus() {
     submitMenu,
     updateMenu,
     deleteMenu,
+    toggleFeatured,
   };
 }
