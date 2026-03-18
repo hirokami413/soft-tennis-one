@@ -118,7 +118,6 @@ export const ProDashboardView: React.FC = () => {
   });
   
   const isAdmin = user?.systemRole === 'admin';
-  const isCoach = user?.systemRole === 'coach';
   
   const [activeTab, setActiveTab] = useState<'pending' | 'reviewed' | 'applications' | 'reports' | 'questions'>(isAdmin ? 'pending' : 'questions');
   const { loadReportedUsers } = useNoteComments();
@@ -644,7 +643,7 @@ export const ProDashboardView: React.FC = () => {
             報告 {reports.length > 0 && <span className="bg-red-500 text-white text-[10px] px-2 py-0.5 rounded-full">{reports.length}</span>}
           </button>
         )}
-        {(isAdmin || isCoach) && (
+        {isAdmin && (
           <button 
             onClick={() => setActiveTab('questions')}
             className={`flex-1 py-3 px-4 rounded-xl font-bold text-sm flex justify-center items-center gap-2 transition-all ${
