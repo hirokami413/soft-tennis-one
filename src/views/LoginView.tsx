@@ -40,8 +40,8 @@ export const LoginView: React.FC = () => {
       <div className="w-full max-w-md">
         {/* Logo Area */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-slate-900 rounded-3xl shadow-xl mb-5">
-            <span className="text-white font-black text-3xl">🎾</span>
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl shadow-xl mb-5 overflow-hidden bg-white">
+            <img src="/logo.png" alt="ソフトテニス One" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">ソフトテニス One</h1>
           <p className="text-sm text-slate-500 mt-1 font-medium">ソフトテニス練習支援アプリ</p>
