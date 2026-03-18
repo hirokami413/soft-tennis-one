@@ -1457,8 +1457,8 @@ export const TennisNoteView: React.FC = () => {
 
       {/* Edit Note Modal */}
       {editingNote && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setEditingNote(null)}>
-          <div className="bg-white w-full max-w-lg rounded-t-3xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end sm:items-center justify-center" onClick={() => setEditingNote(null)}>
+          <div className="bg-white w-full max-w-lg rounded-t-3xl sm:rounded-3xl max-h-[85vh] overflow-y-auto overscroll-contain" onClick={e => e.stopPropagation()}>
             <div className="sticky top-0 bg-white p-4 border-b border-slate-100 flex items-center justify-between z-10">
               <h3 className="font-bold text-slate-800 flex items-center gap-2">
                 <Edit3 size={16} className="text-brand-blue" /> ノートを編集
