@@ -3,7 +3,7 @@ import {
   ShieldCheck, CheckCircle2, 
   ChevronRight, ArrowLeft, Send, Video, Clock, 
   TrendingUp, MessageCircle, Crown, UserPlus, XCircle,
-  Flag, AlertTriangle, Trash2, Ban, MessageSquare,
+  Flag, AlertTriangle, Trash2, Ban, MessageSquare, Star,
   Image as ImageIcon, Link, Loader2, X
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -134,6 +134,7 @@ export const ProDashboardView: React.FC = () => {
   const [applications, setApplications] = useState<any[]>([]);
   const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
   const [reports, setReports] = useState<any[]>([]);
+  const [flaggedReports, setFlaggedReports] = useState<any[]>([]);
   const [allQuestions, setAllQuestions] = useState<any[]>([]);
   const [questionFilter, setQuestionFilter] = useState<'all' | 'waiting' | 'answered' | 'resolved'>('all');
   const { menus: allMenus, toggleFeatured } = useSupabaseMenus();
@@ -237,6 +238,43 @@ export const ProDashboardView: React.FC = () => {
       if (data && !error) setReports(data);
     };
     fetchReports();
+  }, [isAdmin, authLoading]);
+
+  // Fetch flagged review reports (admin only)
+  React.useEffect(() => {
+    if (!isSupabaseConfigured() || !isAdmin || authLoading) return;
+    const fetchFlaggedReports = async () => {
+      const { data, error } = await supabase
+        .from('report_flags')
+        .select('*')
+        .order('created_at', { ascending: false });
+      if (error || !data || data.length === 0) { setFlaggedReports([]); return; }
+
+      // Get related reports and profiles
+      const reportIds = [...new Set(data.map((f: any) => f.report_id))];
+      const reporterIds = [...new Set(data.map((f: any) => f.reporter_id))];
+
+      const { data: reportRows } = await supabase.from('reports').select('*').in('id', reportIds);
+      const allUserIds = [...new Set([...reporterIds, ...(reportRows || []).map((r: any) => r.author_id)])];
+      const { data: profileRows } = await supabase.from('profiles').select('id, nickname, avatar_emoji').in('id', allUserIds);
+
+      const reportMap = new Map((reportRows || []).map((r: any) => [r.id, r]));
+      const profileMap = new Map((profileRows || []).map((p: any) => [p.id, p]));
+
+      setFlaggedReports(data.map((f: any) => {
+        const report = reportMap.get(f.report_id);
+        const reporter = profileMap.get(f.reporter_id);
+        const author = report ? profileMap.get(report.author_id) : null;
+        return {
+          ...f,
+          report,
+          reporterNickname: reporter?.nickname || '不明',
+          authorNickname: author?.nickname || '不明',
+          authorAvatar: author?.avatar_emoji || '🎾',
+        };
+      }));
+    };
+    fetchFlaggedReports();
   }, [isAdmin, authLoading]);
 
   // Fetch All Questions (admin only)
@@ -869,7 +907,57 @@ export const ProDashboardView: React.FC = () => {
           )
         ) : activeTab === 'reports' ? (
           <>
-          {reports.length === 0 ? (
+          {/* Flagged Review Reports */}
+          {flaggedReports.length > 0 && (
+            <div className="mb-6">
+              <h3 className="text-sm font-bold text-orange-600 mb-3 flex items-center gap-1.5">❗ 通報されたレビュー ({flaggedReports.length}件)</h3>
+              {flaggedReports.map((flag: any) => (
+                <div key={flag.id} className="bg-white rounded-2xl shadow-sm border border-orange-100 p-4 mb-3 space-y-3">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg">{flag.authorAvatar}</span>
+                    <span className="text-sm font-bold text-slate-700">{flag.authorNickname}のレポート</span>
+                    <span className="text-[10px] text-slate-400 ml-auto">{new Date(flag.created_at).toLocaleString('ja-JP')}</span>
+                  </div>
+                  {flag.report && (
+                    <div className="bg-slate-50 p-3 rounded-xl">
+                      <div className="flex items-center gap-0.5 mb-1">
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <Star key={i} size={12} className={i < flag.report.rating ? 'text-yellow-400 fill-current' : 'text-slate-200'} />
+                        ))}
+                      </div>
+                      <p className="text-sm text-slate-700">{flag.report.comment}</p>
+                    </div>
+                  )}
+                  <div className="bg-orange-50 border border-orange-100 p-3 rounded-xl">
+                    <p className="text-[10px] text-orange-500 font-bold mb-1">📋 通報理由 (通報者: {flag.reporterNickname})</p>
+                    <p className="text-sm text-slate-700">{flag.reason || '理由なし'}</p>
+                  </div>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={async () => {
+                        if (flag.report) {
+                          await supabase.from('reports').delete().eq('id', flag.report.id);
+                        }
+                        await supabase.from('report_flags').delete().eq('id', flag.id);
+                        setFlaggedReports(prev => prev.filter(f => f.id !== flag.id));
+                      }}
+                      className="flex-1 py-2 rounded-xl text-sm font-bold bg-red-500 text-white"
+                    >レポートを削除</button>
+                    <button
+                      onClick={async () => {
+                        await supabase.from('report_flags').delete().eq('id', flag.id);
+                        setFlaggedReports(prev => prev.filter(f => f.id !== flag.id));
+                      }}
+                      className="flex-1 py-2 rounded-xl text-sm font-bold bg-white text-slate-600 border border-slate-200"
+                    >却下</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Existing coach question reports */}
+          {reports.length === 0 && flaggedReports.length === 0 ? (
             <div className="bg-slate-50 border border-slate-100 rounded-3xl p-10 flex flex-col items-center justify-center text-center">
               <CheckCircle2 size={40} className="text-slate-300 mb-3" />
               <p className="font-bold text-slate-600">未対応の報告はありません</p>

@@ -92,5 +92,33 @@ export function useReports(menuId: string) {
     await fetchReports();
   };
 
-  return { reports, loading, submitReport, deleteReport };
+  const updateReport = async (reportId: string, rating: number, comment: string) => {
+    if (!user || !isSupabaseConfigured()) throw new Error('ログインが必要です');
+    const { error } = await supabase
+      .from('reports')
+      .update({ rating, comment })
+      .eq('id', reportId)
+      .eq('author_id', user.id);
+
+    if (error) throw error;
+    await fetchReports();
+  };
+
+  const flagReport = async (reportId: string, reason: string) => {
+    if (!user || !isSupabaseConfigured()) throw new Error('ログインが必要です');
+    const { error } = await supabase
+      .from('report_flags')
+      .insert({
+        report_id: reportId,
+        reporter_id: user.id,
+        reason,
+      });
+
+    if (error) {
+      if (error.code === '23505') throw new Error('すでに報告済みです');
+      throw error;
+    }
+  };
+
+  return { reports, loading, submitReport, deleteReport, updateReport, flagReport };
 }

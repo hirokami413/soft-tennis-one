@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Clock, Users, Star, MessageCircle, AlertCircle, Camera, Check, Youtube, Edit2, Trash2, Heart } from 'lucide-react';
+import { X, Clock, Users, Star, MessageCircle, AlertCircle, Camera, Check, Youtube, Edit2, Trash2, Heart, Flag, MoreHorizontal } from 'lucide-react';
 import { type MenuData } from '../types/menu';
 import { Rating } from './Rating';
 import { useAuth } from '../contexts/AuthContext';
@@ -32,10 +32,14 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
   
   const { user } = useAuth();
   const { deleteMenu } = useSupabaseMenus();
-  const { reports, loading: reportsLoading, submitReport } = useReports(menu.id);
+  const { reports, loading: reportsLoading, submitReport, deleteReport, updateReport, flagReport } = useReports(menu.id);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+  const [editingReportId, setEditingReportId] = useState<string | null>(null);
+  const [editReportText, setEditReportText] = useState('');
+  const [editReportRating, setEditReportRating] = useState(0);
+  const [reportMenuId, setReportMenuId] = useState<string | null>(null);
 
   const isAuthor = user?.id === menu.authorId;
 
@@ -369,21 +373,112 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
                 </div>
               ) : reports.length > 0 && (
                 <div className="mt-4 space-y-3">
-                  {reports.map(report => (
+                  {reports.map(report => {
+                    const isOwnReport = user?.id === report.authorId;
+                    const isEditingThis = editingReportId === report.id;
+                    return (
                     <div key={report.id} className="bg-white border border-slate-100 rounded-2xl p-4">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="text-lg">{report.authorAvatar}</span>
                         <span className="text-sm font-bold text-slate-700">{report.authorNickname}</span>
                         <span className="text-[10px] text-slate-400 ml-auto">{report.createdAt}</span>
+                        {/* Actions */}
+                        <div className="relative">
+                          <button
+                            onClick={() => setReportMenuId(reportMenuId === report.id ? null : report.id)}
+                            className="w-7 h-7 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-400"
+                          >
+                            <MoreHorizontal size={14} />
+                          </button>
+                          {reportMenuId === report.id && (
+                            <div className="absolute right-0 top-8 bg-white border border-slate-200 rounded-xl shadow-lg z-10 py-1 min-w-[140px]">
+                              {isOwnReport ? (
+                                <>
+                                  <button
+                                    onClick={() => {
+                                      setEditingReportId(report.id);
+                                      setEditReportText(report.comment);
+                                      setEditReportRating(report.rating);
+                                      setReportMenuId(null);
+                                    }}
+                                    className="w-full px-4 py-2.5 text-left text-sm text-slate-700 hover:bg-slate-50 flex items-center gap-2"
+                                  >
+                                    <Edit2 size={14} /> 編集
+                                  </button>
+                                  <button
+                                    onClick={async () => {
+                                      if (window.confirm('このレポートを削除しますか？')) {
+                                        await deleteReport(report.id);
+                                      }
+                                      setReportMenuId(null);
+                                    }}
+                                    className="w-full px-4 py-2.5 text-left text-sm text-red-600 hover:bg-red-50 flex items-center gap-2"
+                                  >
+                                    <Trash2 size={14} /> 削除
+                                  </button>
+                                </>
+                              ) : (
+                                <button
+                                  onClick={async () => {
+                                    const reason = window.prompt('通報理由を入力してください：');
+                                    if (reason !== null) {
+                                      try {
+                                        await flagReport(report.id, reason);
+                                        alert('報告しました。管理者が確認します。');
+                                      } catch (err: any) {
+                                        alert(err.message || '報告に失敗しました。');
+                                      }
+                                    }
+                                    setReportMenuId(null);
+                                  }}
+                                  className="w-full px-4 py-2.5 text-left text-sm text-orange-600 hover:bg-orange-50 flex items-center gap-2"
+                                >
+                                  <Flag size={14} /> 不適切な内容を報告
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <div className="flex items-center gap-0.5 mb-2">
-                        {Array.from({ length: 5 }, (_, i) => (
-                          <Star key={i} size={14} className={i < report.rating ? 'text-yellow-400 fill-current' : 'text-slate-200'} />
-                        ))}
-                      </div>
-                      <p className="text-sm text-slate-600 leading-relaxed">{report.comment}</p>
+                      {isEditingThis ? (
+                        <div className="space-y-3">
+                          <div className="flex items-center gap-0.5">
+                            {Array.from({ length: 5 }, (_, i) => (
+                              <button key={i} type="button" onClick={() => setEditReportRating(i + 1)}>
+                                <Star size={18} className={i < editReportRating ? 'text-yellow-400 fill-current' : 'text-slate-200'} />
+                              </button>
+                            ))}
+                          </div>
+                          <textarea
+                            value={editReportText}
+                            onChange={(e) => setEditReportText(e.target.value)}
+                            className="w-full h-20 p-3 rounded-xl border border-slate-200 text-sm resize-none focus:outline-none focus:border-brand-blue"
+                          />
+                          <div className="flex gap-2">
+                            <button onClick={() => setEditingReportId(null)} className="flex-1 py-2 rounded-xl text-sm font-bold bg-white text-slate-600 border border-slate-200">キャンセル</button>
+                            <button
+                              onClick={async () => {
+                                await updateReport(report.id, editReportRating, editReportText);
+                                setEditingReportId(null);
+                              }}
+                              disabled={editReportRating === 0 || editReportText.length === 0}
+                              className="flex-1 py-2 rounded-xl text-sm font-bold bg-brand-blue text-white disabled:opacity-50"
+                            >保存</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center gap-0.5 mb-2">
+                            {Array.from({ length: 5 }, (_, i) => (
+                              <Star key={i} size={14} className={i < report.rating ? 'text-yellow-400 fill-current' : 'text-slate-200'} />
+                            ))}
+                          </div>
+                          <p className="text-sm text-slate-600 leading-relaxed">{report.comment}</p>
+                        </>
+                      )}
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
 
