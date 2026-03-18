@@ -213,13 +213,25 @@ export function useSupabaseNotes() {
     });
   }, [useSupabase]);
 
-  // ── ノート更新（ローカルステートのみ — 必要に応じてDB連携追加可能）──
+  // ── ノート更新（ローカルステートのみ）──
   const updateNotes = useCallback((updater: (prev: NoteEntry[]) => NoteEntry[]) => {
     setNotes(prev => {
       const updated = updater(prev);
       if (!useSupabase) setLocalNotes(updated);
-      // communityNotesも同期
       setCommunityNotes(updated.filter(n => n.published));
+      return updated;
+    });
+  }, [useSupabase]);
+
+  // ── ノート削除 ──
+  const deleteNote = useCallback(async (noteId: string) => {
+    if (useSupabase) {
+      await supabase.from('tennis_notes').delete().eq('id', noteId);
+    }
+    setNotes(prev => {
+      const updated = prev.filter(n => n.id !== noteId);
+      if (!useSupabase) setLocalNotes(updated);
+      setCommunityNotes(prevC => prevC.filter(n => n.id !== noteId));
       return updated;
     });
   }, [useSupabase]);
@@ -231,6 +243,7 @@ export function useSupabaseNotes() {
     loading,
     addNote,
     publishNote,
+    deleteNote,
     reloadCommunityNotes: loadCommunityNotes,
   };
 }

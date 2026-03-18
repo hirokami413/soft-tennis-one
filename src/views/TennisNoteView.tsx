@@ -71,7 +71,7 @@ export const TennisNoteView: React.FC = () => {
   const { canUseTennisNoteBase, canAskCoachInNote } = useSubscription();
   const { addCoins, user } = useAuth();
   const { addNotification } = useNotifications();
-  const { notes, addNote, publishNote } = useSupabaseNotes();
+  const { notes, addNote, publishNote, deleteNote } = useSupabaseNotes();
   const { goals, setGoals, addGoal: addGoalToDb, deleteGoal: deleteGoalFromDb } = useSupabaseGoals();
   const [expandedNote, setExpandedNote] = useState<string | null>('n-1');
   const [showForm, setShowForm] = useState(false);
@@ -353,6 +353,12 @@ export const TennisNoteView: React.FC = () => {
                     <div className="pt-2">
                       <RadarChart skills={n.skills} />
                     </div>
+                    <button
+                      onClick={() => { if (confirm('このノートを削除しますか？')) deleteNote(n.id); }}
+                      className="w-full mt-2 py-2 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Trash2 size={12} /> このノートを削除
+                    </button>
                   </div>
                 )}
               </div>
@@ -780,6 +786,12 @@ export const TennisNoteView: React.FC = () => {
                       </button>
                     )}
                   </div>
+                  <button
+                    onClick={() => { if (confirm('このノートを削除しますか？')) deleteNote(note.id); }}
+                    className="w-full mt-2 py-2 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                  >
+                    <Trash2 size={12} /> このノートを削除
+                  </button>
                 </div>
               )}
             </div>
