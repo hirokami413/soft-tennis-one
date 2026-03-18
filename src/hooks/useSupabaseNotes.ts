@@ -242,12 +242,35 @@ export function useSupabaseNotes() {
     });
   }, [useSupabase]);
 
+  // ── ノート編集 ──
+  const updateNote = useCallback(async (noteId: string, updates: Partial<Omit<NoteEntry, 'id'>>) => {
+    if (useSupabase) {
+      const dbUpdates: Record<string, unknown> = {};
+      if (updates.keep !== undefined) dbUpdates.keep = updates.keep;
+      if (updates.problem !== undefined) dbUpdates.problem = updates.problem;
+      if (updates.tryItem !== undefined) dbUpdates.try_item = updates.tryItem;
+      if (updates.coachQuestion !== undefined) dbUpdates.coach_question = updates.coachQuestion;
+      if (updates.other !== undefined) dbUpdates.other = updates.other;
+      if (updates.skills !== undefined) dbUpdates.skills = updates.skills;
+      if (updates.media !== undefined) dbUpdates.media = updates.media || null;
+      if (updates.date !== undefined) dbUpdates.date = updates.date;
+
+      await supabase.from('tennis_notes').update(dbUpdates).eq('id', noteId);
+    }
+    setNotes(prev => {
+      const updated = prev.map(n => n.id === noteId ? { ...n, ...updates } : n);
+      if (!useSupabase) setLocalNotes(updated);
+      return updated;
+    });
+  }, [useSupabase]);
+
   return {
     notes,
     setNotes: updateNotes,
     communityNotes,
     loading,
     addNote,
+    updateNote,
     publishNote,
     deleteNote,
     reloadCommunityNotes: loadCommunityNotes,

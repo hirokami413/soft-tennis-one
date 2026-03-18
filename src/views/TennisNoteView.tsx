@@ -73,7 +73,7 @@ export const TennisNoteView: React.FC = () => {
   const { canUseTennisNoteBase, canAskCoachInNote } = useSubscription();
   const { addCoins, user } = useAuth();
   const { addNotification } = useNotifications();
-  const { notes, addNote, publishNote, deleteNote, communityNotes } = useSupabaseNotes();
+  const { notes, addNote, updateNote, publishNote, deleteNote, communityNotes } = useSupabaseNotes();
   const { goals, setGoals, addGoal: addGoalToDb, deleteGoal: deleteGoalFromDb } = useSupabaseGoals();
   const [expandedNote, setExpandedNote] = useState<string | null>('n-1');
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
@@ -85,6 +85,13 @@ export const TennisNoteView: React.FC = () => {
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [noteTab, setNoteTab] = useState<'write' | 'history' | 'community' | 'goals' | 'advice'>('write');
   const [coachAdvices, setCoachAdvices] = useState<any[]>([]);
+  const [editingNote, setEditingNote] = useState<string | null>(null);
+  const [editKeep, setEditKeep] = useState('');
+  const [editProblem, setEditProblem] = useState('');
+  const [editTry, setEditTry] = useState('');
+  const [editCoachQ, setEditCoachQ] = useState('');
+  const [editOther, setEditOther] = useState('');
+  const [editSkills, setEditSkills] = useState<number[]>([3,3,3,3,3,3]);
   const [noteSearchQuery, setNoteSearchQuery] = useState('');
 
   // Calendar State
@@ -364,12 +371,28 @@ export const TennisNoteView: React.FC = () => {
                     <div className="pt-2">
                       <RadarChart skills={n.skills} />
                     </div>
-                    <button
-                      onClick={() => { if (confirm('このノートを削除しますか？')) deleteNote(n.id); }}
-                      className="w-full mt-2 py-2 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center justify-center gap-1.5"
-                    >
-                      <Trash2 size={12} /> このノートを削除
-                    </button>
+                    <div className="flex gap-2 mt-2">
+                      <button
+                        onClick={() => {
+                          setEditingNote(n.id);
+                          setEditKeep(n.keep || '');
+                          setEditProblem(n.problem || '');
+                          setEditTry(n.tryItem || '');
+                          setEditCoachQ(n.coachQuestion || '');
+                          setEditOther(n.other || '');
+                          setEditSkills([...(n.skills || [3,3,3,3,3,3])]);
+                        }}
+                        className="flex-1 py-2 text-xs text-brand-blue hover:bg-blue-50 rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        <Edit3 size={12} /> 編集
+                      </button>
+                      <button
+                        onClick={() => { if (confirm('このノートを削除しますか？')) deleteNote(n.id); }}
+                        className="flex-1 py-2 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                      >
+                        <Trash2 size={12} /> 削除
+                      </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -797,12 +820,28 @@ export const TennisNoteView: React.FC = () => {
                       </button>
                     )}
                   </div>
-                  <button
-                    onClick={() => { if (confirm('このノートを削除しますか？')) deleteNote(note.id); }}
-                    className="w-full mt-2 py-2 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center justify-center gap-1.5"
-                  >
-                    <Trash2 size={12} /> このノートを削除
-                  </button>
+                  <div className="flex gap-2 mt-2">
+                    <button
+                      onClick={() => {
+                        setEditingNote(note.id);
+                        setEditKeep(note.keep || '');
+                        setEditProblem(note.problem || '');
+                        setEditTry(note.tryItem || '');
+                        setEditCoachQ(note.coachQuestion || '');
+                        setEditOther(note.other || '');
+                        setEditSkills([...(note.skills || [3,3,3,3,3,3])]);
+                      }}
+                      className="flex-1 py-2 text-xs text-brand-blue hover:bg-blue-50 rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Edit3 size={12} /> 編集
+                    </button>
+                    <button
+                      onClick={() => { if (confirm('このノートを削除しますか？')) deleteNote(note.id); }}
+                      className="flex-1 py-2 text-xs text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors flex items-center justify-center gap-1.5"
+                    >
+                      <Trash2 size={12} /> 削除
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -1406,6 +1445,95 @@ export const TennisNoteView: React.FC = () => {
               );
             })
           )}
+        </div>
+      )}
+
+      {/* Edit Note Modal */}
+      {editingNote && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setEditingNote(null)}>
+          <div className="bg-white w-full max-w-lg rounded-t-3xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="sticky top-0 bg-white p-4 border-b border-slate-100 flex items-center justify-between z-10">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <Edit3 size={16} className="text-brand-blue" /> ノートを編集
+              </h3>
+              <button onClick={() => setEditingNote(null)} className="p-1.5 text-slate-400 hover:text-slate-600">
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <label className="text-xs font-bold text-green-700 mb-1 block">✅ 良かったこと（Keep）</label>
+                <textarea value={editKeep} onChange={e => setEditKeep(e.target.value)}
+                  className="w-full bg-green-50 border border-green-200 rounded-xl p-3 text-sm focus:outline-none focus:border-green-400 resize-none h-20"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-red-600 mb-1 block">⚠️ 課題・改善点（Problem）</label>
+                <textarea value={editProblem} onChange={e => setEditProblem(e.target.value)}
+                  className="w-full bg-red-50 border border-red-200 rounded-xl p-3 text-sm focus:outline-none focus:border-red-400 resize-none h-20"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-blue-700 mb-1 block">🚀 次やること（Try）</label>
+                <textarea value={editTry} onChange={e => setEditTry(e.target.value)}
+                  className="w-full bg-blue-50 border border-blue-200 rounded-xl p-3 text-sm focus:outline-none focus:border-blue-400 resize-none h-20"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-indigo-700 mb-1 block">💬 コーチへの質問</label>
+                <textarea value={editCoachQ} onChange={e => setEditCoachQ(e.target.value)}
+                  className="w-full bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-sm focus:outline-none focus:border-indigo-400 resize-none h-16"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-bold text-slate-600 mb-1 block">📝 その他メモ</label>
+                <textarea value={editOther} onChange={e => setEditOther(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:border-slate-400 resize-none h-16"
+                />
+              </div>
+
+              {/* Skills */}
+              <div>
+                <label className="text-xs font-bold text-slate-600 mb-2 block">⭐ スキル自己評価（1-10）</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {['フォア', 'バック', 'ボレー', 'サーブ', 'フットワーク', '戦術'].map((label, idx) => (
+                    <div key={idx} className="flex items-center gap-2 bg-slate-50 rounded-xl p-2">
+                      <span className="text-[10px] font-bold text-slate-500 w-16">{label}</span>
+                      <input type="range" min={1} max={10} value={editSkills[idx]}
+                        onChange={e => setEditSkills(prev => { const n = [...prev]; n[idx] = Number(e.target.value); return n; })}
+                        className="flex-1 h-1.5 accent-brand-blue"
+                      />
+                      <span className="text-xs font-bold text-brand-blue w-5 text-right">{editSkills[idx]}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => setEditingNote(null)}
+                  className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors"
+                >
+                  キャンセル
+                </button>
+                <button
+                  onClick={async () => {
+                    await updateNote(editingNote, {
+                      keep: editKeep,
+                      problem: editProblem,
+                      tryItem: editTry,
+                      coachQuestion: editCoachQ,
+                      other: editOther,
+                      skills: editSkills,
+                    });
+                    setEditingNote(null);
+                  }}
+                  className="flex-1 py-3 bg-brand-blue text-white rounded-xl text-sm font-bold hover:bg-blue-600 transition-colors flex items-center justify-center gap-2"
+                >
+                  <Check size={16} /> 保存する
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
