@@ -1121,7 +1121,8 @@ export const CoachSupportView: React.FC = () => {
                   await applyCoachApplication(coachAppForm.fullName, coachAppForm.nickname, {
                     yearsExperience: coachAppForm.yearsExperience,
                     certification: coachAppForm.certification,
-                    selfIntro: coachAppForm.selfIntro
+                    selfIntro: coachAppForm.selfIntro,
+                    tournamentResults: coachAppForm.tournamentResults
                   });
                   setCoachAppStatus('pending');
                   setShowCoachApplication(false);

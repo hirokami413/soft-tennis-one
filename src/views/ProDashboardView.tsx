@@ -573,17 +573,27 @@ export const ProDashboardView: React.FC = () => {
                     <div className="px-5 pb-5 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
                       <div className="border-t border-slate-100 pt-4 grid grid-cols-2 gap-3">
                         <div className="bg-slate-50 rounded-xl p-3">
+                          <p className="text-[10px] text-slate-400 font-medium">氏名（本名）</p>
+                          <p className="text-sm font-bold text-slate-700 mt-0.5">{app.full_name}</p>
+                        </div>
+                        <div className="bg-slate-50 rounded-xl p-3">
                           <p className="text-[10px] text-slate-400 font-medium">ニックネーム</p>
                           <p className="text-sm font-bold text-slate-700 mt-0.5">{app.nickname}</p>
                         </div>
                         <div className="bg-slate-50 rounded-xl p-3">
-                          <p className="text-[10px] text-slate-400 font-medium">指導経験</p>
+                          <p className="text-[10px] text-slate-400 font-medium">ソフトテニス経験年数</p>
                           <p className="text-sm font-bold text-slate-700 mt-0.5">{app.years_experience || '未記入'}</p>
                         </div>
-                        <div className="col-span-2 bg-slate-50 rounded-xl p-3">
-                          <p className="text-[10px] text-slate-400 font-medium">資格・実績</p>
-                          <p className="text-sm text-slate-700 mt-0.5">{app.certification || '未記入'}</p>
+                        <div className="bg-slate-50 rounded-xl p-3">
+                          <p className="text-[10px] text-slate-400 font-medium">所有資格</p>
+                          <p className="text-sm font-bold text-slate-700 mt-0.5">{app.certification || 'なし'}</p>
                         </div>
+                        {app.tournament_results && (
+                          <div className="col-span-2 bg-amber-50 rounded-xl p-3 border border-amber-100">
+                            <p className="text-[10px] text-amber-600 font-medium">大会実績</p>
+                            <p className="text-sm text-slate-700 mt-1 whitespace-pre-wrap leading-relaxed">{app.tournament_results}</p>
+                          </div>
+                        )}
                         {app.self_intro && (
                           <div className="col-span-2 bg-indigo-50 rounded-xl p-3 border border-indigo-100">
                             <p className="text-[10px] text-indigo-500 font-medium">自己PR</p>
