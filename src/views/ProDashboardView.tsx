@@ -13,6 +13,18 @@ import { useNoteComments, type ReportedUser } from '../hooks/useNoteComments';
 import { uploadFile, generateFilePath } from '../lib/storage';
 import { compressImage } from '../lib/imageCompress';
 
+// publicUrlからStorageパスを抽出するヘルパー
+function extractStoragePath(publicUrl: string, bucket: string): string | null {
+  // URL形式: https://xxx.supabase.co/storage/v1/object/public/coach-docs/userId/folder/file
+  const marker = `/storage/v1/object/public/${bucket}/`;
+  const idx = publicUrl.indexOf(marker);
+  if (idx !== -1) return decodeURIComponent(publicUrl.substring(idx + marker.length));
+  // フォールバック: バケット名以降のパスを取得
+  const parts = publicUrl.split(`/${bucket}/`);
+  if (parts.length > 1) return decodeURIComponent(parts[parts.length - 1].split('?')[0]);
+  return null;
+}
+
 // --- Types ---
 interface SubmittedNote {
   id: string;
@@ -166,7 +178,30 @@ export const ProDashboardView: React.FC = () => {
     if (!isSupabaseConfigured() || !isAdmin) return;
     const fetchApps = async () => {
       const { data, error } = await supabase.from('coach_applications').select('*').eq('status', 'pending').order('created_at', { ascending: false });
-      if (data && !error) setApplications(data);
+      if (data && !error) {
+        // coach-docsは非公開バケットのためSigned URLに変換
+        const appsWithSignedUrls = await Promise.all(
+          data.map(async (app: any) => {
+            const updated = { ...app };
+            if (app.id_document_url) {
+              const path = extractStoragePath(app.id_document_url, 'coach-docs');
+              if (path) {
+                const { data: signed } = await supabase.storage.from('coach-docs').createSignedUrl(path, 3600);
+                if (signed) updated.id_document_url = signed.signedUrl;
+              }
+            }
+            if (app.resume_url) {
+              const path = extractStoragePath(app.resume_url, 'coach-docs');
+              if (path) {
+                const { data: signed } = await supabase.storage.from('coach-docs').createSignedUrl(path, 3600);
+                if (signed) updated.resume_url = signed.signedUrl;
+              }
+            }
+            return updated;
+          })
+        );
+        setApplications(appsWithSignedUrls);
+      }
     };
     fetchApps();
   }, [isAdmin]);

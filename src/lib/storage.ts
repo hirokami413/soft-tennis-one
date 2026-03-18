@@ -17,11 +17,32 @@ export async function uploadFile(
     return { url: null, error: error.message };
   }
 
+  // 非公開バケットの場合はsigned URLを使用（1時間有効）
+  // アプリケーション表示時に毎回取得し直すので問題ない
   const { data: urlData } = supabase.storage
     .from(bucket)
     .getPublicUrl(path);
 
   return { url: urlData.publicUrl, error: null };
+}
+
+/**
+ * 非公開バケットのファイルのSigned URL（期限付きアクセスURL）を取得
+ */
+export async function getSignedUrl(
+  bucket: string,
+  path: string,
+  expiresIn: number = 3600
+): Promise<string | null> {
+  const { data, error } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(path, expiresIn);
+
+  if (error) {
+    console.error('Signed URL error:', error);
+    return null;
+  }
+  return data.signedUrl;
 }
 
 /**
