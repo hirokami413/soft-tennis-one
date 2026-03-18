@@ -4,6 +4,7 @@ import { type MenuData } from '../types/menu';
 import { Rating } from './Rating';
 import { useAuth } from '../contexts/AuthContext';
 import { useSupabaseMenus } from '../hooks/useSupabaseMenus';
+import { useReports } from '../hooks/useReports';
 import { EditMenuModal } from './EditMenuModal';
 
 interface MenuDetailModalProps {
@@ -31,8 +32,10 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
   
   const { user } = useAuth();
   const { deleteMenu } = useSupabaseMenus();
+  const { reports, loading: reportsLoading, submitReport } = useReports(menu.id);
   const [isEditing, setIsEditing] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
 
   const isAuthor = user?.id === menu.authorId;
 
@@ -63,11 +66,23 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
     }
   };
 
-  const handleSubmitReport = () => {
-    alert("「やってみた！」レポートを投稿しました！（※モック動作）");
-    setShowReportForm(false);
-    setReportText("");
-    setReportRating(0);
+  const handleSubmitReport = async () => {
+    if (!user) {
+      alert('レポートを投稿するにはログインが必要です。');
+      return;
+    }
+    try {
+      setIsSubmittingReport(true);
+      await submitReport(reportRating, reportText);
+      setShowReportForm(false);
+      setReportText('');
+      setReportRating(0);
+    } catch (err) {
+      console.error(err);
+      alert('レポートの投稿に失敗しました。');
+    } finally {
+      setIsSubmittingReport(false);
+    }
   };
 
   const getYoutubeId = (url: string) => {
@@ -297,12 +312,18 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
                   <MessageCircle size={18} className="text-brand-blue" />
                   みんなの「やってみた！」
                 </h3>
-                <span className="text-sm text-slate-500 font-medium">{menu.reviewCount}件</span>
+                <span className="text-sm text-slate-500 font-medium">{reports.length}件</span>
               </div>
 
               {!showReportForm ? (
                 <button 
-                  onClick={() => setShowReportForm(true)}
+                  onClick={() => {
+                    if (!user) {
+                      alert('レポートを投稿するにはログインが必要です。');
+                      return;
+                    }
+                    setShowReportForm(true);
+                  }}
                   className="w-full flex justify-center items-center gap-2 p-4 bg-slate-50 hover:bg-slate-100 rounded-2xl border border-dashed border-slate-300 text-sm font-bold text-slate-600 transition-colors"
                 >
                   <Camera size={18} />
@@ -332,16 +353,39 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
                     </button>
                     <button 
                       onClick={handleSubmitReport}
-                      disabled={reportRating === 0 || reportText.length === 0}
+                      disabled={reportRating === 0 || reportText.length === 0 || isSubmittingReport}
                       className="flex-1 py-3 rounded-xl font-bold text-sm bg-brand-blue text-white disabled:opacity-50 flex justify-center items-center gap-1"
                     >
-                      <Check size={16} />
-                      投稿
+                      {isSubmittingReport ? <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Check size={16} /> 投稿</>}
                     </button>
                   </div>
                 </div>
               )}
 
+              {/* Report List */}
+              {reportsLoading ? (
+                <div className="flex justify-center py-6">
+                  <div className="w-6 h-6 border-2 border-slate-200 border-t-brand-blue rounded-full animate-spin" />
+                </div>
+              ) : reports.length > 0 && (
+                <div className="mt-4 space-y-3">
+                  {reports.map(report => (
+                    <div key={report.id} className="bg-white border border-slate-100 rounded-2xl p-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">{report.authorAvatar}</span>
+                        <span className="text-sm font-bold text-slate-700">{report.authorNickname}</span>
+                        <span className="text-[10px] text-slate-400 ml-auto">{report.createdAt}</span>
+                      </div>
+                      <div className="flex items-center gap-0.5 mb-2">
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <Star key={i} size={14} className={i < report.rating ? 'text-yellow-400 fill-current' : 'text-slate-200'} />
+                        ))}
+                      </div>
+                      <p className="text-sm text-slate-600 leading-relaxed">{report.comment}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
 
             </div>
             

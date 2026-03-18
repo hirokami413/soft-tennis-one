@@ -160,7 +160,13 @@ export const EditMenuModal: React.FC<EditMenuModalProps> = ({ menu, onClose }) =
             {/* YouTube */}
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5"><Youtube size={16} className="text-red-500" />YouTube URL（任意）</label>
-              <input type="url" value={formData.youtubeUrl} onChange={(e) => setFormData({...formData, youtubeUrl: e.target.value})} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 placeholder:text-slate-300" />
+              <input type="url" value={formData.youtubeUrl} onChange={(e) => setFormData({...formData, youtubeUrl: e.target.value})} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 placeholder:text-slate-300" placeholder="https://youtube.com/..." />
+            </div>
+
+            {/* Instagram */}
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5"><span className="text-base">📸</span>Instagram URL（任意）</label>
+              <input type="url" value={formData.instagramUrl} onChange={(e) => setFormData({...formData, instagramUrl: e.target.value})} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 placeholder:text-slate-300" placeholder="https://instagram.com/reel/..." />
             </div>
 
             {/* Submit */}
