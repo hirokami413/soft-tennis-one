@@ -83,43 +83,44 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
       {/* Modal Content - Sliding up from bottom */}
       <div className="relative bg-white w-full h-[90vh] md:h-[85vh] md:max-w-2xl md:mx-auto rounded-t-3xl shadow-2xl flex flex-col overflow-hidden animate-in slide-in-from-bottom-full duration-300">
         
-        {/* Handle for drag-to-close feel (visual only for now) */}
-        <div className="w-full flex justify-center pt-3 pb-1" onClick={onClose}>
-          <div className="w-12 h-1.5 bg-slate-200 rounded-full" />
-        </div>
-
-        {/* Header Image */}
-        <div className="relative h-48 md:h-64 flex-shrink-0 bg-slate-100">
-          {menu.imageUrl ? (
-            <img src={menu.imageUrl} alt={menu.title} className="w-full h-full object-cover" />
-          ) : (
-            <div className={`w-full h-full flex items-center justify-center p-6 ${
-              ({
-                'フォアハンド': 'bg-gradient-to-br from-blue-400 to-blue-600',
-                'バックハンド': 'bg-gradient-to-br from-violet-400 to-violet-600',
-                'ボレー': 'bg-gradient-to-br from-emerald-400 to-emerald-600',
-                'スマッシュ': 'bg-gradient-to-br from-orange-400 to-orange-600',
-                'サーブ': 'bg-gradient-to-br from-rose-400 to-rose-600',
-                'フットワーク': 'bg-gradient-to-br from-cyan-400 to-cyan-600',
-                'トレーニング': 'bg-gradient-to-br from-lime-400 to-lime-600',
-                '実戦形式': 'bg-gradient-to-br from-amber-400 to-amber-600',
-              } as Record<string, string>)[menu.category] || 'bg-gradient-to-br from-slate-400 to-slate-600'
-            }`}>
-              <span className="text-white font-bold text-2xl text-center leading-snug drop-shadow-lg">
-                {menu.title}
-              </span>
-            </div>
-          )}
+        {/* Handle + Close button */}
+        <div className="w-full flex items-center justify-between px-4 pt-3 pb-1 flex-shrink-0">
+          <div className="w-8" />
+          <div className="w-12 h-1.5 bg-slate-200 rounded-full cursor-pointer" onClick={onClose} />
           <button 
             onClick={onClose}
-            className="absolute top-4 right-4 w-8 h-8 bg-white/70 backdrop-blur-md rounded-full flex items-center justify-center text-slate-800"
+            className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-slate-100 text-slate-500"
           >
             <X size={20} />
           </button>
         </div>
 
-        {/* Scrollable Content */}
+        {/* Scrollable Content (including image) */}
         <div className="flex-1 overflow-y-auto pb-safe">
+          {/* Header Image */}
+          <div className="relative h-48 md:h-64 bg-slate-100">
+            {menu.imageUrl ? (
+              <img src={menu.imageUrl} alt={menu.title} className="w-full h-full object-cover" />
+            ) : (
+              <div className={`w-full h-full flex items-center justify-center p-6 ${
+                ({
+                  'フォアハンド': 'bg-gradient-to-br from-blue-400 to-blue-600',
+                  'バックハンド': 'bg-gradient-to-br from-violet-400 to-violet-600',
+                  'ボレー': 'bg-gradient-to-br from-emerald-400 to-emerald-600',
+                  'スマッシュ': 'bg-gradient-to-br from-orange-400 to-orange-600',
+                  'サーブ': 'bg-gradient-to-br from-rose-400 to-rose-600',
+                  'フットワーク': 'bg-gradient-to-br from-cyan-400 to-cyan-600',
+                  'トレーニング': 'bg-gradient-to-br from-lime-400 to-lime-600',
+                  '実戦形式': 'bg-gradient-to-br from-amber-400 to-amber-600',
+                } as Record<string, string>)[menu.category] || 'bg-gradient-to-br from-slate-400 to-slate-600'
+              }`}>
+                <span className="text-white font-bold text-2xl text-center leading-snug drop-shadow-lg">
+                  {menu.title}
+                </span>
+              </div>
+            )}
+          </div>
+
           <div className="p-6 flex flex-col gap-6">
             
             {/* Title & Stats */}
