@@ -100,8 +100,16 @@ export const TennisNoteView: React.FC = () => {
   const [newUrlInput, setNewUrlInput] = useState('');
   const [mediaUploading, setMediaUploading] = useState(false);
 
+  const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+  const MAX_VIDEO_SIZE = 50 * 1024 * 1024; // 50MB
+
   const handleMediaUpload = async (type: 'image' | 'video', file: File) => {
     if (!user) return;
+    const maxSize = type === 'image' ? MAX_IMAGE_SIZE : MAX_VIDEO_SIZE;
+    if (file.size > maxSize) {
+      alert(`ファイルサイズが大きすぎます。${type === 'image' ? '画像は5MB' : '動画は50MB'}以下のファイルを選択してください。\n現在のサイズ: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
+      return;
+    }
     setMediaUploading(true);
     const folder = type === 'image' ? 'images' : 'videos';
     const path = generateFilePath(user.id, folder, file.name);

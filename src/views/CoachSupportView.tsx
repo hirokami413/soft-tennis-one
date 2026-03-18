@@ -124,8 +124,14 @@ export const CoachSupportView: React.FC = () => {
   });
   const [uploading, setUploading] = useState(false);
 
+  const MAX_DOC_SIZE = 5 * 1024 * 1024; // 5MB
+
   const handleFileUpload = async (field: 'idDocumentUrl' | 'resumeUrl', file: File) => {
     if (!user) return;
+    if (file.size > MAX_DOC_SIZE) {
+      alert(`ファイルサイズが大きすぎます。${Math.round(MAX_DOC_SIZE / 1024 / 1024)}MB以下のファイルを選択してください。\n現在のサイズ: ${(file.size / 1024 / 1024).toFixed(1)}MB`);
+      return;
+    }
     setUploading(true);
     const folder = field === 'idDocumentUrl' ? 'id-docs' : 'resumes';
     const path = generateFilePath(user.id, folder, file.name);
