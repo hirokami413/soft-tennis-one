@@ -157,10 +157,10 @@ export const CoachSupportView: React.FC = () => {
     alert('報告を送信しました。管理者が確認し対応いたします。');
   };
 
-  // コーチ回答タブに表示: waitingは全コーチ、reaskは元のコーチのみ
-  const waitingConsultations = consultations.filter(c =>
-    c.status === 'waiting' || (c.status === 'reask' && c.answeredBy === user?.id)
-  );
+  // コーチ回答タブに表示: waitingは全コーチ、reaskは元のコーチのみ（再質問を優先表示）
+  const waitingConsultations = consultations
+    .filter(c => c.status === 'waiting' || (c.status === 'reask' && c.answeredBy === user?.id))
+    .sort((a, b) => (a.status === 'reask' ? -1 : 0) - (b.status === 'reask' ? -1 : 0));
 
   const goToNextQuestion = () => {
     setCurrentQuestionIndex(prev => prev + 1);
