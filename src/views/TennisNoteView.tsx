@@ -190,18 +190,21 @@ export const TennisNoteView: React.FC = () => {
   };
 
   const todayStr = fmtDate(todayDate);
-  const alreadyPublishedToday = notes.some(n => n.published && n.date === todayStr);
+  const coinGrantedKey = `publish_coin_granted_${todayStr}`;
+  const alreadyCoinedToday = localStorage.getItem(coinGrantedKey) === 'true';
+  const alreadyPublishedToday = notes.some(n => n.published && n.date === todayStr) || alreadyCoinedToday;
 
   const handlePublishNote = async (noteId: string) => {
     const note = notes.find(n => n.id === noteId);
     if (!note || note.date !== todayStr || alreadyPublishedToday) return;
     await publishNote(noteId);
-    // コイン付与は初回公開時のみ（削除→再公開でのコイン稼ぎ防止）
-    if (!note.coinGranted) {
+    // コイン付与は1日1回のみ（削除→新規作成→再公開でのコイン稼ぎも防止）
+    if (!note.coinGranted && !alreadyCoinedToday) {
       addCoins(20);
+      localStorage.setItem(coinGrantedKey, 'true');
       addNotification({ type: 'system', title: '公開完了', message: 'ノートを公開して 20コイン 獲得しました！' });
     } else {
-      addNotification({ type: 'system', title: '再公開完了', message: 'ノートを再公開しました（コインは初回公開時のみ付与されます）' });
+      addNotification({ type: 'system', title: '再公開完了', message: 'ノートを再公開しました（コインは1日1回のみ付与されます）' });
     }
   };
 
