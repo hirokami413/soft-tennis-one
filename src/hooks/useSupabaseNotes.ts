@@ -14,6 +14,7 @@ export interface NoteEntry {
   skills: number[]; // [フォア, バック, ボレー, サーブ, フットワーク, 戦術] 1-5
   media?: { type: 'image' | 'video' | 'url'; name: string; url?: string }[];
   published?: boolean;
+  coinGranted?: boolean;
   userId?: string;
   username?: string;
   avatarEmoji?: string;
@@ -41,6 +42,7 @@ function dbRowToNote(row: Record<string, unknown>): NoteEntry {
     skills: (row.skills as number[]) || [3, 3, 3, 3, 3, 3],
     media: (row.media as any[]) || undefined,
     published: (row.published as boolean) || false,
+    coinGranted: (row.coin_granted as boolean) || false,
     userId: row.user_id as string,
     username: (row as any).profiles?.nickname || (row as any).username || undefined,
     avatarEmoji: (row as any).profiles?.avatar_emoji || undefined,
@@ -204,12 +206,12 @@ export function useSupabaseNotes() {
     if (useSupabase) {
       await (supabase
         .from('tennis_notes') as any)
-        .update({ published: true })
+        .update({ published: true, coin_granted: true })
         .eq('id', noteId);
     }
 
     setNotes(prev => {
-      const updated = prev.map(n => n.id === noteId ? { ...n, published: true } : n);
+      const updated = prev.map(n => n.id === noteId ? { ...n, published: true, coinGranted: true } : n);
       if (!useSupabase) setLocalNotes(updated);
       setCommunityNotes(prevC => {
         const published = updated.find(n => n.id === noteId);

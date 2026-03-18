@@ -196,8 +196,13 @@ export const TennisNoteView: React.FC = () => {
     const note = notes.find(n => n.id === noteId);
     if (!note || note.date !== todayStr || alreadyPublishedToday) return;
     await publishNote(noteId);
-    addCoins(20);
-    addNotification({ type: 'system', title: '公開完了', message: 'ノートを公開して 20コイン 獲得しました！' });
+    // コイン付与は初回公開時のみ（削除→再公開でのコイン稼ぎ防止）
+    if (!note.coinGranted) {
+      addCoins(20);
+      addNotification({ type: 'system', title: '公開完了', message: 'ノートを公開して 20コイン 獲得しました！' });
+    } else {
+      addNotification({ type: 'system', title: '再公開完了', message: 'ノートを再公開しました（コインは初回公開時のみ付与されます）' });
+    }
   };
 
   const handleAddGoal = async () => {
