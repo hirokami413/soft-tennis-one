@@ -6,6 +6,7 @@ import { useNotifications } from '../contexts/NotificationContext';
 import { useSupabaseNotes, useSupabaseGoals } from '../hooks/useSupabaseNotes';
 import type { Goal } from '../hooks/useSupabaseNotes';
 import { uploadFile, generateFilePath } from '../lib/storage';
+import { supabase } from '../lib/supabase';
 import { useNoteComments } from '../hooks/useNoteComments';
 import { 
   BookOpen, Plus, Target, TrendingUp, Star, Lock,
@@ -147,12 +148,14 @@ export const TennisNoteView: React.FC = () => {
   const remainingSends = advicePlan !== 'none' ? Math.max(0, planLimits[advicePlan].limit - monthlyUsed) : 0;
   const remainingVideoSends = advicePlan !== 'none' ? Math.max(0, planLimits[advicePlan].videoLimit - monthlyVideoUsed) : 0;
 
-  const handleSendToCoach = (noteId: string, hasVideo: boolean) => {
+  const handleSendToCoach = async (noteId: string, hasVideo: boolean) => {
     if (!canSendToCoach || sentNotes.includes(noteId)) return;
     if (hasVideo && remainingVideoSends <= 0) return;
     setSentNotes(prev => [...prev, noteId]);
     setMonthlyUsed(prev => prev + 1);
     if (hasVideo) setMonthlyVideoUsed(prev => prev + 1);
+    // DB にコーチ送信フラグを保存
+    await supabase.from('tennis_notes').update({ sent_to_coach: true }).eq('id', noteId);
   };
 
   const handleAddNote = async () => {

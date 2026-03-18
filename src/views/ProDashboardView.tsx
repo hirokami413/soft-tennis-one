@@ -96,7 +96,7 @@ export const ProDashboardView: React.FC = () => {
           id, date, keep, problem, try_item, coach_question, skills, created_at,
           profiles ( nickname )
         `)
-        .eq('published', true)
+        .eq('sent_to_coach', true)
         .order('created_at', { ascending: false })
         .limit(20);
         
