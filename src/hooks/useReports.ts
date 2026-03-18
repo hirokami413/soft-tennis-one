@@ -23,22 +23,36 @@ export function useReports(menuId: string) {
     try {
       const { data, error } = await supabase
         .from('reports')
-        .select('*, profiles!reports_author_id_fkey(nickname, avatar_emoji)')
+        .select('*')
         .eq('menu_id', menuId)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      if (data) {
-        setReports(data.map((r: any) => ({
-          id: r.id,
-          menuId: r.menu_id,
-          authorId: r.author_id,
-          authorNickname: r.profiles?.nickname || '匿名',
-          authorAvatar: r.profiles?.avatar_emoji || '🎾',
-          rating: r.rating,
-          comment: r.comment,
-          createdAt: new Date(r.created_at).toLocaleDateString('ja-JP'),
-        })));
+      if (data && data.length > 0) {
+        // 投稿者のプロフィールを取得
+        const authorIds = [...new Set(data.map((r: any) => r.author_id))];
+        const { data: profiles } = await supabase
+          .from('profiles')
+          .select('id, nickname, avatar_emoji')
+          .in('id', authorIds);
+
+        const profileMap = new Map((profiles || []).map((p: any) => [p.id, p]));
+
+        setReports(data.map((r: any) => {
+          const profile = profileMap.get(r.author_id);
+          return {
+            id: r.id,
+            menuId: r.menu_id,
+            authorId: r.author_id,
+            authorNickname: profile?.nickname || '匿名',
+            authorAvatar: profile?.avatar_emoji || '🎾',
+            rating: r.rating,
+            comment: r.comment,
+            createdAt: new Date(r.created_at).toLocaleDateString('ja-JP'),
+          };
+        }));
+      } else {
+        setReports([]);
       }
     } catch (err) {
       console.error('Error fetching reports:', err);
