@@ -132,7 +132,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
                 onClick={() => { setShowUserMenu(!showUserMenu); setShowNotifPanel(false); }}
                 className={`flex items-center gap-2 border rounded-full pl-2 pr-3 py-1.5 transition-all ${isDark ? 'bg-slate-700 border-slate-600 hover:bg-slate-600' : 'bg-slate-50 hover:bg-slate-100 border-slate-200'}`}
               >
-                <span className="text-lg">{user.avatarEmoji}</span>
+                {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" /> : <span className="text-lg">{user.avatarEmoji}</span>}
                 <span className={`text-xs font-bold ${isDark ? 'text-slate-200' : 'text-slate-700'}`}>{user.nickname}</span>
               </button>
             </div>
@@ -146,7 +146,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
           <div className="fixed inset-0 z-[60]" onClick={() => setShowUserMenu(false)} />
           <div className={`fixed right-4 top-14 w-48 rounded-xl shadow-lg border py-2 z-[70] animate-in fade-in zoom-in-95 duration-200 ${isDark ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-100'}`}>
             <div className={`px-4 py-2 border-b ${isDark ? 'border-slate-700' : 'border-slate-100'}`}>
-              <p className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{user.avatarEmoji} {user.nickname}</p>
+              <p className={`text-sm font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{user.avatarUrl ? '' : user.avatarEmoji} {user.nickname}</p>
               <p className={`text-[10px] mt-0.5 ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>
                 {user.provider === 'google' ? 'Google' : user.provider === 'line' ? 'LINE' : 'Apple'} でログイン中
               </p>
@@ -204,7 +204,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
                 onClick={() => setShowUserMenu(!showUserMenu)}
                 className={`flex items-center gap-1.5 border rounded-full pl-1.5 pr-3 py-1 shadow-sm ${isDark ? 'bg-slate-700 border-slate-600' : 'bg-white border-slate-200'}`}
               >
-                <span className="text-base">{user.avatarEmoji}</span>
+                {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover" /> : <span className="text-base">{user.avatarEmoji}</span>}
                 <span className={`text-[10px] font-bold ${isDark ? 'text-slate-200' : 'text-slate-600'}`}>{user.nickname}</span>
               </button>
             ) : null}
@@ -259,7 +259,7 @@ export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange
             <div className={`absolute bottom-0 left-0 right-0 rounded-t-3xl shadow-xl p-5 space-y-3 animate-in slide-in-from-bottom duration-200 ${isDark ? 'bg-slate-800' : 'bg-white'}`}>
               <div className="w-10 h-1 bg-slate-300 dark:bg-slate-600 rounded-full mx-auto mb-3" />
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900 dark:to-indigo-900 flex items-center justify-center text-2xl">{user.avatarEmoji}</div>
+                {user.avatarUrl ? <img src={user.avatarUrl} alt="" className="w-12 h-12 rounded-full object-cover" /> : <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 dark:from-blue-900 dark:to-indigo-900 flex items-center justify-center text-2xl">{user.avatarEmoji}</div>}
                 <div>
                   <p className={`font-bold ${isDark ? 'text-white' : 'text-slate-800'}`}>{user.nickname}</p>
                   <p className={`text-[10px] ${isDark ? 'text-slate-500' : 'text-slate-400'}`}>

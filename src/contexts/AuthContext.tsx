@@ -7,6 +7,7 @@ export interface UserProfile {
   id: string;
   nickname: string;
   avatarEmoji: string;
+  avatarUrl?: string;
   provider: 'google' | 'line' | 'apple' | 'email';
   createdAt: string;
   coins: number;
@@ -23,7 +24,7 @@ interface AuthContextType {
   login: (profile: Omit<UserProfile, 'id' | 'createdAt'>) => void;
   loginWithOAuth: (provider: 'google' | 'apple') => Promise<void>;
   logout: () => void;
-  updateProfile: (updates: Partial<Pick<UserProfile, 'nickname' | 'avatarEmoji'>>) => void;
+  updateProfile: (updates: Partial<Pick<UserProfile, 'nickname' | 'avatarEmoji' | 'avatarUrl'>>) => void;
   addCoins: (amount: number) => void;
   refreshProfile: () => Promise<void>;
 }
@@ -54,6 +55,7 @@ async function sessionToProfile(session: Session): Promise<UserProfile> {
       id: p.id,
       nickname: p.nickname,
       avatarEmoji: p.avatar_emoji,
+      avatarUrl: p.avatar_url || undefined,
       provider,
       createdAt: p.created_at,
       coins: p.coins,
@@ -89,6 +91,7 @@ async function sessionToProfile(session: Session): Promise<UserProfile> {
     id: authUser.id,
     nickname: np?.nickname || nickname,
     avatarEmoji: np?.avatar_emoji || '🎾',
+    avatarUrl: np?.avatar_url || undefined,
     provider,
     createdAt: np?.created_at || new Date().toISOString(),
     coins: np?.coins ?? 20,
@@ -230,7 +233,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   // ── プロフィール更新 ──
-  const updateProfile = async (updates: Partial<Pick<UserProfile, 'nickname' | 'avatarEmoji'>>) => {
+  const updateProfile = async (updates: Partial<Pick<UserProfile, 'nickname' | 'avatarEmoji' | 'avatarUrl'>>) => {
     setUser(prev => prev ? { ...prev, ...updates } : null);
 
     // Supabase DBにも反映（非同期）
@@ -238,6 +241,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       const dbUpdates: Record<string, string> = {};
       if (updates.nickname) dbUpdates.nickname = updates.nickname;
       if (updates.avatarEmoji) dbUpdates.avatar_emoji = updates.avatarEmoji;
+      if (updates.avatarUrl !== undefined) dbUpdates.avatar_url = updates.avatarUrl || '';
       if (Object.keys(dbUpdates).length > 0) {
         (supabase.from('profiles') as any).update(dbUpdates).eq('id', user.id).then();
       }
