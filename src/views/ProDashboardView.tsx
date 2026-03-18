@@ -27,6 +27,7 @@ interface SubmittedNote {
     skills: number[]; // [fore, back, volley, serve, foot, tactics]
     videoUrl?: string;
     coachQuestion?: string;
+    media?: { type: string; name: string; url?: string }[];
   };
   coachAdvice?: string;
   userId?: string;
@@ -127,7 +128,7 @@ export const ProDashboardView: React.FC = () => {
       const { data, error } = await supabase
         .from('tennis_notes')
         .select(`
-          id, date, keep, problem, try_item, coach_question, skills, created_at, user_id, coach_reviewed,
+          id, date, keep, problem, try_item, coach_question, skills, created_at, user_id, coach_reviewed, media,
           profiles ( nickname )
         `)
         .eq('sent_to_coach', true)
@@ -148,7 +149,8 @@ export const ProDashboardView: React.FC = () => {
             problem: n.problem || 'なし',
             try: n.try_item || 'なし',
             skills: n.skills || [3,3,3,3,3,3],
-            coachQuestion: n.coach_question
+            coachQuestion: n.coach_question,
+            media: n.media || []
           }
         }));
         setInbox(mapped);
@@ -418,6 +420,28 @@ export const ProDashboardView: React.FC = () => {
                 <p className="text-[10px] font-bold text-slate-500 mb-2 uppercase tracking-wider">スキル自己評価（10段階）</p>
                 <SmallRadarChart skills={selectedNote.content.skills} />
               </div>
+
+              {/* Student's Media Attachments */}
+              {selectedNote.content.media && selectedNote.content.media.length > 0 && (
+                <div className="bg-slate-50 p-4 rounded-2xl space-y-3">
+                  <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">📎 添付メディア</p>
+                  {selectedNote.content.media.map((m, i) => (
+                    <div key={i}>
+                      {m.type === 'image' && m.url && (
+                        <img src={m.url} alt={m.name} className="w-full rounded-xl max-h-60 object-cover" />
+                      )}
+                      {m.type === 'video' && m.url && (
+                        <video src={m.url} controls className="w-full rounded-xl max-h-60" />
+                      )}
+                      {m.type === 'url' && m.url && (
+                        <a href={m.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-xs text-brand-blue hover:underline bg-blue-50 p-3 rounded-xl">
+                          <Link size={14} /> {m.name || m.url}
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
