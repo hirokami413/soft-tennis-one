@@ -16,6 +16,8 @@ export interface NoteEntry {
   published?: boolean;
   userId?: string;
   username?: string;
+  avatarEmoji?: string;
+  avatarUrl?: string;
 }
 
 export interface Goal {
@@ -41,6 +43,8 @@ function dbRowToNote(row: Record<string, unknown>): NoteEntry {
     published: (row.published as boolean) || false,
     userId: row.user_id as string,
     username: (row as any).profiles?.nickname || (row as any).username || undefined,
+    avatarEmoji: (row as any).profiles?.avatar_emoji || undefined,
+    avatarUrl: (row as any).profiles?.avatar_url || undefined,
   };
 }
 
@@ -126,7 +130,7 @@ export function useSupabaseNotes() {
   const loadCommunityNotes = async () => {
     const { data, error } = await supabase
       .from('tennis_notes')
-      .select('*, profiles!tennis_notes_user_id_fkey(nickname)')
+      .select('*, profiles!tennis_notes_user_id_fkey(nickname, avatar_emoji, avatar_url)')
       .eq('published', true)
       .order('created_at', { ascending: false })
       .limit(50);

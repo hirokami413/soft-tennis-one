@@ -951,7 +951,13 @@ export const TennisNoteView: React.FC = () => {
                       onClick={() => setSelectedProfile(n.userId || null)}
                       className="flex items-center gap-2 hover:opacity-70 transition-opacity"
                     >
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-blue to-indigo-500 flex items-center justify-center text-white text-xs font-bold shrink-0">{initial}</div>
+                      {n.avatarUrl ? (
+                        <img src={n.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+                      ) : n.avatarEmoji ? (
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-base shrink-0">{n.avatarEmoji}</div>
+                      ) : (
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-brand-blue to-indigo-500 flex items-center justify-center text-white text-xs font-bold shrink-0">{initial}</div>
+                      )}
                       <div>
                         <span className="text-xs font-bold text-slate-700">{displayName}</span>
                         {isOwn && <span className="ml-1.5 text-[8px] font-bold bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full">あなた</span>}
@@ -1174,7 +1180,13 @@ export const TennisNoteView: React.FC = () => {
                 return (
                   <>
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-blue to-indigo-500 flex items-center justify-center text-white text-lg font-bold">{initial}</div>
+                      {profileNotes[0]?.avatarUrl ? (
+                        <img src={profileNotes[0].avatarUrl} alt="" className="w-12 h-12 rounded-full object-cover" />
+                      ) : profileNotes[0]?.avatarEmoji ? (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-2xl">{profileNotes[0].avatarEmoji}</div>
+                      ) : (
+                        <div className="w-12 h-12 rounded-full bg-gradient-to-br from-brand-blue to-indigo-500 flex items-center justify-center text-white text-lg font-bold">{initial}</div>
+                      )}
                       <div>
                         <p className="font-bold text-slate-800">{profileName}</p>
                         <p className="text-xs text-slate-400">公開ノート {profileNotes.length}件</p>
