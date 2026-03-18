@@ -20,7 +20,7 @@ const notifTypeConfig: Record<Notification['type'] | 'team', { emoji: string; co
 
 export const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
   const { user, logout } = useAuth();
-  const isProCoach = user?.systemRole === 'coach' || user?.systemRole === 'admin';
+  const isProCoach = user?.systemRole === 'admin';
   const { isDark, toggleDark } = useTheme();
   const { notifications, unreadCount, notificationsEnabled, markRead, markAllRead, clearAll, toggleNotifications } = useNotifications();
   const [showUserMenu, setShowUserMenu] = useState(false);
