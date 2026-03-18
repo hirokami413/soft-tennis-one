@@ -18,12 +18,9 @@ CREATE POLICY "reports_select_all" ON reports FOR SELECT USING (true);
 CREATE POLICY "reports_insert_auth" ON reports FOR INSERT
 WITH CHECK (auth.uid() = author_id);
 
--- 投稿者だけが削除可能
-CREATE POLICY "reports_delete_own" ON reports FOR DELETE
-USING (auth.uid() = author_id);
-
--- 管理者は全て削除可能
-CREATE POLICY "reports_delete_admin" ON reports FOR DELETE
+-- 投稿者または管理者が削除可能
+CREATE POLICY "reports_delete" ON reports FOR DELETE
 USING (
-  EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
+  auth.uid() = author_id
+  OR EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND system_role = 'admin')
 );
