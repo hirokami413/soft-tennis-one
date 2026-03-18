@@ -201,7 +201,12 @@ export const ProDashboardView: React.FC = () => {
 
   const handleApproveApp = async (id: string, userId: string) => {
     await supabase.from('coach_applications').update({ status: 'approved' }).eq('id', id);
-    await supabase.from('profiles').update({ system_role: 'coach', coach_rank: 'bronze' }).eq('id', userId);
+    const { error } = await supabase.from('profiles').update({ system_role: 'coach', coach_rank: 'bronze' }).eq('id', userId);
+    if (error) {
+      console.error('コーチ権限付与失敗:', error);
+      alert('承認処理でエラーが発生しました: ' + error.message + '\n\nSupabaseで 020_admin_update_profiles.sql を実行してください。');
+      return;
+    }
     setApplications(prev => prev.filter(a => a.id !== id));
     alert('コーチとして承認しました！対象ユーザーはコーチ機能が利用可能になります。');
   };
