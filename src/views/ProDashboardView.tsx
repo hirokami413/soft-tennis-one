@@ -111,13 +111,13 @@ const SmallRadarChart: React.FC<{ skills: number[] }> = ({ skills }) => {
 export const ProDashboardView: React.FC = () => {
   const { user, isLoading: authLoading } = useAuth();
   
+  const isAdmin = user?.systemRole === 'admin';
+
   // States
   const [inbox, setInbox] = React.useState<SubmittedNote[]>([]);
   const [reviewedIds, setReviewedIds] = React.useState<string[]>(() => {
     try { return JSON.parse(localStorage.getItem('pro_dashboard_reviewed') || '[]'); } catch { return []; }
   });
-  
-  const isAdmin = user?.systemRole === 'admin';
   
   const [activeTab, setActiveTab] = useState<'pending' | 'reviewed' | 'applications' | 'reports' | 'questions'>(isAdmin ? 'pending' : 'questions');
   const { loadReportedUsers } = useNoteComments();
@@ -133,6 +133,15 @@ export const ProDashboardView: React.FC = () => {
   const [reports, setReports] = useState<any[]>([]);
   const [allQuestions, setAllQuestions] = useState<any[]>([]);
   const [questionFilter, setQuestionFilter] = useState<'all' | 'waiting' | 'answered' | 'resolved'>('all');
+
+  // 管理者以外はアクセス不可（hooksの後に配置）
+  if (!authLoading && !isAdmin) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <p className="text-slate-400 text-center">⛔ このページは管理者のみアクセスできます</p>
+      </div>
+    );
+  }
 
   // Fetch Public Notes
   React.useEffect(() => {
