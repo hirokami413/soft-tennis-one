@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { useAuth } from './AuthContext';
 
 interface FavoritesContextType {
@@ -11,34 +11,24 @@ interface FavoritesContextType {
 
 const FavoritesContext = createContext<FavoritesContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'nexus_one_favorites';
-
-function isSupabaseUser(userId?: string): boolean {
-  return !!userId && !userId.startsWith('user_');
-}
-
 export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const useDB = isSupabaseUser(user?.id);
+  const useDB = isSupabaseConfigured() && !!user?.id;
 
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
-  });
-
-  // localStorage同期
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
-  }, [favorites]);
+  const [favorites, setFavorites] = useState<string[]>([]);
 
   // Supabaseからロード
   useEffect(() => {
     if (!useDB || !user) return;
     const load = async () => {
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from('favorites')
         .select('menu_id')
         .eq('user_id', user.id);
+      if (error) {
+        console.error('お気に入り取得エラー:', error);
+        return;
+      }
       if (data) {
         setFavorites(data.map(r => r.menu_id));
       }
@@ -54,12 +44,13 @@ export const FavoritesProvider: React.FC<{ children: ReactNode }> = ({ children 
       // Supabase DB にも反映
       if (useDB && user) {
         if (isFav) {
-          (supabase.from('favorites') as any).delete()
-            .eq('user_id', user.id).eq('menu_id', id).then();
+          supabase.from('favorites').delete()
+            .eq('user_id', user.id).eq('menu_id', id)
+            .then(({ error }) => { if (error) console.error('お気に入り削除失敗:', error); });
         } else {
-          (supabase.from('favorites') as any).insert({
+          supabase.from('favorites').insert({
             user_id: user.id, menu_id: id,
-          }).then();
+          }).then(({ error }) => { if (error) console.error('お気に入り追加失敗:', error); });
         }
       }
 
