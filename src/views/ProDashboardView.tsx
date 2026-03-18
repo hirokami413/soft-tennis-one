@@ -8,6 +8,7 @@ import {
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { isSupabaseConfigured } from '../lib/supabase';
+import { useNoteComments, type ReportedUser } from '../hooks/useNoteComments';
 
 // --- Types ---
 interface SubmittedNote {
@@ -72,6 +73,8 @@ export const ProDashboardView: React.FC = () => {
   });
   
   const [activeTab, setActiveTab] = useState<'pending' | 'reviewed' | 'applications' | 'reports' | 'questions'>('pending');
+  const { loadReportedUsers } = useNoteComments();
+  const [reportedUsers, setReportedUsers] = useState<ReportedUser[]>([]);
   const [selectedNoteId, setSelectedNoteId] = useState<string | null>(null);
   const [adviceText, setAdviceText] = useState('');
   
@@ -632,7 +635,8 @@ export const ProDashboardView: React.FC = () => {
             })
           )
         ) : activeTab === 'reports' ? (
-          reports.length === 0 ? (
+          <>
+          {reports.length === 0 ? (
             <div className="bg-slate-50 border border-slate-100 rounded-3xl p-10 flex flex-col items-center justify-center text-center">
               <CheckCircle2 size={40} className="text-slate-300 mb-3" />
               <p className="font-bold text-slate-600">未対応の報告はありません</p>
@@ -712,7 +716,74 @@ export const ProDashboardView: React.FC = () => {
                 </div>
               </div>
             ))
-          )
+          )}
+
+          {/* Comment Reports Section */}
+          <div className="mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <MessageSquare size={16} className="text-orange-500" /> コメント報告
+              </h3>
+              <button
+                onClick={async () => {
+                  const data = await loadReportedUsers();
+                  setReportedUsers(data);
+                }}
+                className="text-xs font-bold text-brand-blue hover:underline"
+              >
+                更新
+              </button>
+            </div>
+            {reportedUsers.length === 0 ? (
+              <div className="bg-slate-50 border border-slate-100 rounded-2xl p-6 text-center">
+                <p className="text-sm text-slate-400">報告されたコメントはありません</p>
+                <button
+                  onClick={async () => {
+                    const data = await loadReportedUsers();
+                    setReportedUsers(data);
+                  }}
+                  className="mt-2 text-xs font-bold text-brand-blue hover:underline"
+                >
+                  データを読み込む
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {reportedUsers.map(ru => (
+                  <div key={ru.userId} className="bg-white rounded-2xl border border-orange-100 shadow-sm p-4 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-orange-100 text-orange-500 rounded-full flex items-center justify-center">
+                          <AlertTriangle size={14} />
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-slate-700">{ru.username}</p>
+                          <p className="text-[10px] text-slate-400">最終報告: {new Date(ru.latestReport).toLocaleDateString('ja-JP')}</p>
+                        </div>
+                      </div>
+                      <div className="bg-red-100 text-red-600 px-3 py-1 rounded-full text-xs font-bold">
+                        {ru.reportCount}件の報告
+                      </div>
+                    </div>
+                    <div className="space-y-2">
+                      {ru.comments.map(c => (
+                        <div key={c.id} className="bg-orange-50 border border-orange-100 p-3 rounded-xl">
+                          <p className="text-xs text-slate-700 mb-1">「{c.content}」</p>
+                          <div className="flex items-center gap-2">
+                            <span className="text-[9px] text-orange-500 font-bold">報告{c.reportCount}件</span>
+                            {c.reasons.length > 0 && (
+                              <span className="text-[9px] text-slate-400">理由: {c.reasons.join(', ')}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+          </>
         ) : (
           filteredNotes.length === 0 ? (
             <div className="bg-slate-50 border border-slate-100 rounded-3xl p-10 flex flex-col items-center justify-center text-center">

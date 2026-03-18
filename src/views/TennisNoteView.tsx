@@ -6,11 +6,12 @@ import { useNotifications } from '../contexts/NotificationContext';
 import { useSupabaseNotes, useSupabaseGoals } from '../hooks/useSupabaseNotes';
 import type { Goal } from '../hooks/useSupabaseNotes';
 import { uploadFile, generateFilePath } from '../lib/storage';
+import { useNoteComments } from '../hooks/useNoteComments';
 import { 
   BookOpen, Plus, Target, TrendingUp, Star, Lock,
   ChevronDown, ChevronUp, Edit3, Check, Crown, MessageCircle,
   Video, CheckCircle2, ChevronLeft, ChevronRight, CalendarDays, Send,
-  Image as ImageIcon, X, Film, Link, Trash2, Globe, Coins, Users
+  Image as ImageIcon, X, Film, Link, Trash2, Globe, Coins, Users, Flag, MessageSquare
 } from 'lucide-react';
 
 // ── Radar Chart (SVG) ──
@@ -75,6 +76,10 @@ export const TennisNoteView: React.FC = () => {
   const { goals, setGoals, addGoal: addGoalToDb, deleteGoal: deleteGoalFromDb } = useSupabaseGoals();
   const [expandedNote, setExpandedNote] = useState<string | null>('n-1');
   const [selectedProfile, setSelectedProfile] = useState<string | null>(null);
+  const { comments, loadingComments, loadComments, addComment, deleteComment, reportComment } = useNoteComments();
+  const [commentInputs, setCommentInputs] = useState<Record<string, string>>({});
+  const [reportingComment, setReportingComment] = useState<string | null>(null);
+  const [reportReason, setReportReason] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [noteTab, setNoteTab] = useState<'write' | 'history' | 'community' | 'goals'>('write');
@@ -1017,6 +1022,90 @@ export const TennisNoteView: React.FC = () => {
                       <div className="pt-2">
                         <RadarChart skills={n.skills} />
                       </div>
+
+                      {/* Comments Section */}
+                      <div className="mt-3 pt-3 border-t border-slate-100">
+                        <button
+                          onClick={() => { if (!comments[n.id]) loadComments(n.id); }}
+                          className="flex items-center gap-1.5 text-xs font-bold text-slate-500 mb-2 hover:text-brand-blue transition-colors"
+                        >
+                          <MessageSquare size={12} />
+                          コメント {comments[n.id]?.length ? `(${comments[n.id].length})` : ''}
+                        </button>
+
+                        {loadingComments[n.id] && (
+                          <p className="text-xs text-slate-400 animate-pulse">読み込み中...</p>
+                        )}
+
+                        {comments[n.id] && (
+                          <div className="space-y-2">
+                            {comments[n.id].map(c => (
+                              <div key={c.id} className="bg-slate-50 rounded-xl p-3">
+                                <div className="flex items-center gap-2 mb-1">
+                                  {c.avatarUrl ? (
+                                    <img src={c.avatarUrl} alt="" className="w-5 h-5 rounded-full object-cover" />
+                                  ) : (
+                                    <span className="text-xs">{c.avatarEmoji}</span>
+                                  )}
+                                  <span className="text-[10px] font-bold text-slate-600">{c.username}</span>
+                                  <span className="text-[9px] text-slate-400 ml-auto">{new Date(c.createdAt).toLocaleDateString('ja-JP')}</span>
+                                </div>
+                                <p className="text-xs text-slate-700">{c.content}</p>
+                                <div className="flex items-center gap-2 mt-1.5">
+                                  {user?.id === c.userId && (
+                                    <button
+                                      onClick={() => { if (confirm('このコメントを削除しますか？')) deleteComment(n.id, c.id); }}
+                                      className="text-[9px] text-slate-400 hover:text-red-500 flex items-center gap-0.5"
+                                    >
+                                      <Trash2 size={9} /> 削除
+                                    </button>
+                                  )}
+                                  {user?.id !== c.userId && (
+                                    <button
+                                      onClick={() => setReportingComment(c.id)}
+                                      className="text-[9px] text-slate-400 hover:text-orange-500 flex items-center gap-0.5"
+                                    >
+                                      <Flag size={9} /> 報告
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+
+                            {/* Comment input */}
+                            {user && (
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={commentInputs[n.id] || ''}
+                                  onChange={e => setCommentInputs(prev => ({ ...prev, [n.id]: e.target.value }))}
+                                  placeholder="コメントを入力..."
+                                  maxLength={200}
+                                  className="flex-1 bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-brand-blue"
+                                  onKeyDown={e => {
+                                    if (e.key === 'Enter' && commentInputs[n.id]?.trim()) {
+                                      addComment(n.id, commentInputs[n.id]);
+                                      setCommentInputs(prev => ({ ...prev, [n.id]: '' }));
+                                    }
+                                  }}
+                                />
+                                <button
+                                  onClick={() => {
+                                    if (commentInputs[n.id]?.trim()) {
+                                      addComment(n.id, commentInputs[n.id]);
+                                      setCommentInputs(prev => ({ ...prev, [n.id]: '' }));
+                                    }
+                                  }}
+                                  disabled={!commentInputs[n.id]?.trim()}
+                                  className="px-3 py-2 bg-brand-blue text-white rounded-xl text-xs font-bold disabled:opacity-30 hover:bg-brand-blue-hover transition-colors"
+                                >
+                                  <Send size={12} />
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
                       {isOwn && (
                         <button
                           onClick={() => {
@@ -1115,6 +1204,45 @@ export const TennisNoteView: React.FC = () => {
                   </>
                 );
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Report Comment Modal */}
+      {reportingComment && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={() => { setReportingComment(null); setReportReason(''); }}>
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2">
+                <Flag size={16} className="text-orange-500" /> コメントを報告
+              </h3>
+              <button onClick={() => { setReportingComment(null); setReportReason(''); }} className="text-slate-400 hover:text-slate-600"><X size={18} /></button>
+            </div>
+            <div className="p-5 space-y-4">
+              <p className="text-xs text-slate-500">不適切なコメントの理由を入力してください</p>
+              <textarea
+                value={reportReason}
+                onChange={e => setReportReason(e.target.value)}
+                placeholder="例: 暴言、スパム、個人情報の公開など"
+                maxLength={500}
+                rows={3}
+                className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-orange-400 resize-none"
+              />
+              <button
+                onClick={async () => {
+                  const ok = await reportComment(reportingComment, reportReason);
+                  if (ok) {
+                    alert('報告を送信しました。管理者が確認します。');
+                    setReportingComment(null);
+                    setReportReason('');
+                  }
+                }}
+                disabled={!reportReason.trim()}
+                className="w-full py-3 bg-orange-500 text-white rounded-xl font-bold text-sm disabled:opacity-40 hover:bg-orange-600 transition-colors"
+              >
+                報告を送信
+              </button>
             </div>
           </div>
         </div>
