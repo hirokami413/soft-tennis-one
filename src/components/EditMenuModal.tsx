@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
-import { Send, Hash, X, Youtube } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Send, Hash, X, Youtube, ImageIcon, Trash2 } from 'lucide-react';
 import { type MenuData } from '../types/menu';
 import { useSupabaseMenus } from '../hooks/useSupabaseMenus';
+import { useAuth } from '../contexts/AuthContext';
+import { uploadFile, generateFilePath } from '../lib/storage';
+import { compressImage } from '../lib/imageCompress';
 
 interface EditMenuModalProps {
   menu: MenuData;
@@ -10,8 +13,13 @@ interface EditMenuModalProps {
 
 export const EditMenuModal: React.FC<EditMenuModalProps> = ({ menu, onClose }) => {
   const { updateMenu } = useSupabaseMenus();
+  const { user } = useAuth();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(menu.imageUrl || null);
+  const [removeImage, setRemoveImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     title: menu.title || '',
@@ -68,8 +76,21 @@ export const EditMenuModal: React.FC<EditMenuModalProps> = ({ menu, onClose }) =
     try {
       setIsSubmitting(true);
       setSubmitError('');
+
+      let imageUrl = menu.imageUrl || '';
+      if (thumbnailFile && user) {
+        const compressed = await compressImage(thumbnailFile);
+        const path = generateFilePath(user.id, 'menu-thumbnails', compressed.name);
+        const { url, error: uploadError } = await uploadFile('note-media', path, compressed);
+        if (uploadError) throw new Error('サムネイルのアップロードに失敗: ' + uploadError);
+        imageUrl = url || '';
+      } else if (removeImage) {
+        imageUrl = '';
+      }
+
       await updateMenu(menu.id, {
         ...formData,
+        imageUrl,
         duration: formData.duration ? Number(formData.duration) : undefined,
         minPlayers: formData.minPlayers ? Number(formData.minPlayers) : undefined,
         maxPlayers: formData.maxPlayers ? Number(formData.maxPlayers) : undefined,
@@ -109,6 +130,45 @@ export const EditMenuModal: React.FC<EditMenuModalProps> = ({ menu, onClose }) =
             <div className="space-y-2">
               <label className="text-sm font-bold text-slate-700 block">練習メニュー名 <span className="text-red-500">*</span></label>
               <input type="text" required value={formData.title} onChange={(e) => setFormData({...formData, title: e.target.value})} className="w-full bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue" />
+            </div>
+
+            {/* Thumbnail */}
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-slate-700 flex items-center gap-1.5"><ImageIcon size={14} className="text-brand-blue" />サムネイル画像</label>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    setThumbnailFile(file);
+                    setRemoveImage(false);
+                    const reader = new FileReader();
+                    reader.onload = (ev) => setThumbnailPreview(ev.target?.result as string);
+                    reader.readAsDataURL(file);
+                  }
+                }}
+              />
+              {thumbnailPreview ? (
+                <div className="relative">
+                  <img src={thumbnailPreview} alt="サムネイル" className="w-full h-36 object-cover rounded-xl border border-slate-200" />
+                  <div className="absolute top-2 right-2 flex gap-1.5">
+                    <button type="button" onClick={() => fileInputRef.current?.click()} className="w-8 h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center text-slate-600 hover:bg-white shadow-sm">
+                      <ImageIcon size={14} />
+                    </button>
+                    <button type="button" onClick={() => { setThumbnailFile(null); setThumbnailPreview(null); setRemoveImage(true); }} className="w-8 h-8 bg-white/80 backdrop-blur rounded-full flex items-center justify-center text-red-500 hover:bg-white shadow-sm">
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button type="button" onClick={() => fileInputRef.current?.click()} className="w-full h-24 border-2 border-dashed border-slate-200 rounded-xl flex flex-col items-center justify-center gap-1 text-slate-400 hover:border-brand-blue hover:text-brand-blue transition-colors">
+                  <ImageIcon size={20} />
+                  <span className="text-xs font-medium">タップして画像を選択</span>
+                </button>
+              )}
             </div>
 
             {/* Category & Level */}
