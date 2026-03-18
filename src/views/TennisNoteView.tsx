@@ -483,14 +483,28 @@ export const TennisNoteView: React.FC = () => {
                 <div className="text-xs text-indigo-600 font-bold animate-pulse text-center py-1">アップロード中...</div>
               )}
               {newMedia.length > 0 && (
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-2">
                   {newMedia.map((m, i) => (
-                    <div key={i} className="flex items-center gap-1.5 bg-slate-100 px-2.5 py-1.5 rounded-lg text-xs">
-                      {m.type === 'image' ? <ImageIcon size={12} className="text-blue-500" /> : m.type === 'video' ? <Film size={12} className="text-purple-500" /> : <Link size={12} className="text-indigo-500" />}
-                      <span className="text-slate-600 max-w-[120px] truncate">{m.type === 'url' ? (() => { try { return new URL(m.name).hostname; } catch { return m.name; } })() : m.name}</span>
-                      <button onClick={() => setNewMedia(prev => prev.filter((_, j) => j !== i))} className="text-slate-400 hover:text-red-500">
+                    <div key={i} className="relative rounded-xl overflow-hidden border border-slate-200 shadow-sm">
+                      {m.type === 'image' && m.url ? (
+                        <img src={m.url} alt={m.name} className="w-full max-h-48 object-cover" />
+                      ) : m.type === 'video' && m.url ? (
+                        <video src={m.url} controls className="w-full max-h-48" />
+                      ) : (
+                        <div className="flex items-center gap-1.5 bg-slate-100 px-3 py-2 text-xs">
+                          {m.type === 'url' ? <Link size={12} className="text-indigo-500" /> : m.type === 'image' ? <ImageIcon size={12} className="text-blue-500" /> : <Film size={12} className="text-purple-500" />}
+                          <span className="text-slate-600 truncate">{m.name}</span>
+                        </div>
+                      )}
+                      <button
+                        onClick={() => setNewMedia(prev => prev.filter((_, j) => j !== i))}
+                        className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/50 hover:bg-red-500 text-white rounded-full flex items-center justify-center transition-colors"
+                      >
                         <X size={12} />
                       </button>
+                      <div className="absolute bottom-1.5 left-1.5 bg-black/50 text-white text-[9px] px-2 py-0.5 rounded-full">
+                        {m.name}
+                      </div>
                     </div>
                   ))}
                 </div>
