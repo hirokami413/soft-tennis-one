@@ -143,6 +143,8 @@ export const FavoritesView: React.FC = () => {
           onClose={() => setSelectedMenu(null)}
           onAdd={() => addToPlaylist(selectedMenu)}
           isAdded={isInPlaylist(selectedMenu.id)}
+          onToggleFavorite={() => toggleFavorite(selectedMenu.id)}
+          isFavorite={isFavorite(selectedMenu.id)}
         />
       )}
 

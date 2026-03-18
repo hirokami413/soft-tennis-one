@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Clock, Users, Star, MessageCircle, AlertCircle, Camera, Check, Youtube, Edit2, Trash2 } from 'lucide-react';
+import { X, Clock, Users, Star, MessageCircle, AlertCircle, Camera, Check, Youtube, Edit2, Trash2, Heart } from 'lucide-react';
 import { type MenuData } from '../types/menu';
 import { Rating } from './Rating';
 import { useAuth } from '../contexts/AuthContext';
@@ -12,6 +12,8 @@ interface MenuDetailModalProps {
   onClose: () => void;
   onAdd: () => void;
   isAdded?: boolean;
+  onToggleFavorite?: () => void;
+  isFavorite?: boolean;
 }
 
 export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({ 
@@ -19,7 +21,9 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
   isOpen, 
   onClose,
   onAdd,
-  isAdded = false
+  isAdded = false,
+  onToggleFavorite,
+  isFavorite = false
 }) => {
   const [showReportForm, setShowReportForm] = useState(false);
   const [reportText, setReportText] = useState("");
@@ -348,16 +352,30 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
 
         {/* Fixed Bottom CTA */}
         <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-md border-t border-slate-100 pb-safe">
-          <button 
-            onClick={onAdd}
-            className={`w-full py-4 rounded-full font-bold text-lg transition-colors flex items-center justify-center gap-2 ${
-              isAdded 
-                ? 'bg-green-100 text-green-700' 
-                : 'bg-brand-blue text-white active:bg-blue-800 hover:bg-brand-blue-hover'
-            }`}
-          >
-            {isAdded ? "セットに追加済み" : "今日のメニューに追加する"}
-          </button>
+          <div className="flex gap-3">
+            {onToggleFavorite && (
+              <button
+                onClick={onToggleFavorite}
+                className={`w-14 h-14 rounded-full flex items-center justify-center transition-all border ${
+                  isFavorite
+                    ? 'bg-rose-50 border-rose-200 text-rose-500'
+                    : 'bg-white border-slate-200 text-slate-400 hover:text-rose-400'
+                }`}
+              >
+                <Heart size={22} className={isFavorite ? 'fill-current' : ''} />
+              </button>
+            )}
+            <button 
+              onClick={onAdd}
+              className={`flex-1 py-4 rounded-full font-bold text-lg transition-colors flex items-center justify-center gap-2 ${
+                isAdded 
+                  ? 'bg-green-100 text-green-700' 
+                  : 'bg-brand-blue text-white active:bg-blue-800 hover:bg-brand-blue-hover'
+              }`}
+            >
+              {isAdded ? "セットに追加済み" : "今日のメニューに追加する"}
+            </button>
+          </div>
         </div>
       </div>
     </div>

@@ -287,6 +287,8 @@ export const LibraryView: React.FC = () => {
           onClose={() => setSelectedMenu(null)}
           onAdd={() => handleAdd(undefined, selectedMenu)}
           isAdded={isInPlaylist(selectedMenu.id)}
+          onToggleFavorite={() => toggleFavorite(selectedMenu.id)}
+          isFavorite={isFavorite(selectedMenu.id)}
         />
       )}
     </div>
