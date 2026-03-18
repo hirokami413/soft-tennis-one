@@ -659,9 +659,13 @@ export const CoachSupportView: React.FC = () => {
           {/* Coach Header / Coins */}
           <div className="flex items-center justify-between bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
             <div className="flex items-center gap-2">
-              <div className="w-8 h-8 rounded-full bg-slate-900 flex items-center justify-center font-bold text-white text-xs">
-                {user?.avatarEmoji || '🎾'}
-              </div>
+              {user?.avatarUrl ? (
+                <img src={user.avatarUrl} alt="" className="w-8 h-8 rounded-full object-cover" />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-lg">
+                  {user?.avatarEmoji || '🎾'}
+                </div>
+              )}
               <span className="font-bold text-slate-800 text-sm">{user?.nickname || 'コーチ'} 様</span>
             </div>
             <div className="flex items-center gap-2">
