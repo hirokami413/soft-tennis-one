@@ -1313,12 +1313,70 @@ export const TennisNoteView: React.FC = () => {
                     </div>
                   </div>
 
-                  {matchingNote && (
-                    <div className="bg-white/60 rounded-xl p-3 text-[10px] text-slate-500">
-                      <p className="font-bold mb-1">対象ノート: {matchingNote.date}</p>
-                      <p>良かった点: {matchingNote.keep?.slice(0, 30) || 'なし'}...</p>
-                    </div>
-                  )}
+                  {matchingNote && (() => {
+                    const noteKey = `advice-note-${a.id}`;
+                    const isExpanded = expandedNote === noteKey;
+                    return (
+                      <div>
+                        <button
+                          onClick={() => setExpandedNote(isExpanded ? null : noteKey)}
+                          className="w-full bg-white/60 rounded-xl p-3 text-left hover:bg-white/80 transition-colors"
+                        >
+                          <div className="flex items-center justify-between">
+                            <p className="text-[10px] font-bold text-slate-600 flex items-center gap-1">
+                              📋 対象ノート: {matchingNote.date}
+                            </p>
+                            {isExpanded ? <ChevronUp size={12} className="text-slate-400" /> : <ChevronDown size={12} className="text-slate-400" />}
+                          </div>
+                          {!isExpanded && (
+                            <p className="text-[10px] text-slate-400 mt-1">タップして詳細を表示</p>
+                          )}
+                        </button>
+                        {isExpanded && (
+                          <div className="mt-2 bg-white/60 rounded-xl p-4 space-y-2 text-xs">
+                            <div className="bg-green-50 p-2 rounded-lg">
+                              <p className="font-bold text-green-700 text-[10px] mb-0.5">✅ 良かったこと</p>
+                              <p className="text-slate-700">{matchingNote.keep || 'なし'}</p>
+                            </div>
+                            <div className="bg-red-50 p-2 rounded-lg">
+                              <p className="font-bold text-red-600 text-[10px] mb-0.5">⚠️ 課題・改善点</p>
+                              <p className="text-slate-700">{matchingNote.problem || 'なし'}</p>
+                            </div>
+                            <div className="bg-blue-50 p-2 rounded-lg">
+                              <p className="font-bold text-blue-700 text-[10px] mb-0.5">🚀 次やること</p>
+                              <p className="text-slate-700">{matchingNote.tryItem || 'なし'}</p>
+                            </div>
+                            {matchingNote.coachQuestion && (
+                              <div className="bg-indigo-50 p-2 rounded-lg">
+                                <p className="font-bold text-indigo-700 text-[10px] mb-0.5">💬 コーチへの質問</p>
+                                <p className="text-slate-700">{matchingNote.coachQuestion}</p>
+                              </div>
+                            )}
+                            {matchingNote.media && matchingNote.media.length > 0 && (
+                              <div className="space-y-2 pt-1">
+                                <p className="font-bold text-slate-500 text-[10px]">📎 添付メディア</p>
+                                {matchingNote.media.map((m: any, mi: number) => (
+                                  <div key={mi}>
+                                    {m.type === 'image' && m.url && (
+                                      <img src={m.url} alt="" className="w-full rounded-lg max-h-48 object-cover" />
+                                    )}
+                                    {m.type === 'video' && m.url && (
+                                      <video src={m.url} controls className="w-full rounded-lg max-h-48" />
+                                    )}
+                                    {m.type === 'url' && (m.url || m.name) && (
+                                      <a href={m.url || m.name} target="_blank" rel="noopener noreferrer" className="flex items-center gap-1.5 text-[10px] text-brand-blue hover:underline bg-blue-50 p-2 rounded-lg">
+                                        <Link size={10} /> {m.name || m.url}
+                                      </a>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
 
                   <div className="bg-white rounded-xl p-4">
                     <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">{a.content}</p>
@@ -1326,6 +1384,7 @@ export const TennisNoteView: React.FC = () => {
 
                   {media.length > 0 && (
                     <div className="space-y-2">
+                      <p className="text-[10px] font-bold text-slate-500">📎 コーチからの添付</p>
                       {media.map((m: any, i: number) => (
                         <div key={i}>
                           {m.type === 'image' && m.url && (
