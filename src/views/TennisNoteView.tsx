@@ -92,6 +92,9 @@ export const TennisNoteView: React.FC = () => {
   const [editCoachQ, setEditCoachQ] = useState('');
   const [editOther, setEditOther] = useState('');
   const [editSkills, setEditSkills] = useState<number[]>([3,3,3,3,3,3]);
+  const [editMedia, setEditMedia] = useState<{ type: 'image' | 'video' | 'url'; name: string; url?: string }[]>([]);
+  const [editMediaUploading, setEditMediaUploading] = useState(false);
+  const [editUrlInput, setEditUrlInput] = useState('');
   const [noteSearchQuery, setNoteSearchQuery] = useState('');
 
   // Calendar State
@@ -381,6 +384,8 @@ export const TennisNoteView: React.FC = () => {
                           setEditCoachQ(n.coachQuestion || '');
                           setEditOther(n.other || '');
                           setEditSkills([...(n.skills || [3,3,3,3,3,3])]);
+                          setEditMedia([...(n.media || [])]);
+                          setEditUrlInput('');
                         }}
                         className="flex-1 py-2 text-xs text-brand-blue hover:bg-blue-50 rounded-xl transition-colors flex items-center justify-center gap-1.5"
                       >
@@ -830,6 +835,8 @@ export const TennisNoteView: React.FC = () => {
                         setEditCoachQ(note.coachQuestion || '');
                         setEditOther(note.other || '');
                         setEditSkills([...(note.skills || [3,3,3,3,3,3])]);
+                        setEditMedia([...(note.media || [])]);
+                        setEditUrlInput('');
                       }}
                       className="flex-1 py-2 text-xs text-brand-blue hover:bg-blue-50 rounded-xl transition-colors flex items-center justify-center gap-1.5"
                     >
@@ -1509,6 +1516,73 @@ export const TennisNoteView: React.FC = () => {
                 </div>
               </div>
 
+              {/* Media Attachments */}
+              <div>
+                <label className="text-xs font-bold text-slate-600 mb-2 block">📎 添付メディア</label>
+                {editMedia.length > 0 && (
+                  <div className="space-y-2 mb-3">
+                    {editMedia.map((m, i) => (
+                      <div key={i} className="flex items-center gap-2 bg-slate-50 rounded-xl p-2">
+                        {m.type === 'image' ? <ImageIcon size={14} className="text-blue-500 shrink-0" /> : m.type === 'video' ? <Film size={14} className="text-purple-500 shrink-0" /> : <Link size={14} className="text-indigo-500 shrink-0" />}
+                        <span className="text-xs text-slate-600 flex-1 truncate">{m.name}</span>
+                        <button onClick={() => setEditMedia(prev => prev.filter((_, j) => j !== i))} className="p-1 text-red-400 hover:text-red-600">
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {editMediaUploading && (
+                  <div className="flex items-center gap-2 text-xs text-slate-400 mb-2">
+                    <div className="w-3 h-3 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" /> アップロード中...
+                  </div>
+                )}
+                <div className="flex gap-2 flex-wrap">
+                  <label className="flex items-center gap-1.5 px-3 py-2 bg-blue-50 text-blue-600 rounded-xl text-xs font-bold cursor-pointer hover:bg-blue-100 transition-colors">
+                    <ImageIcon size={12} /> 画像
+                    <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                      const file = e.target.files?.[0];
+                      if (!file || !user) return;
+                      if (file.size > 5 * 1024 * 1024) { alert('5MB以下の画像を選択してください'); return; }
+                      setEditMediaUploading(true);
+                      const path = generateFilePath(user.id, 'note-edit', file.name);
+                      const { url, error } = await uploadFile('note-media', path, file);
+                      if (!error && url) setEditMedia(prev => [...prev, { type: 'image', name: file.name, url }]);
+                      setEditMediaUploading(false);
+                      e.target.value = '';
+                    }} />
+                  </label>
+                  <label className="flex items-center gap-1.5 px-3 py-2 bg-purple-50 text-purple-600 rounded-xl text-xs font-bold cursor-pointer hover:bg-purple-100 transition-colors">
+                    <Video size={12} /> 動画
+                    <input type="file" accept="video/*" className="hidden" onChange={async e => {
+                      const file = e.target.files?.[0];
+                      if (!file || !user) return;
+                      if (file.size > 50 * 1024 * 1024) { alert('50MB以下の動画を選択してください'); return; }
+                      setEditMediaUploading(true);
+                      const path = generateFilePath(user.id, 'note-edit', file.name);
+                      const { url, error } = await uploadFile('note-media', path, file);
+                      if (!error && url) setEditMedia(prev => [...prev, { type: 'video', name: file.name, url }]);
+                      setEditMediaUploading(false);
+                      e.target.value = '';
+                    }} />
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <input
+                      type="url" value={editUrlInput} onChange={e => setEditUrlInput(e.target.value)}
+                      placeholder="動画URL..."
+                      className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs w-32 focus:outline-none focus:border-indigo-400"
+                    />
+                    <button
+                      onClick={() => { if (editUrlInput.trim()) { setEditMedia(prev => [...prev, { type: 'url', name: editUrlInput.trim(), url: editUrlInput.trim() }]); setEditUrlInput(''); } }}
+                      disabled={!editUrlInput.trim()}
+                      className="px-2 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-colors disabled:opacity-30"
+                    >
+                      <Link size={12} />
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <button onClick={() => setEditingNote(null)}
                   className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-200 transition-colors"
@@ -1524,6 +1598,7 @@ export const TennisNoteView: React.FC = () => {
                       coachQuestion: editCoachQ,
                       other: editOther,
                       skills: editSkills,
+                      media: editMedia.length > 0 ? editMedia : undefined,
                     });
                     setEditingNote(null);
                   }}
