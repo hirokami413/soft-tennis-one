@@ -186,14 +186,15 @@ export function useSupabaseCoach() {
      return { error };
   };
 
-  const askQuestion = async (content: Partial<CoachConsultation>) => {
+  const askQuestion = async (content: Partial<CoachConsultation> & { media?: any[] }) => {
     if (!useDB || !user) return;
     const { data, error } = await supabase.from('coach_questions').insert({
       user_id: user.id,
       question: content.question,
       category: content.category || '',
       question_type: content.questionType || 'text',
-      status: 'waiting'
+      status: 'waiting',
+      media: content.media && content.media.length > 0 ? content.media : null,
     }).select().single();
 
     if (data && !error) {

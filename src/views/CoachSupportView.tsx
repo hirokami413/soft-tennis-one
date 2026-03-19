@@ -11,6 +11,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useSupabaseCoach } from '../hooks/useSupabaseCoach';
 import { supabase } from '../lib/supabase';
 import { uploadFile, generateFilePath } from '../lib/storage';
+import { compressImage } from '../lib/imageCompress';
 
 // ── Types ──
 interface Coach {
@@ -59,6 +60,9 @@ export const CoachSupportView: React.FC = () => {
   const [expandedId, setExpandedId] = useState<string | null>('c-1');
   const [activeTab, setActiveTab] = useLocalStorage<'list' | 'new' | 'coach'>('coach_support_active_tab', 'list');
   const [searchQuery, setSearchQuery] = useState('');
+  const [questionMedia, setQuestionMedia] = useState<{ type: 'image' | 'url'; name: string; url?: string }[]>([]);
+  const [questionUrlInput, setQuestionUrlInput] = useState('');
+  const [questionMediaUploading, setQuestionMediaUploading] = useState(false);
 
   // Role State
   const isCoach = user?.systemRole === 'coach' || user?.systemRole === 'admin';
@@ -157,9 +161,12 @@ export const CoachSupportView: React.FC = () => {
     askQuestion({
       question: newQuestion.trim(),
       questionType,
-      category: questionCategory || undefined
+      category: questionCategory || undefined,
+      media: questionMedia.length > 0 ? questionMedia : undefined,
     });
     setNewQuestion('');
+    setQuestionMedia([]);
+    setQuestionUrlInput('');
     setActiveTab('list');
     // コイン差引（非ブロッキング）
     addCoins(-questionCost);
@@ -382,8 +389,9 @@ export const CoachSupportView: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center justify-center gap-1">
+                  <ImageIcon size={14} className="text-indigo-600" />
                   <Video size={14} className="text-indigo-600" />
-                  <p className="text-sm font-bold text-slate-800">動画付き</p>
+                  <p className="text-sm font-bold text-slate-800">画像・動画付き</p>
                 </div>
                 <p className="text-yellow-600 font-mono font-bold text-sm mt-1">2,000 🪙</p>
               </button>
@@ -425,10 +433,69 @@ export const CoachSupportView: React.FC = () => {
             />
             
             {questionType === 'video' && (
-              <div className="flex items-center gap-2">
-                <button className="flex items-center gap-1.5 text-xs text-indigo-600 font-bold bg-indigo-50 px-3 py-1.5 rounded-lg border border-indigo-100 hover:bg-indigo-100 transition-colors">
-                  <Video size={14} /> 動画を添付する
-                </button>
+              <div className="space-y-3">
+                {/* 添付済みメディア一覧 */}
+                {questionMedia.length > 0 && (
+                  <div className="space-y-1.5">
+                    {questionMedia.map((m, i) => (
+                      <div key={i} className="flex items-center gap-2 bg-slate-50 rounded-lg p-2">
+                        {m.type === 'image' ? <ImageIcon size={12} className="text-blue-500 shrink-0" /> : <Link size={12} className="text-indigo-500 shrink-0" />}
+                        <span className="text-xs text-slate-600 flex-1 truncate">{m.name}</span>
+                        <button onClick={() => setQuestionMedia(prev => prev.filter((_, j) => j !== i))} className="p-0.5 text-red-400 hover:text-red-600">
+                          <X size={12} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {questionMediaUploading && (
+                  <div className="flex items-center gap-2 text-xs text-slate-400">
+                    <div className="w-3 h-3 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" /> アップロード中...
+                  </div>
+                )}
+                {/* 画像アップロード */}
+                <label className="flex items-center gap-1.5 text-xs text-blue-600 font-bold bg-blue-50 px-3 py-2 rounded-xl border border-blue-100 hover:bg-blue-100 transition-colors cursor-pointer w-fit">
+                  <ImageIcon size={14} /> 画像をアップロード
+                  <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                    const file = e.target.files?.[0];
+                    if (!file || !user) return;
+                    if (file.size > 5 * 1024 * 1024) { alert('5MB以下の画像を選択してください'); return; }
+                    setQuestionMediaUploading(true);
+                    try {
+                      const compressed = await compressImage(file);
+                      const path = generateFilePath(user.id, 'coach-q', compressed.name);
+                      const { url, error } = await uploadFile('note-media', path, compressed);
+                      if (!error && url) setQuestionMedia(prev => [...prev, { type: 'image', name: file.name, url }]);
+                    } catch { /* ignore */ }
+                    setQuestionMediaUploading(false);
+                    e.target.value = '';
+                  }} />
+                </label>
+                {/* 動画URL入力 */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={questionUrlInput}
+                    onChange={e => setQuestionUrlInput(e.target.value)}
+                    placeholder="YouTube/InstagramのURLを貼り付け"
+                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-400"
+                  />
+                  <button
+                    onClick={() => { if (questionUrlInput.trim()) { setQuestionMedia(prev => [...prev, { type: 'url', name: questionUrlInput.trim(), url: questionUrlInput.trim() }]); setQuestionUrlInput(''); } }}
+                    disabled={!questionUrlInput.trim()}
+                    className="px-3 py-2 bg-indigo-500 text-white rounded-xl text-xs font-bold hover:bg-indigo-600 transition-colors disabled:opacity-30 flex items-center gap-1"
+                  >
+                    <Link size={12} /> 追加
+                  </button>
+                </div>
+                <div className="bg-indigo-50 rounded-xl p-3 border border-indigo-100">
+                  <p className="text-[10px] font-bold text-indigo-600 mb-1">📱 動画の共有方法</p>
+                  <ol className="text-[10px] text-slate-500 space-y-0.5 list-decimal pl-3.5">
+                    <li>スマホで撮影した動画を <b>YouTube</b>（限定公開）や <b>Instagram</b>（リール）にアップロード</li>
+                    <li>URLをコピーして上の欄に貼り付け</li>
+                  </ol>
+                  <p className="text-[9px] text-slate-400 mt-1">💡 画像はそのままアップロードできます</p>
+                </div>
               </div>
             )}
 
@@ -928,7 +995,7 @@ export const CoachSupportView: React.FC = () => {
           <div className="grid grid-cols-1 gap-1.5">
             {[
               { label: 'コーチに質問（テキスト）', value: '-1,000🪙', note: '生徒側' },
-              { label: 'コーチに質問（動画付き）', value: '-2,000🪙', note: '生徒側' },
+              { label: 'コーチに質問（画像・動画付き）', value: '-2,000🪙', note: '生徒側' },
               { label: '質問をスキップ（コーチ側）', value: '-50🪙', note: '' },
             ].map((item, i) => (
               <div key={i} className="flex items-center justify-between bg-red-50 px-3 py-2 rounded-xl">
