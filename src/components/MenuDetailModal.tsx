@@ -252,28 +252,40 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
 
             {/* Instagram Section */}
             {menu.instagramUrl && (() => {
-              // Instagram URLから埋め込みURLを生成
-              const getInstagramEmbedUrl = (url: string): string | null => {
+              // Instagram URLからpost IDを抽出
+              const getInstagramInfo = (url: string) => {
                 const match = url.match(/instagram\.com\/(p|reel|tv)\/([A-Za-z0-9_-]+)/);
-                if (match) return `https://www.instagram.com/${match[1]}/${match[2]}/embed/`;
+                if (match) return { type: match[1], id: match[2], embedUrl: `https://www.instagram.com/${match[1]}/${match[2]}/embed/captioned/` };
                 return null;
               };
-              const embedUrl = getInstagramEmbedUrl(menu.instagramUrl);
+              const info = getInstagramInfo(menu.instagramUrl);
               return (
                 <div className="mt-2">
                   <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
                     <span className="text-lg">📸</span>
                     Instagram動画
                   </h3>
-                  {embedUrl ? (
-                    <div className="relative w-full overflow-hidden rounded-2xl bg-slate-100 shadow-sm border border-slate-100" style={{ minHeight: '750px' }}>
-                      <iframe
-                        src={embedUrl}
-                        className="w-full border-0"
-                        style={{ minHeight: '750px' }}
-                        allowFullScreen
-                        scrolling="no"
-                      />
+                  {info ? (
+                    <div className="space-y-2">
+                      <div className="relative w-full overflow-hidden rounded-2xl bg-slate-100 shadow-sm border border-slate-100" style={{ minHeight: '500px' }}>
+                        <iframe
+                          src={info.embedUrl}
+                          className="w-full border-0"
+                          style={{ minHeight: '500px' }}
+                          allowFullScreen
+                          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+                          loading="lazy"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                      <a
+                        href={menu.instagramUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-center gap-2 p-2.5 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-xl hover:shadow-md transition-all text-sm font-bold text-purple-700"
+                      >
+                        📸 Instagramアプリで開く →
+                      </a>
                     </div>
                   ) : (
                     <a
