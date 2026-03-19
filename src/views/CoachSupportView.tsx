@@ -200,9 +200,14 @@ export const CoachSupportView: React.FC = () => {
     alert('報告を送信しました。管理者が確認し対応いたします。');
   };
 
-  // コーチ回答タブ: waitingかつ自分が未回答かつ回答数が3未満の質問のみ表示
+  // スキップした質問ID（永続化）
+  const [skippedQuestionIds, setSkippedQuestionIds] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem('coach_skipped_questions') || '[]'); } catch { return []; }
+  });
+
+  // コーチ回答タブ: waitingかつ自分が未回答かつ回答数が3未満かつスキップしていない質問のみ表示
   const waitingConsultations = consultations
-    .filter(c => c.status === 'waiting' && !c.answers.some(a => a.coachId === user?.id) && c.answers.length < 3);
+    .filter(c => c.status === 'waiting' && !c.answers.some(a => a.coachId === user?.id) && c.answers.length < 3 && !skippedQuestionIds.includes(c.id));
 
   const goToNextQuestion = () => {
     setCurrentQuestionIndex(prev => prev + 1);
@@ -212,6 +217,12 @@ export const CoachSupportView: React.FC = () => {
 
   const handleSkipQuestion = async () => {
     if (coachCoins >= 50) {
+      const qId = waitingConsultations[currentQuestionIndex]?.id;
+      if (qId) {
+        const updated = [...skippedQuestionIds, qId];
+        setSkippedQuestionIds(updated);
+        localStorage.setItem('coach_skipped_questions', JSON.stringify(updated));
+      }
       await addCoins(-50);
       goToNextQuestion();
     } else {
