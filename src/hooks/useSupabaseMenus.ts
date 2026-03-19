@@ -31,19 +31,23 @@ export function useSupabaseMenus() {
 
       if (data) {
         // レポート統計を取得
-        const { data: reportStats } = await supabase
-          .from('reports')
-          .select('menu_id, rating');
+        let reportStats: any[] = [];
+        try {
+          const { data: rData } = await supabase
+            .from('reports')
+            .select('menu_id, rating');
+          reportStats = rData || [];
+        } catch {
+          // レポート取得失敗はメニュー表示をブロックしない
+        }
 
         // メニューIDごとにcount/avg集計
         const statsMap = new Map<string, { count: number; totalRating: number }>();
-        if (reportStats) {
-          for (const r of reportStats) {
-            const existing = statsMap.get(r.menu_id) || { count: 0, totalRating: 0 };
-            existing.count++;
-            existing.totalRating += r.rating;
-            statsMap.set(r.menu_id, existing);
-          }
+        for (const r of reportStats) {
+          const existing = statsMap.get(r.menu_id) || { count: 0, totalRating: 0 };
+          existing.count++;
+          existing.totalRating += r.rating;
+          statsMap.set(r.menu_id, existing);
         }
 
         // DBから取得したデータをMenuData型に変換
@@ -77,16 +81,22 @@ export function useSupabaseMenus() {
     } catch (err: any) {
       console.error('Error fetching menus:', err);
       setError(err);
-      // エラー時は空配列を設定
-      setMenus([]);
+      // エラー時も既存データは消さない（初回のみ空配列）
     } finally {
       if (!silent) setIsLoading(false);
     }
   }, []);
 
-  // 初回マウント時に取得
+  // 初回マウント時に取得（失敗時は3秒後にリトライ）
   useEffect(() => {
-    fetchMenus();
+    let retryTimer: ReturnType<typeof setTimeout>;
+    fetchMenus().then(() => {
+      // 取得成功
+    }).catch(() => {
+      // 3秒後にリトライ（認証セッション復元待ち）
+      retryTimer = setTimeout(() => fetchMenus(), 3000);
+    });
+    return () => clearTimeout(retryTimer);
   }, [fetchMenus]);
 
   // ページ復帰時に再取得（タブ切替やアプリ復帰時に最新データを表示）
