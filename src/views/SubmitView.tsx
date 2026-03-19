@@ -78,28 +78,37 @@ export const SubmitView: React.FC = () => {
       setIsSubmitting(true);
       setSubmitError('');
       
-      let imageUrl = '';
-      if (thumbnailFile && user) {
-        const compressed = await compressImage(thumbnailFile);
-        const path = generateFilePath(user.id, 'menu-thumbnails', compressed.name);
-        const { url, error: uploadError } = await uploadFile('note-media', path, compressed);
-        if (uploadError) throw new Error('サムネイルのアップロードに失敗: ' + uploadError);
-        imageUrl = url || '';
-      }
+      // タイムアウト付き投稿処理
+      const submitPromise = (async () => {
+        let imageUrl = '';
+        if (thumbnailFile && user) {
+          const compressed = await compressImage(thumbnailFile);
+          const path = generateFilePath(user.id, 'menu-thumbnails', compressed.name);
+          const { url, error: uploadError } = await uploadFile('note-media', path, compressed);
+          if (uploadError) throw new Error('サムネイルのアップロードに失敗: ' + uploadError);
+          imageUrl = url || '';
+        }
 
-      await submitMenu({
-        title: formData.title,
-        category: formData.category,
-        level: formData.level,
-        description: formData.description,
-        tags: formData.tags,
-        youtubeUrl: formData.youtubeUrl,
-        instagramUrl: formData.instagramUrl,
-        imageUrl: imageUrl || undefined,
-        duration: formData.duration ? Number(formData.duration) : undefined,
-        minPlayers: formData.minPlayers ? Number(formData.minPlayers) : undefined,
-        maxPlayers: formData.maxPlayers ? Number(formData.maxPlayers) : undefined,
-      });
+        await submitMenu({
+          title: formData.title,
+          category: formData.category,
+          level: formData.level,
+          description: formData.description,
+          tags: formData.tags,
+          youtubeUrl: formData.youtubeUrl,
+          instagramUrl: formData.instagramUrl,
+          imageUrl: imageUrl || undefined,
+          duration: formData.duration ? Number(formData.duration) : undefined,
+          minPlayers: formData.minPlayers ? Number(formData.minPlayers) : undefined,
+          maxPlayers: formData.maxPlayers ? Number(formData.maxPlayers) : undefined,
+        });
+      })();
+
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error('投稿がタイムアウトしました。通信環境を確認して再度お試しください。')), 30000)
+      );
+
+      await Promise.race([submitPromise, timeoutPromise]);
 
       setIsSubmitted(true);
       // フォームを即座にリセット
@@ -113,7 +122,7 @@ export const SubmitView: React.FC = () => {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       console.error('Submit error:', err);
-      setSubmitError(err.message || '投稿に失敗しました');
+      setSubmitError(err.message || '投稿に失敗しました。再度お試しください。');
     } finally {
       setIsSubmitting(false);
     }

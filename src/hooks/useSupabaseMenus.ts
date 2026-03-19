@@ -9,10 +9,10 @@ export function useSupabaseMenus() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  // メニュー一覧を取得する関数
-  const fetchMenus = useCallback(async () => {
+  // メニュー一覧を取得する関数（silent=trueの場合、isLoadingを変更しない）
+  const fetchMenus = useCallback(async (silent = false) => {
     try {
-      setIsLoading(true);
+      if (!silent) setIsLoading(true);
       setError(null);
 
       if (!isSupabaseConfigured()) {
@@ -80,7 +80,7 @@ export function useSupabaseMenus() {
       // エラー時は空配列を設定
       setMenus([]);
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   }, []);
 
@@ -93,7 +93,7 @@ export function useSupabaseMenus() {
   useEffect(() => {
     const handleVisibility = () => {
       if (document.visibilityState === 'visible') {
-        fetchMenus();
+        fetchMenus(true);
       }
     };
     document.addEventListener('visibilitychange', handleVisibility);
@@ -128,8 +128,8 @@ export function useSupabaseMenus() {
 
       if (error) throw error;
 
-      // 投稿後、バックグラウンドで一覧を再取得（awaitしない）
-      fetchMenus().catch(console.error);
+      // 投稿後、バックグラウンドで一覧を再取得（silentモード：isLoadingを変更しない）
+      fetchMenus(true).catch(console.error);
       
       return data;
     } catch (err) {
