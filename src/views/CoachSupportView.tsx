@@ -205,9 +205,9 @@ export const CoachSupportView: React.FC = () => {
     try { return JSON.parse(localStorage.getItem('coach_skipped_questions') || '[]'); } catch { return []; }
   });
 
-  // コーチ回答タブ: waitingかつ自分が未回答かつ回答数が3未満かつスキップしていない質問のみ表示
+  // コーチ回答タブ: waiting/answeredかつ自分が未回答かつ回答数が3未満かつスキップしていない質問のみ表示
   const waitingConsultations = consultations
-    .filter(c => c.status === 'waiting' && !c.answers.some(a => a.coachId === user?.id) && c.answers.length < 3 && !skippedQuestionIds.includes(c.id));
+    .filter(c => (c.status === 'waiting' || c.status === 'answered') && !c.answers.some(a => a.coachId === user?.id) && c.answers.length < 3 && !skippedQuestionIds.includes(c.id));
 
   const goToNextQuestion = () => {
     setCurrentQuestionIndex(prev => prev + 1);
