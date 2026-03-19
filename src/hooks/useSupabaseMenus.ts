@@ -107,6 +107,9 @@ export function useSupabaseMenus() {
     }
 
     try {
+      // URLをクリーンアップ（前後の空白除去）
+      const cleanUrl = (url: string | undefined) => (url || '').trim();
+
       const { error } = await supabase
         .from('menus')
         .insert({
@@ -115,9 +118,9 @@ export function useSupabaseMenus() {
           level: menuData.level,
           description: menuData.description,
           tags: menuData.tags || [],
-          youtube_url: menuData.youtubeUrl || '',
-          instagram_url: menuData.instagramUrl || '',
-          image_url: menuData.imageUrl || '',
+          youtube_url: cleanUrl(menuData.youtubeUrl),
+          instagram_url: cleanUrl(menuData.instagramUrl),
+          image_url: cleanUrl(menuData.imageUrl),
           duration: menuData.duration || null,
           min_players: menuData.minPlayers || null,
           max_players: menuData.maxPlayers || null,

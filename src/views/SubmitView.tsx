@@ -367,7 +367,7 @@ export const SubmitView: React.FC = () => {
             参考YouTube動画URL（任意）
           </label>
           <input
-            type="url"
+            type="text"
             value={formData.youtubeUrl}
             onChange={(e) => setFormData({...formData, youtubeUrl: e.target.value})}
             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
@@ -382,7 +382,7 @@ export const SubmitView: React.FC = () => {
             Instagram動画URL（任意）
           </label>
           <input
-            type="url"
+            type="text"
             value={formData.instagramUrl}
             onChange={(e) => setFormData({...formData, instagramUrl: e.target.value})}
             className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
