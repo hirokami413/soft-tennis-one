@@ -801,15 +801,17 @@ export const CoachSupportView: React.FC = () => {
           );
         })
       )}
-          {/* 無料ユーザーが5件を超えた場合のアップグレード案内 */}
-          {!canViewAllConsultations && displayConsultations.length > 5 && (
+          {/* 無料ユーザーへのアップグレード案内 */}
+          {!canViewAllConsultations && (
             <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl p-5 text-center space-y-3">
               <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mx-auto">
                 <Crown size={24} className="text-indigo-500" />
               </div>
               <div>
-                <p className="font-bold text-slate-800 text-sm">もっとQ&Aを見るには</p>
-                <p className="text-xs text-slate-500 mt-1">他 {displayConsultations.length - 5}件の相談があります</p>
+                <p className="font-bold text-slate-800 text-sm">すべてのQ&Aを閲覧するには</p>
+                {displayConsultations.length > 5 && (
+                  <p className="text-xs text-slate-500 mt-1">他 {displayConsultations.length - 5}件の相談があります</p>
+                )}
               </div>
               <p className="text-[11px] text-slate-500">
                 「ナレッジプラン」に登録すると、すべてのQ&Aを閲覧できます。<br/>コーチの回答から学びを得ましょう！

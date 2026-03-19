@@ -909,9 +909,8 @@ export const TennisNoteView: React.FC = () => {
             { icon: <CheckCircle2 size={14} className="text-green-500 shrink-0"/>, text: 'テニスノートの振り返りに対する具体的なフィードバックとアドバイス' },
             { icon: <CheckCircle2 size={14} className="text-green-500 shrink-0"/>, text: '技術評価のレーダーチャートに対する客観的な補正コメント' },
             { icon: <CheckCircle2 size={14} className="text-green-500 shrink-0"/>, text: '練習メニューの提案と次の目標設定サポート' },
-            { icon: <CheckCircle2 size={14} className="text-green-500 shrink-0"/>, text: 'フォームや打ち方の改善ポイントを文章で具体的に指導' },
+            { icon: <CheckCircle2 size={14} className="text-green-500 shrink-0"/>, text: 'フォームや打ち方の改善ポイントを文章や参考動画で具体的に指導' },
             { icon: <CheckCircle2 size={14} className="text-green-500 shrink-0"/>, text: 'コーチ相談（Q&A）の閲覧制限解除 ─ すべてのQ&Aを閲覧可能' },
-            { icon: <ImageIcon size={14} className="text-indigo-500 shrink-0"/>, text: '画像を直接アップロードしてフォームチェック（上位プラン）' },
             { icon: <Video size={14} className="text-indigo-500 shrink-0"/>, text: 'YouTube/InstagramのURLを添付して動画をプロコーチに確認してもらえる（上位プラン）' },
           ].map((item, i) => (
             <div key={i} className="flex items-start gap-2.5">
