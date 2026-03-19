@@ -759,7 +759,7 @@ export const TennisNoteView: React.FC = () => {
                   {/* Send to Coach Button */}
                   <div className="mt-3 pt-3 border-t border-slate-100">
                     {(() => {
-                      const noteHasVideo = !!(note.media && note.media.some(m => m.type === 'video'));
+                      const noteHasMedia = !!(note.media && note.media.some(m => m.type === 'video' || m.type === 'url'));
                       if (sentNotes.includes(note.id)) {
                         return (
                           <div className="flex items-center justify-center gap-2 py-2.5 bg-green-50 border border-green-200 rounded-xl text-green-600 text-xs font-bold">
@@ -784,23 +784,23 @@ export const TennisNoteView: React.FC = () => {
                           </button>
                         );
                       }
-                      if (noteHasVideo && remainingVideoSends <= 0) {
+                      if (noteHasMedia && remainingVideoSends <= 0) {
                         return (
                           <button disabled className="w-full flex items-center justify-center gap-2 py-2.5 bg-purple-50 text-purple-600 border border-purple-200 rounded-xl text-xs font-bold cursor-not-allowed">
                             <Lock size={14} />
-                            動画付き送信の月間上限に達しました
+                            画像・動画付き送信の月間上限に達しました
                           </button>
                         );
                       }
                       return (
                         <button
-                          onClick={() => handleSendToCoach(note.id, noteHasVideo)}
+                          onClick={() => handleSendToCoach(note.id, noteHasMedia)}
                           className="w-full flex items-center justify-center gap-2 py-2.5 bg-yellow-500 hover:bg-yellow-600 text-white rounded-xl text-xs font-bold transition-colors active:scale-95"
                         >
                           <Send size={14} />
                           ノートをプロコーチに送信
                           <span className="text-[10px] opacity-80">
-                            (残り{remainingSends}回{noteHasVideo ? ` / 動画残り${remainingVideoSends}回` : ''})
+                            (残り{remainingSends}回{noteHasMedia ? ` / 画像・動画残り${remainingVideoSends}回` : ''})
                           </span>
                         </button>
                       );
@@ -910,8 +910,8 @@ export const TennisNoteView: React.FC = () => {
             { icon: <CheckCircle2 size={14} className="text-green-500 shrink-0"/>, text: '技術評価のレーダーチャートに対する客観的な補正コメント' },
             { icon: <CheckCircle2 size={14} className="text-green-500 shrink-0"/>, text: '練習メニューの提案と次の目標設定サポート' },
             { icon: <CheckCircle2 size={14} className="text-green-500 shrink-0"/>, text: 'フォームや打ち方の改善ポイントを文章で具体的に指導' },
-            { icon: <Video size={14} className="text-indigo-500 shrink-0"/>, text: '動画を共有して、フォーム・打ち方をプロコーチが直接アドバイス（上位プラン）' },
-            { icon: <Link size={14} className="text-indigo-500 shrink-0"/>, text: 'YouTubeやInstagramの動画URLを添付してプロコーチに確認してもらえる' },
+            { icon: <ImageIcon size={14} className="text-indigo-500 shrink-0"/>, text: '画像を直接アップロードしてフォームチェック（上位プラン）' },
+            { icon: <Video size={14} className="text-indigo-500 shrink-0"/>, text: 'YouTube/InstagramのURLを添付して動画をプロコーチに確認してもらえる（上位プラン）' },
           ].map((item, i) => (
             <div key={i} className="flex items-start gap-2.5">
               {item.icon}
@@ -927,8 +927,8 @@ export const TennisNoteView: React.FC = () => {
           <div className="grid grid-cols-3 gap-2">
             {([
               { key: 'light' as const, name: 'ライト', price: '¥1,480', desc: '月3回のアドバイス', sub: 'テキストのみ', video: '' },
-              { key: 'standard' as const, name: 'スタンダード', price: '¥2,980', desc: '月8回のアドバイス', sub: '', video: '+動画 月1件', popular: true },
-              { key: 'premium' as const, name: 'プレミアム', price: '¥4,980', desc: '無制限アドバイス', sub: '', video: '+動画 月3件 🎬' },
+              { key: 'standard' as const, name: 'スタンダード', price: '¥2,980', desc: '月8回のアドバイス', sub: '', video: '+画像・動画 月1件', popular: true },
+              { key: 'premium' as const, name: 'プレミアム', price: '¥4,980', desc: '無制限アドバイス', sub: '', video: '+画像・動画 月3件 📸🎬' },
             ]).map(p => {
               const isActive = advicePlan === p.key;
               return (
