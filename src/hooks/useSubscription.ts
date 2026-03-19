@@ -1,6 +1,6 @@
 import { useLocalStorage } from './useLocalStorage';
 
-export type SubscriptionPlan = 'free' | 'light' | 'standard' | 'pro';
+export type SubscriptionPlan = 'free' | 'basic' | 'light' | 'standard' | 'pro';
 
 export const useSubscription = () => {
   const [plan, setPlan] = useLocalStorage<SubscriptionPlan>('user_subscription_plan', 'free');
@@ -10,6 +10,7 @@ export const useSubscription = () => {
   const canAskCoach = plan !== 'free'; // プロコーチへの直接相談(CoachSupportView)のみサブスク制限
   const canUploadVideo = plan === 'standard' || plan === 'pro';
   const canAccessProDashboard = plan === 'pro';
+  const canViewAllConsultations = plan !== 'free'; // basic以上で相談一覧を全件閲覧可
 
   return {
     plan,
@@ -19,5 +20,6 @@ export const useSubscription = () => {
     canAskCoach,
     canUploadVideo,
     canAccessProDashboard,
+    canViewAllConsultations,
   };
 };

@@ -10,7 +10,7 @@ export interface Database {
           nickname: string;
           avatar_emoji: string;
           coins: number;
-          subscription_plan: 'free' | 'light' | 'standard' | 'pro';
+          subscription_plan: 'free' | 'basic' | 'light' | 'standard' | 'pro';
           created_at: string;
         };
         Insert: {
@@ -18,14 +18,14 @@ export interface Database {
           nickname: string;
           avatar_emoji?: string;
           coins?: number;
-          subscription_plan?: 'free' | 'light' | 'standard' | 'pro';
+          subscription_plan?: 'free' | 'basic' | 'light' | 'standard' | 'pro';
           created_at?: string;
         };
         Update: {
           nickname?: string;
           avatar_emoji?: string;
           coins?: number;
-          subscription_plan?: 'free' | 'light' | 'standard' | 'pro';
+          subscription_plan?: 'free' | 'basic' | 'light' | 'standard' | 'pro';
         };
       };
       tennis_notes: {

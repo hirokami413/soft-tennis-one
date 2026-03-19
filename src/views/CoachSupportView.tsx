@@ -8,6 +8,7 @@ import {
   Upload, FileText
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useSubscription } from '../hooks/useSubscription';
 import { useSupabaseCoach } from '../hooks/useSupabaseCoach';
 import { supabase } from '../lib/supabase';
 import { uploadFile, generateFilePath } from '../lib/storage';
@@ -56,6 +57,7 @@ const coinPackages = [
 export const CoachSupportView: React.FC = () => {
   const { user, refreshProfile, addCoins } = useAuth();
   const { consultations, loading: consultationsLoading, askQuestion, answerQuestion, selectBestAnswer, updateQuestionStatus, applyCoachApplication, reportAnswer } = useSupabaseCoach();
+  const { canViewAllConsultations } = useSubscription();
   const [newQuestion, setNewQuestion] = useLocalStorage('coach_support_new_question', '');
   const [expandedId, setExpandedId] = useState<string | null>('c-1');
   const [answerRatings, setAnswerRatings] = useState<Record<string, number>>({});
@@ -576,7 +578,7 @@ export const CoachSupportView: React.FC = () => {
                 <p className="text-sm font-bold">相談が見つかりません</p>
               </div>
             ) : (
-              displayConsultations.map(c => {
+              (canViewAllConsultations ? displayConsultations : displayConsultations.slice(0, 5)).map(c => {
                 const status = statusConfig[c.status];
                 const isExpanded = expandedId === c.id;
 
@@ -799,6 +801,27 @@ export const CoachSupportView: React.FC = () => {
           );
         })
       )}
+          {/* 無料ユーザーが5件を超えた場合のアップグレード案内 */}
+          {!canViewAllConsultations && displayConsultations.length > 5 && (
+            <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl p-5 text-center space-y-3">
+              <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mx-auto">
+                <Crown size={24} className="text-indigo-500" />
+              </div>
+              <div>
+                <p className="font-bold text-slate-800 text-sm">もっとQ&Aを見るには</p>
+                <p className="text-xs text-slate-500 mt-1">他 {displayConsultations.length - 5}件の相談があります</p>
+              </div>
+              <p className="text-[11px] text-slate-500">
+                「ナレッジプラン」に登録すると、すべてのQ&Aを閲覧できます。<br/>コーチの回答から学びを得ましょう！
+              </p>
+              <button
+                className="w-full py-2.5 bg-indigo-500 text-white rounded-xl text-xs font-bold hover:bg-indigo-600 transition-colors flex items-center justify-center gap-2 shadow-md"
+                onClick={() => alert('ナレッジプランの登録は準備中です。しばらくお待ちください。')}
+              >
+                <Crown size={14} /> ナレッジプランに登録
+              </button>
+            </div>
+          )}
           </div>
         </div>
       )}
