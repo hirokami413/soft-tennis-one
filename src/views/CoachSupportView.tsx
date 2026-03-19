@@ -80,9 +80,9 @@ export const CoachSupportView: React.FC = () => {
   const coachAvgRating = user?.coachAvgRating || 0;
   const [rankUpNotification, _setRankUpNotification] = useState<string | null>(null);
 
-  // Rank-based reward calculation (fixed base: 700 = 70% of text question cost)
+  // Rank-based reward calculation (base: 600)
   const getReward = () => {
-    return Math.floor(700 * rankConfig[coachRank].multiplier);
+    return Math.floor(600 * rankConfig[coachRank].multiplier);
   };
 
   // Student Coin & Question Type States
@@ -987,7 +987,8 @@ export const CoachSupportView: React.FC = () => {
                         disabled={coachAnswerText.trim().length < 100}
                         className="flex-1 py-3 bg-brand-blue text-white rounded-xl text-sm font-bold flex justify-center items-center gap-2 hover:bg-brand-blue-hover disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Send size={16} /> 送信して +{getReward()}🪙
+                        <Send size={16} /> 回答を送信
+                        <span className="text-[10px] opacity-80">（ベストアンサーで +{getReward()}🪙）</span>
                       </button>
                     </div>
                     <p className={`text-right text-[10px] ${coachAnswerText.trim().length < 100 ? 'text-red-400' : 'text-green-500'}`}>
@@ -1076,7 +1077,7 @@ export const CoachSupportView: React.FC = () => {
           <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">コインを獲得する（コーチ側）</p>
           <div className="grid grid-cols-1 gap-1.5">
             {[
-              { label: '質問に回答（生徒が解決時）', value: '700〜1,050🪙', note: 'ランク倍率 ×1.0〜×1.5' },
+              { label: 'ベストアンサーに選ばれた', value: '600〜900🪙', note: 'ランク倍率 ×1.0〜×1.5' },
               { label: 'ランクアップボーナス', value: '5,000〜50,000🪙', note: 'シルバー→プラチナ' },
             ].map((item, i) => (
               <div key={i} className="flex items-center justify-between bg-green-50 px-3 py-2 rounded-xl">
