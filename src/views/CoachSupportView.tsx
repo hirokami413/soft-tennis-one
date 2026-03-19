@@ -58,6 +58,7 @@ export const CoachSupportView: React.FC = () => {
   const { consultations, loading: consultationsLoading, askQuestion, answerQuestion, selectBestAnswer, updateQuestionStatus, applyCoachApplication, reportAnswer } = useSupabaseCoach();
   const [newQuestion, setNewQuestion] = useLocalStorage('coach_support_new_question', '');
   const [expandedId, setExpandedId] = useState<string | null>('c-1');
+  const [answerRatings, setAnswerRatings] = useState<Record<string, number>>({});
   const [activeTab, setActiveTab] = useLocalStorage<'list' | 'new' | 'coach'>('coach_support_active_tab', 'list');
   const [searchQuery, setSearchQuery] = useState('');
   const [questionMedia, setQuestionMedia] = useState<{ type: 'image' | 'url'; name: string; url?: string }[]>([]);
@@ -177,8 +178,10 @@ export const CoachSupportView: React.FC = () => {
   // Resolve → コーチにコインを付与（DB処理はuseSupabaseCoachで実行）
   // ベストアンサー選択
   const handleSelectBestAnswer = async (answerId: string, questionId: string) => {
+    const rating = answerRatings[answerId];
+    if (!rating) { alert('先にコーチを評価してください。'); return; }
     if (!window.confirm('この回答をベストアンサーに選びますか？\n選ばれたコーチにコインが付与されます。')) return;
-    await selectBestAnswer(answerId, questionId);
+    await selectBestAnswer(answerId, questionId, rating);
     await refreshProfile();
   };
 
@@ -685,14 +688,29 @@ export const CoachSupportView: React.FC = () => {
                               ))}
                             </div>
                           )}
-                          {/* Best Answer Button */}
+                          {/* 評価 + ベストアンサーボタン */}
                           {c.isMine && c.status === 'answered' && !c.answers.some(ans => ans.isBestAnswer) && (
-                            <button
-                              onClick={() => handleSelectBestAnswer(a.id, c.id)}
-                              className="w-full py-2 bg-yellow-50 text-yellow-700 border border-yellow-300 rounded-lg text-xs font-bold hover:bg-yellow-100 transition-colors flex items-center justify-center gap-1.5"
-                            >
-                              <Trophy size={14} /> この回答をベストアンサーに選ぶ
-                            </button>
+                            <div className="space-y-2 border-t border-slate-100 pt-2">
+                              <p className="text-[10px] text-slate-400 font-medium text-center">コーチを評価してからベストアンサーを選んでください</p>
+                              <div className="flex justify-center gap-1">
+                                {[1,2,3,4,5].map(star => (
+                                  <button
+                                    key={star}
+                                    onClick={() => setAnswerRatings(prev => ({ ...prev, [a.id]: star }))}
+                                    className="p-0.5 hover:scale-125 transition-transform"
+                                  >
+                                    <Star size={22} className={star <= (answerRatings[a.id] || 0) ? 'text-yellow-400 fill-current' : 'text-slate-300 hover:text-yellow-300'} />
+                                  </button>
+                                ))}
+                              </div>
+                              <button
+                                onClick={() => handleSelectBestAnswer(a.id, c.id)}
+                                disabled={!answerRatings[a.id]}
+                                className="w-full py-2 bg-yellow-50 text-yellow-700 border border-yellow-300 rounded-lg text-xs font-bold hover:bg-yellow-100 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
+                              >
+                                <Trophy size={14} /> この回答をベストアンサーに選ぶ
+                              </button>
+                            </div>
                           )}
                           {/* 各回答ごとの報告ボタン */}
                           {c.isMine && !a.isBestAnswer && (

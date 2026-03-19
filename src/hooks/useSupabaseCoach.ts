@@ -280,8 +280,20 @@ export function useSupabaseCoach() {
   const BASE_REWARD = 600;
 
   // ベストアンサーを選択 → 選ばれたコーチにコイン付与
-  const selectBestAnswer = async (answerId: string, questionId: string) => {
+  const selectBestAnswer = async (answerId: string, questionId: string, rating?: number) => {
     if (!useDB || !user) return;
+
+    // 既にベストアンサーが設定済みかチェック（二重実行防止）
+    const { data: existingBest } = await supabase.from('coach_answers')
+      .select('id')
+      .eq('question_id', questionId)
+      .eq('is_best_answer', true)
+      .maybeSingle();
+    if (existingBest) {
+      console.log('既にベストアンサーが設定済みです');
+      await loadConsultations();
+      return;
+    }
 
     // ベストアンサーをセット
     const { error } = await supabase.from('coach_answers')
@@ -294,9 +306,11 @@ export function useSupabaseCoach() {
       return;
     }
 
-    // 質問をresolvedに
+    // 質問をresolvedに + 評価を保存
+    const questionUpdate: any = { status: 'resolved' };
+    if (rating !== undefined) questionUpdate.user_rating = rating;
     await supabase.from('coach_questions')
-      .update({ status: 'resolved' })
+      .update(questionUpdate)
       .eq('id', questionId);
 
     // ベストアンサーのコーチIDを取得
