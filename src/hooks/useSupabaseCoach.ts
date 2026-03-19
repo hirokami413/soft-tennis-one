@@ -283,13 +283,12 @@ export function useSupabaseCoach() {
   const selectBestAnswer = async (answerId: string, questionId: string, rating?: number) => {
     if (!useDB || !user) return;
 
-    // 既にベストアンサーが設定済みかチェック（二重実行防止）
-    const { data: existingBest } = await supabase.from('coach_answers')
-      .select('id')
-      .eq('question_id', questionId)
-      .eq('is_best_answer', true)
-      .maybeSingle();
-    if (existingBest) {
+    // 既に解決済みかチェック（二重実行防止）
+    const { data: questionCheck } = await supabase.from('coach_questions')
+      .select('status')
+      .eq('id', questionId)
+      .single();
+    if (questionCheck?.status === 'resolved') {
       console.log('既にベストアンサーが設定済みです');
       await loadConsultations();
       return;
