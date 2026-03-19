@@ -210,6 +210,16 @@ export function useSupabaseCoach() {
   const answerQuestion = async (questionId: string, answer: string, media?: any[]) => {
     if (!useDB || !user) return false;
 
+    // 3回答上限チェック
+    const { count } = await supabase
+      .from('coach_answers')
+      .select('*', { count: 'exact', head: true })
+      .eq('question_id', questionId);
+    if (count !== null && count >= 3) {
+      alert('この質問には既に3件の回答があります。');
+      return false;
+    }
+
     // coach_answersにINSERT
     const { error } = await supabase.from('coach_answers').insert({
       question_id: questionId,
@@ -223,6 +233,9 @@ export function useSupabaseCoach() {
       alert('回答の保存に失敗しました: ' + error.message);
       return false;
     }
+
+    // 回答送信の即時報酬: +50コイン
+    await supabase.rpc('add_coins', { p_user_id: user.id, p_amount: 50 });
 
     // 質問のステータスをansweredに更新（まだwaitingの場合のみ）
     await supabase.from('coach_questions').update({

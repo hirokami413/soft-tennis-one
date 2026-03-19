@@ -200,9 +200,9 @@ export const CoachSupportView: React.FC = () => {
     alert('報告を送信しました。管理者が確認し対応いたします。');
   };
 
-  // コーチ回答タブ: waitingのみ表示（自分が既に回答済みの質問は除く）
+  // コーチ回答タブ: waitingかつ自分が未回答かつ回答数が3未満の質問のみ表示
   const waitingConsultations = consultations
-    .filter(c => c.status === 'waiting' && !c.answers.some(a => a.coachId === user?.id));
+    .filter(c => c.status === 'waiting' && !c.answers.some(a => a.coachId === user?.id) && c.answers.length < 3);
 
   const goToNextQuestion = () => {
     setCurrentQuestionIndex(prev => prev + 1);
@@ -987,8 +987,8 @@ export const CoachSupportView: React.FC = () => {
                         disabled={coachAnswerText.trim().length < 100}
                         className="flex-1 py-3 bg-brand-blue text-white rounded-xl text-sm font-bold flex justify-center items-center gap-2 hover:bg-brand-blue-hover disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Send size={16} /> 回答を送信
-                        <span className="text-[10px] opacity-80">（ベストアンサーで +{getReward()}🪙）</span>
+                        <Send size={16} /> 回答を送信（+50🪙）
+                        <span className="text-[10px] opacity-80">ベストアンサーでさらに +{getReward()}🪙</span>
                       </button>
                     </div>
                     <p className={`text-right text-[10px] ${coachAnswerText.trim().length < 100 ? 'text-red-400' : 'text-green-500'}`}>
@@ -1077,6 +1077,7 @@ export const CoachSupportView: React.FC = () => {
           <p className="text-[10px] font-black text-green-600 uppercase tracking-widest">コインを獲得する（コーチ側）</p>
           <div className="grid grid-cols-1 gap-1.5">
             {[
+              { label: '回答を送信した', value: '+50🪙', note: '回答ごとに即時付与' },
               { label: 'ベストアンサーに選ばれた', value: '600〜900🪙', note: 'ランク倍率 ×1.0〜×1.5' },
               { label: 'ランクアップボーナス', value: '5,000〜50,000🪙', note: 'シルバー→プラチナ' },
             ].map((item, i) => (
