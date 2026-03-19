@@ -72,7 +72,9 @@ export const CoachSupportView: React.FC = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [coachAnswerText, setCoachAnswerText] = useState('');
   const [showCoachAnswerInput, setShowCoachAnswerInput] = useState(false);
-  const [coachAnswerUrl, setCoachAnswerUrl] = useState('');
+  const [coachAnswerMedia, setCoachAnswerMedia] = useState<{ type: 'image' | 'url'; name: string; url?: string }[]>([]);
+  const [coachAnswerMediaUploading, setCoachAnswerMediaUploading] = useState(false);
+  const [coachAnswerUrlInput, setCoachAnswerUrlInput] = useState('');
   const coachRank = (user?.coachRank || 'bronze') as Coach['rank'];
   const coachAnswerCount = user?.coachAnswerCount || 0;
   const coachAvgRating = user?.coachAvgRating || 0;
@@ -223,7 +225,9 @@ export const CoachSupportView: React.FC = () => {
       alert('回答は100文字以上で入力してください。');
       return;
     }
-    answerQuestion(consultationId, coachAnswerText);
+    answerQuestion(consultationId, coachAnswerText, coachAnswerMedia.length > 0 ? coachAnswerMedia : undefined);
+    setCoachAnswerMedia([]);
+    setCoachAnswerUrlInput('');
     goToNextQuestion();
   };
 
@@ -576,6 +580,23 @@ export const CoachSupportView: React.FC = () => {
                       <p className={`text-sm font-medium text-slate-800 ${isExpanded ? '' : 'line-clamp-2'}`}>
                         {c.question}
                       </p>
+                      {/* 質問の添付メディア（展開時のみ） */}
+                      {isExpanded && c.media && c.media.length > 0 && (
+                        <div className="space-y-2 mt-2">
+                          {c.media.map((m: any, i: number) => (
+                            <div key={i}>
+                              {m.type === 'image' && m.url ? (
+                                <img src={m.url} alt={m.name} className="w-full max-h-48 object-contain rounded-xl border border-slate-200" />
+                              ) : m.type === 'url' && m.url ? (
+                                <a href={m.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-indigo-50 rounded-lg p-2 border border-indigo-100 hover:bg-indigo-100 transition-colors">
+                                  <Video size={12} className="text-indigo-500 shrink-0" />
+                                  <span className="text-[11px] text-indigo-600 font-medium truncate">{m.url}</span>
+                                </a>
+                              ) : null}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                     <div className="text-slate-400 mt-1">
                       {isExpanded ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
@@ -630,6 +651,23 @@ export const CoachSupportView: React.FC = () => {
                           </div>
                           {/* Answer Text */}
                           <p className="text-sm text-slate-700 leading-relaxed whitespace-pre-wrap">{a.answer}</p>
+                          {/* 回答の添付メディア */}
+                          {a.media && a.media.length > 0 && (
+                            <div className="space-y-2 mt-2">
+                              {a.media.map((m: any, mi: number) => (
+                                <div key={mi}>
+                                  {m.type === 'image' && m.url ? (
+                                    <img src={m.url} alt={m.name} className="w-full max-h-48 object-contain rounded-xl border border-slate-200" />
+                                  ) : m.type === 'url' && m.url ? (
+                                    <a href={m.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-indigo-50 rounded-lg p-2 border border-indigo-100 hover:bg-indigo-100 transition-colors">
+                                      <Video size={12} className="text-indigo-500 shrink-0" />
+                                      <span className="text-[11px] text-indigo-600 font-medium truncate">{m.url}</span>
+                                    </a>
+                                  ) : null}
+                                </div>
+                              ))}
+                            </div>
+                          )}
                           {/* Best Answer Button */}
                           {c.isMine && c.status === 'answered' && !c.answers.some(ans => ans.isBestAnswer) && (
                             <button
@@ -817,10 +855,38 @@ export const CoachSupportView: React.FC = () => {
                 <div className="flex items-center gap-2 text-slate-400">
                   <Clock size={14} />
                   <span className="text-xs font-medium">{waitingConsultations[currentQuestionIndex].createdAt}</span>
+                  {waitingConsultations[currentQuestionIndex].questionType === 'video' && (
+                    <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">画像・動画付き</span>
+                  )}
                 </div>
                 <p className="text-slate-800 font-bold text-lg leading-relaxed whitespace-pre-wrap">
                   {waitingConsultations[currentQuestionIndex].question}
                 </p>
+                {/* 生徒の添付メディア表示 */}
+                {waitingConsultations[currentQuestionIndex].media && waitingConsultations[currentQuestionIndex].media!.length > 0 && (
+                  <div className="space-y-2 border-t border-slate-100 pt-3">
+                    <p className="text-[10px] font-bold text-slate-400">📎 添付メディア</p>
+                    <div className="space-y-2">
+                      {waitingConsultations[currentQuestionIndex].media!.map((m: any, i: number) => (
+                        <div key={i}>
+                          {m.type === 'image' && m.url ? (
+                            <img src={m.url} alt={m.name} className="w-full max-h-60 object-contain rounded-xl border border-slate-200" />
+                          ) : m.type === 'url' && m.url ? (
+                            <a href={m.url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 bg-indigo-50 rounded-xl p-3 border border-indigo-100 hover:bg-indigo-100 transition-colors">
+                              <Video size={14} className="text-indigo-500 shrink-0" />
+                              <span className="text-xs text-indigo-600 font-medium truncate">{m.url}</span>
+                            </a>
+                          ) : (
+                            <div className="flex items-center gap-2 bg-slate-50 rounded-lg p-2">
+                              <Link size={12} className="text-slate-400" />
+                              <span className="text-xs text-slate-500 truncate">{m.name}</span>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Action Area */}
@@ -853,36 +919,71 @@ export const CoachSupportView: React.FC = () => {
                       className="w-full h-40 bg-white border border-slate-200 rounded-xl px-4 py-3 text-sm resize-none focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
                       autoFocus
                     />
-                    {/* Media Attachments for Coach Answer */}
+                    {/* Coach Answer Media Attachments */}
                     <div className="space-y-2">
-                      <input
-                        type="url"
-                        value={coachAnswerUrl}
-                        onChange={(e) => setCoachAnswerUrl(e.target.value)}
-                        placeholder="YouTube / Instagram URL を貼り付け（任意）"
-                        className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-brand-blue transition-all"
-                      />
-                      <div className="flex gap-2">
-                        <button className="flex items-center gap-1 text-[11px] text-slate-500 font-medium bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
+                      {coachAnswerMedia.length > 0 && (
+                        <div className="space-y-1.5">
+                          {coachAnswerMedia.map((m, i) => (
+                            <div key={i} className="flex items-center gap-2 bg-slate-50 rounded-lg p-2">
+                              {m.type === 'image' ? <ImageIcon size={12} className="text-blue-500 shrink-0" /> : <Link size={12} className="text-indigo-500 shrink-0" />}
+                              <span className="text-xs text-slate-600 flex-1 truncate">{m.name}</span>
+                              <button onClick={() => setCoachAnswerMedia(prev => prev.filter((_, j) => j !== i))} className="p-0.5 text-red-400 hover:text-red-600">
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {coachAnswerMediaUploading && (
+                        <div className="flex items-center gap-2 text-xs text-slate-400">
+                          <div className="w-3 h-3 border-2 border-brand-blue border-t-transparent rounded-full animate-spin" /> アップロード中...
+                        </div>
+                      )}
+                      <div className="flex gap-2 flex-wrap">
+                        <label className="flex items-center gap-1 text-[11px] text-blue-600 font-bold bg-blue-50 px-2.5 py-1.5 rounded-lg border border-blue-100 hover:bg-blue-100 transition-colors cursor-pointer">
                           <ImageIcon size={12} /> 画像
-                        </button>
-                        <button className="flex items-center gap-1 text-[11px] text-slate-500 font-medium bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
-                          <Video size={12} /> 動画
-                        </button>
-                        <button className="flex items-center gap-1 text-[11px] text-slate-500 font-medium bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 hover:bg-slate-100 transition-colors">
-                          <Link size={12} /> リンク
+                          <input type="file" accept="image/*" className="hidden" onChange={async e => {
+                            const file = e.target.files?.[0];
+                            if (!file || !user) return;
+                            if (file.size > 5 * 1024 * 1024) { alert('5MB以下の画像を選択してください'); return; }
+                            setCoachAnswerMediaUploading(true);
+                            try {
+                              const compressed = await compressImage(file);
+                              const path = generateFilePath(user.id, 'coach-a', compressed.name);
+                              const { url, error } = await uploadFile('note-media', path, compressed);
+                              if (!error && url) setCoachAnswerMedia(prev => [...prev, { type: 'image', name: file.name, url }]);
+                            } catch { /* ignore */ }
+                            setCoachAnswerMediaUploading(false);
+                            e.target.value = '';
+                          }} />
+                        </label>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          value={coachAnswerUrlInput}
+                          onChange={e => setCoachAnswerUrlInput(e.target.value)}
+                          placeholder="YouTube/Instagram URLを貼り付け（任意）"
+                          className="flex-1 bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-brand-blue transition-all"
+                        />
+                        <button
+                          onClick={() => { if (coachAnswerUrlInput.trim()) { setCoachAnswerMedia(prev => [...prev, { type: 'url', name: coachAnswerUrlInput.trim(), url: coachAnswerUrlInput.trim() }]); setCoachAnswerUrlInput(''); } }}
+                          disabled={!coachAnswerUrlInput.trim()}
+                          className="px-2 py-2 bg-indigo-50 text-indigo-600 rounded-lg text-xs font-bold hover:bg-indigo-100 transition-colors disabled:opacity-30"
+                        >
+                          <Link size={12} />
                         </button>
                       </div>
                     </div>
                     <div className="flex gap-2">
                        <button
-                        onClick={() => { setShowCoachAnswerInput(false); setCoachAnswerUrl(''); }}
+                        onClick={() => { setShowCoachAnswerInput(false); setCoachAnswerMedia([]); setCoachAnswerUrlInput(''); }}
                         className="py-3 px-4 font-bold text-slate-500 bg-white border border-slate-200 rounded-xl text-sm"
                       >
                         キャンセル
                       </button>
                       <button
-                        onClick={() => { handleCoachAnswerSubmit(waitingConsultations[currentQuestionIndex].id); setCoachAnswerUrl(''); }}
+                        onClick={() => { handleCoachAnswerSubmit(waitingConsultations[currentQuestionIndex].id); }}
                         disabled={coachAnswerText.trim().length < 100}
                         className="flex-1 py-3 bg-brand-blue text-white rounded-xl text-sm font-bold flex justify-center items-center gap-2 hover:bg-brand-blue-hover disabled:opacity-50 disabled:cursor-not-allowed"
                       >

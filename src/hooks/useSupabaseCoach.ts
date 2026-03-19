@@ -11,6 +11,7 @@ export interface CoachAnswer {
   answer: string;
   createdAt: string;
   isBestAnswer: boolean;
+  media?: any[];
 }
 
 export interface CoachConsultation {
@@ -26,6 +27,7 @@ export interface CoachConsultation {
   questionType?: 'text' | 'video';
   category?: string;
   report_reason?: string | null;
+  media?: any[];
   // 後方互換: 旧answerフィールド（単一回答）
   answer?: string;
   answeredBy?: string;
@@ -87,6 +89,7 @@ export function useSupabaseCoach() {
           answer: row.answer,
           createdAt: row.created_at,
           isBestAnswer: row.is_best_answer,
+          media: row.media || undefined,
         });
       }
     }
@@ -102,6 +105,7 @@ export function useSupabaseCoach() {
         questionType: row.question_type,
         category: row.category,
         report_reason: row.report_reason,
+        media: row.media || undefined,
         // 後方互換: 旧データ（coach_questions.answerに直接入っているもの）
         answer: row.answer,
         answeredBy: row.answered_by,
@@ -203,7 +207,7 @@ export function useSupabaseCoach() {
   };
 
   // コーチが回答を送信（coach_answersテーブルにINSERT）
-  const answerQuestion = async (questionId: string, answer: string) => {
+  const answerQuestion = async (questionId: string, answer: string, media?: any[]) => {
     if (!useDB || !user) return false;
 
     // coach_answersにINSERT
@@ -211,6 +215,7 @@ export function useSupabaseCoach() {
       question_id: questionId,
       coach_id: user.id,
       answer: answer,
+      media: media && media.length > 0 ? media : null,
     });
 
     if (error) {
