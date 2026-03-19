@@ -816,6 +816,7 @@ export const CoachSupportView: React.FC = () => {
               <p className="text-[11px] text-slate-500">
                 「Q&Aプラン」に登録すると、すべてのQ&Aを閲覧できます。<br/>コーチの回答から学びを得ましょう！
               </p>
+              <p className="text-lg font-black text-indigo-600">¥500<span className="text-[10px] font-bold text-slate-400">/月</span></p>
               <button
                 className="w-full py-2.5 bg-indigo-500 text-white rounded-xl text-xs font-bold hover:bg-indigo-600 transition-colors flex items-center justify-center gap-2 shadow-md"
                 onClick={() => alert('Q&Aプランの登録は準備中です。しばらくお待ちください。')}
