@@ -12,6 +12,7 @@ export interface CoachAnswer {
   createdAt: string;
   isBestAnswer: boolean;
   media?: any[];
+  coachAvatarUrl?: string;
 }
 
 export interface CoachConsultation {
@@ -66,7 +67,7 @@ export function useSupabaseCoach() {
       .from('coach_answers')
       .select(`
         *,
-        coach:coach_id(nickname, avatar_emoji, coach_rank)
+        coach:coach_id(nickname, avatar_emoji, avatar_url, coach_rank)
       `)
       .order('created_at', { ascending: true });
 
@@ -90,6 +91,7 @@ export function useSupabaseCoach() {
           createdAt: row.created_at,
           isBestAnswer: row.is_best_answer,
           media: row.media || undefined,
+          coachAvatarUrl: row.coach?.avatar_url || undefined,
         });
       }
     }

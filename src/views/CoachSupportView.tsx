@@ -255,13 +255,14 @@ export const CoachSupportView: React.FC = () => {
   const displayConsultations = consultations.filter(c => {
     // 管理者により非表示にされた相談は除外
     if (c.report_reason === 'admin_hidden') return false;
-    // 他人のwaitingはコーチ回答タブで扱うのでここでは除外
-    // 自分のwaitingは「回答待ち」として表示
-    // answered / resolved は全員分表示（Q&A一覧として）
-    if (c.status === 'waiting' && !c.isMine) return false;
-    if (searchQuery.trim()) {
-      return c.question.toLowerCase().includes(searchQuery.toLowerCase());
+    // 自分の質問は常に表示
+    if (c.isMine) {
+      if (searchQuery.trim()) return c.question.toLowerCase().includes(searchQuery.toLowerCase());
+      return true;
     }
+    // 他人の質問は解決済み（ベストアンサーあり）のみ表示
+    if (c.status !== 'resolved') return false;
+    if (searchQuery.trim()) return c.question.toLowerCase().includes(searchQuery.toLowerCase());
     return true;
   });
 
@@ -641,9 +642,13 @@ export const CoachSupportView: React.FC = () => {
                           )}
                           {/* Coach Info */}
                           <div className="flex items-center gap-2">
-                            <div className="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-white text-xs shrink-0">
-                              {a.coachAvatar}
-                            </div>
+                            {a.coachAvatarUrl ? (
+                              <img src={a.coachAvatarUrl} alt="" className="w-8 h-8 rounded-full object-cover shrink-0" />
+                            ) : (
+                              <div className="w-8 h-8 bg-slate-800 rounded-full flex items-center justify-center text-white text-xs shrink-0">
+                                {a.coachAvatar}
+                              </div>
+                            )}
                             <div className="flex-1 min-w-0">
                               <div className="flex items-center gap-1.5">
                                 <span className="font-bold text-xs text-slate-800">{a.coachName}</span>
