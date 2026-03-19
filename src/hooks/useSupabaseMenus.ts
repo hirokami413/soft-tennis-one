@@ -128,8 +128,8 @@ export function useSupabaseMenus() {
 
       if (error) throw error;
 
-      // 投稿後、ローカルの一覧を再取得して更新する
-      await fetchMenus();
+      // 投稿後、バックグラウンドで一覧を再取得（awaitしない）
+      fetchMenus().catch(console.error);
       
       return data;
     } catch (err) {
