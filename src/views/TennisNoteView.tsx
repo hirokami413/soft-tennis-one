@@ -96,6 +96,7 @@ export const TennisNoteView: React.FC = () => {
   const [editMedia, setEditMedia] = useState<{ type: 'image' | 'video' | 'url'; name: string; url?: string }[]>([]);
   const [editMediaUploading, setEditMediaUploading] = useState(false);
   const [editUrlInput, setEditUrlInput] = useState('');
+  const [editDate, setEditDate] = useState('');
   const [noteSearchQuery, setNoteSearchQuery] = useState('');
 
   // Calendar State
@@ -397,6 +398,7 @@ export const TennisNoteView: React.FC = () => {
                           setEditSkills([...(n.skills || [3,3,3,3,3,3])]);
                           setEditMedia([...(n.media || [])]);
                           setEditUrlInput('');
+                          setEditDate(n.date || '');
                         }}
                         className="flex-1 py-2 text-xs text-brand-blue hover:bg-blue-50 rounded-xl transition-colors flex items-center justify-center gap-1.5"
                       >
@@ -834,6 +836,7 @@ export const TennisNoteView: React.FC = () => {
                         setEditSkills([...(note.skills || [3,3,3,3,3,3])]);
                         setEditMedia([...(note.media || [])]);
                         setEditUrlInput('');
+                        setEditDate(note.date || '');
                       }}
                       className="flex-1 py-2 text-xs text-brand-blue hover:bg-blue-50 rounded-xl transition-colors flex items-center justify-center gap-1.5"
                     >
@@ -1465,6 +1468,13 @@ export const TennisNoteView: React.FC = () => {
               </button>
             </div>
             <div className="p-5 space-y-4">
+              {/* 日付変更 */}
+              <div>
+                <label className="text-xs font-bold text-slate-600 mb-1 block">📅 ノートの日付</label>
+                <input type="date" value={editDate} onChange={e => setEditDate(e.target.value)}
+                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue transition-all"
+                />
+              </div>
               <div>
                 <label className="text-xs font-bold text-green-700 mb-1 block">✅ 良かったこと（Keep）</label>
                 <textarea value={editKeep} onChange={e => setEditKeep(e.target.value)}
@@ -1552,20 +1562,24 @@ export const TennisNoteView: React.FC = () => {
                       e.target.value = '';
                     }} />
                   </label>
-                  <div className="flex items-center gap-1">
-                    <input
-                      type="url" value={editUrlInput} onChange={e => setEditUrlInput(e.target.value)}
-                      placeholder="動画URL..."
-                      className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs w-32 focus:outline-none focus:border-indigo-400"
-                    />
-                    <button
-                      onClick={() => { if (editUrlInput.trim()) { setEditMedia(prev => [...prev, { type: 'url', name: editUrlInput.trim(), url: editUrlInput.trim() }]); setEditUrlInput(''); } }}
-                      disabled={!editUrlInput.trim()}
-                      className="px-2 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-colors disabled:opacity-30"
-                    >
-                      <Link size={12} />
-                    </button>
-                  </div>
+                  {advicePlan !== 'none' ? (
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text" value={editUrlInput} onChange={e => setEditUrlInput(e.target.value)}
+                        placeholder="動画URL..."
+                        className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs w-32 focus:outline-none focus:border-indigo-400"
+                      />
+                      <button
+                        onClick={() => { if (editUrlInput.trim()) { setEditMedia(prev => [...prev, { type: 'url', name: editUrlInput.trim(), url: editUrlInput.trim() }]); setEditUrlInput(''); } }}
+                        disabled={!editUrlInput.trim()}
+                        className="px-2 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-colors disabled:opacity-30"
+                      >
+                        <Link size={12} />
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 py-1">動画URL添付はプラン加入で利用可能</p>
+                  )}
                 </div>
               </div>
 
@@ -1578,6 +1592,7 @@ export const TennisNoteView: React.FC = () => {
                 <button
                   onClick={async () => {
                     await updateNote(editingNote, {
+                      date: editDate,
                       keep: editKeep,
                       problem: editProblem,
                       tryItem: editTry,
