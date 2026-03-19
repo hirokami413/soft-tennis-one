@@ -351,6 +351,14 @@ export function useSupabaseCoach() {
       console.error('コイン付与処理でエラー:', e);
     }
 
+    // ベストアンサーに選ばれたコーチに通知
+    await supabase.from('notifications').insert({
+      user_id: bestAnswer.coach_id,
+      type: 'coach',
+      title: '🏆 ベストアンサーに選ばれました！',
+      message: 'あなたの回答がベストアンサーに選ばれました。おめでとうございます！',
+    });
+
     await loadConsultations();
   };
 

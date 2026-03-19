@@ -286,7 +286,10 @@ export const ProDashboardView: React.FC = () => {
         .select(`
           *,
           questioner:user_id(nickname, avatar_emoji),
-          answerer:answered_by(nickname)
+          answerer:answered_by(nickname),
+          coach_answers(*,
+            coach:coach_id(nickname, avatar_emoji, avatar_url)
+          )
         `)
         .order('created_at', { ascending: false });
       if (data && !error) setAllQuestions(data);
@@ -765,8 +768,30 @@ export const ProDashboardView: React.FC = () => {
                         {q.reported && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-600">⚠報告あり</span>}
                       </div>
                     </div>
-                    <p className="text-sm text-slate-700">{q.question}</p>
-                    {q.answer && (
+                    <p className="text-sm text-slate-700 whitespace-pre-wrap">{q.question}</p>
+                    {/* coach_answersテーブルの回答一覧 */}
+                    {q.coach_answers && q.coach_answers.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-[10px] font-bold text-slate-400">💬 回答一覧（{q.coach_answers.length}件）</p>
+                        {q.coach_answers.map((a: any) => (
+                          <div key={a.id} className={`border rounded-xl p-3 space-y-1 ${a.is_best_answer ? 'border-yellow-400 bg-yellow-50' : 'border-slate-200 bg-slate-50'}`}>
+                            {a.is_best_answer && <p className="text-[10px] font-bold text-yellow-600">🏆 ベストアンサー</p>}
+                            <div className="flex items-center gap-2">
+                              {a.coach?.avatar_url ? (
+                                <img src={a.coach.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover" />
+                              ) : (
+                                <span className="text-sm">{a.coach?.avatar_emoji || '🎾'}</span>
+                              )}
+                              <span className="text-xs font-bold text-slate-700">{a.coach?.nickname || '不明'}</span>
+                              <span className="text-[10px] text-slate-400">{new Date(a.created_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</span>
+                            </div>
+                            <p className="text-xs text-slate-600 whitespace-pre-wrap line-clamp-4">{a.answer}</p>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    {/* 旧データ: coach_questions.answerフィールド */}
+                    {(!q.coach_answers || q.coach_answers.length === 0) && q.answer && (
                       <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl">
                         <p className="text-[10px] text-blue-500 font-bold mb-1">💬 回答（{q.answerer?.nickname || '不明'}）</p>
                         <p className="text-sm text-slate-700 whitespace-pre-wrap line-clamp-3">{q.answer}</p>
