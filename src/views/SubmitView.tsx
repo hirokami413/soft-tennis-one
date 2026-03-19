@@ -70,59 +70,58 @@ export const SubmitView: React.FC = () => {
     if (!formData.title || !formData.description || isSubmitting) return;
     
     // 入力中のタグがあれば確定
+    const finalTags = [...formData.tags];
     if (tagInput.trim()) {
-      commitTag(tagInput);
+      const cleaned = tagInput.replace(/^#/, '').trim();
+      if (cleaned && !finalTags.includes(cleaned)) {
+        finalTags.push(cleaned);
+      }
     }
 
     try {
       setIsSubmitting(true);
       setSubmitError('');
       
-      // タイムアウト付き投稿処理
-      const submitPromise = (async () => {
-        let imageUrl = '';
-        if (thumbnailFile && user) {
+      let imageUrl = '';
+      if (thumbnailFile && user) {
+        try {
           const compressed = await compressImage(thumbnailFile);
           const path = generateFilePath(user.id, 'menu-thumbnails', compressed.name);
           const { url, error: uploadError } = await uploadFile('note-media', path, compressed);
           if (uploadError) throw new Error('サムネイルのアップロードに失敗: ' + uploadError);
           imageUrl = url || '';
+        } catch (imgErr: any) {
+          console.error('Image upload error:', imgErr);
+          // 画像アップロード失敗でも投稿は続行
         }
+      }
 
-        await submitMenu({
-          title: formData.title,
-          category: formData.category,
-          level: formData.level,
-          description: formData.description,
-          tags: formData.tags,
-          youtubeUrl: formData.youtubeUrl,
-          instagramUrl: formData.instagramUrl,
-          imageUrl: imageUrl || undefined,
-          duration: formData.duration ? Number(formData.duration) : undefined,
-          minPlayers: formData.minPlayers ? Number(formData.minPlayers) : undefined,
-          maxPlayers: formData.maxPlayers ? Number(formData.maxPlayers) : undefined,
-        });
-      })();
-
-      const timeoutPromise = new Promise((_, reject) =>
-        setTimeout(() => reject(new Error('投稿がタイムアウトしました。通信環境を確認して再度お試しください。')), 30000)
-      );
-
-      await Promise.race([submitPromise, timeoutPromise]);
+      await submitMenu({
+        title: formData.title,
+        category: formData.category,
+        level: formData.level,
+        description: formData.description,
+        tags: finalTags,
+        youtubeUrl: formData.youtubeUrl,
+        instagramUrl: formData.instagramUrl,
+        imageUrl: imageUrl || undefined,
+        duration: formData.duration ? Number(formData.duration) : undefined,
+        minPlayers: formData.minPlayers ? Number(formData.minPlayers) : undefined,
+        maxPlayers: formData.maxPlayers ? Number(formData.maxPlayers) : undefined,
+      });
 
       setIsSubmitted(true);
-      // フォームを即座にリセット
       setFormData(defaultForm);
       setTagInput('');
       setThumbnailFile(null);
       setThumbnailPreview(null);
-      // LocalStorageの古いデータもクリア
       localStorage.removeItem('submit_view_form');
       localStorage.removeItem('submit_view_tag_input');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       console.error('Submit error:', err);
-      setSubmitError(err.message || '投稿に失敗しました。再度お試しください。');
+      const detail = err?.details || err?.hint || '';
+      setSubmitError((err.message || '投稿に失敗しました') + (detail ? `\n${detail}` : ''));
     } finally {
       setIsSubmitting(false);
     }
