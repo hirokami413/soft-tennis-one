@@ -233,7 +233,7 @@ export const CoachSupportView: React.FC = () => {
   const handleCoachAnswerSubmit = (consultationId: string) => {
     if (!coachAnswerText.trim()) return;
     if (coachAnswerText.trim().length < 100) {
-      alert('回答は100文字以上で入力してください。');
+      alert('回答は50文字以上で入力してください。');
       return;
     }
     answerQuestion(consultationId, coachAnswerText, coachAnswerMedia.length > 0 ? coachAnswerMedia : undefined);
@@ -995,15 +995,15 @@ export const CoachSupportView: React.FC = () => {
                       </button>
                       <button
                         onClick={() => { handleCoachAnswerSubmit(waitingConsultations[currentQuestionIndex].id); }}
-                        disabled={coachAnswerText.trim().length < 100}
+                        disabled={coachAnswerText.trim().length < 50}
                         className="flex-1 py-3 bg-brand-blue text-white rounded-xl text-sm font-bold flex justify-center items-center gap-2 hover:bg-brand-blue-hover disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <Send size={16} /> 回答を送信（+50🪙）
                         <span className="text-[10px] opacity-80">ベストアンサーでさらに +{getReward()}🪙</span>
                       </button>
                     </div>
-                    <p className={`text-right text-[10px] ${coachAnswerText.trim().length < 100 ? 'text-red-400' : 'text-green-500'}`}>
-                      {coachAnswerText.trim().length}/100文字以上
+                    <p className={`text-right text-[10px] ${coachAnswerText.trim().length < 50 ? 'text-red-400' : 'text-green-500'}`}>
+                      {coachAnswerText.trim().length}/50文字以上
                     </p>
                   </div>
                 )}
