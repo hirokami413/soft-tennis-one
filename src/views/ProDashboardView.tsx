@@ -134,6 +134,7 @@ export const ProDashboardView: React.FC = () => {
   const [applications, setApplications] = useState<any[]>([]);
   const [expandedAppId, setExpandedAppId] = useState<string | null>(null);
   const [reports, setReports] = useState<any[]>([]);
+  const [reportedAnswers, setReportedAnswers] = useState<any[]>([]);
   const [flaggedReports, setFlaggedReports] = useState<any[]>([]);
   const [allQuestions, setAllQuestions] = useState<any[]>([]);
   const [questionFilter, setQuestionFilter] = useState<'all' | 'waiting' | 'answered' | 'resolved'>('all');
@@ -238,6 +239,25 @@ export const ProDashboardView: React.FC = () => {
       if (data && !error) setReports(data);
     };
     fetchReports();
+  }, [isAdmin, authLoading]);
+
+  // Fetch Reported Answers (admin only)
+  React.useEffect(() => {
+    if (!isSupabaseConfigured() || !isAdmin || authLoading) return;
+    const fetchReportedAnswers = async () => {
+      const {    data, error } = await supabase
+        .from('coach_answers')
+        .select(`
+          *,
+          reporter:reported_by(nickname),
+          coach:coach_id(nickname, avatar_emoji),
+          question:question_id(question, user_id)
+        `)
+        .eq('reported', true)
+        .order('reported_at', { ascending: false });
+      if (data && !error) setReportedAnswers(data);
+    };
+    fetchReportedAnswers();
   }, [isAdmin, authLoading]);
 
   // Fetch flagged review reports (admin only)
@@ -418,6 +438,29 @@ export const ProDashboardView: React.FC = () => {
       setReports(prev => prev.filter(r => r.id !== id));
       alert('回答を削除し、質問を再振分しました。');
     } else alert('エラー: ' + error.message);
+  };
+
+  // 回答報告: 却下
+  const handleDismissAnswerReport = async (answerId: string) => {
+    if (!window.confirm('この報告を却下しますか？')) return;
+    const { error } = await supabase.from('coach_answers').update({ reported: false, report_reason: null, reported_at: null, reported_by: null }).eq('id', answerId);
+    if (!error) setReportedAnswers(prev => prev.filter(r => r.id !== answerId));
+  };
+
+  // 回答報告: 回答削除 + コイン没収(-50)
+  const handleDeleteReportedAnswer = async (answerId: string, coachId: string) => {
+    if (!window.confirm('この回答を削除し、50コインを没収しますか？')) return;
+    const { error } = await supabase.from('coach_answers').delete().eq('id', answerId);
+    if (error) { alert('削除に失敗: ' + error.message); return; }
+    await supabase.rpc('add_coins', { p_user_id: coachId, p_amount: -50 });
+    await supabase.from('notifications').insert({
+      user_id: coachId,
+      type: 'system',
+      title: '⚠️ 回答が削除されました',
+      message: 'あなたの回答が不適切と判断され削除されました。50コインが没収されました。',
+    });
+    setReportedAnswers(prev => prev.filter(r => r.id !== answerId));
+    alert('回答を削除し、50コインを没収しました。');
   };
 
   const handleWarnUser = async (userId: string) => {
@@ -982,7 +1025,7 @@ export const ProDashboardView: React.FC = () => {
           )}
 
           {/* Existing coach question reports */}
-          {reports.length === 0 && flaggedReports.length === 0 ? (
+          {reports.length === 0 && reportedAnswers.length === 0 && flaggedReports.length === 0 ? (
             <div className="bg-slate-50 border border-slate-100 rounded-3xl p-10 flex flex-col items-center justify-center text-center">
               <CheckCircle2 size={40} className="text-slate-300 mb-3" />
               <p className="font-bold text-slate-600">未対応の報告はありません</p>
@@ -1062,6 +1105,60 @@ export const ProDashboardView: React.FC = () => {
                 </div>
               </div>
             ))
+          )}
+
+          {/* Reported Coach Answers Section */}
+          {reportedAnswers.length > 0 && (
+            <div className="mt-6">
+              <h3 className="font-bold text-slate-800 flex items-center gap-2 mb-3">
+                🚨 回答の報告 <span className="bg-red-100 text-red-600 text-[10px] px-2 py-0.5 rounded-full">{reportedAnswers.length}</span>
+              </h3>
+              <div className="space-y-3">
+                {reportedAnswers.map(ra => (
+                  <div key={ra.id} className="bg-white rounded-2xl shadow-sm border border-red-100 p-4 space-y-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-8 h-8 bg-red-100 text-red-500 rounded-full flex items-center justify-center">
+                          <Flag size={14} />
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-500">報告者: <span className="font-bold text-slate-700">{ra.reporter?.nickname || '不明'}</span></p>
+                          <p className="text-[10px] text-slate-400">{ra.reported_at ? new Date(ra.reported_at).toLocaleString('ja-JP') : ''}</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="bg-red-50 border border-red-100 p-3 rounded-xl">
+                      <p className="text-[10px] text-red-500 font-bold mb-1">📋 報告理由</p>
+                      <p className="text-sm text-slate-700">{ra.report_reason}</p>
+                    </div>
+                    <div className="space-y-2">
+                      <div className="bg-slate-50 p-3 rounded-xl">
+                        <p className="text-[10px] text-slate-400 font-bold mb-1">❓ 元の質問</p>
+                        <p className="text-sm text-slate-700">{ra.question?.question || '不明'}</p>
+                      </div>
+                      <div className="bg-blue-50 border border-blue-100 p-3 rounded-xl">
+                        <p className="text-[10px] text-blue-500 font-bold mb-1">💬 報告された回答（{ra.coach?.nickname || '不明'}）</p>
+                        <p className="text-sm text-slate-700 whitespace-pre-wrap">{ra.answer}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 pt-2 border-t border-slate-100">
+                      <button
+                        onClick={() => handleDismissAnswerReport(ra.id)}
+                        className="py-2 px-3 bg-slate-100 text-slate-600 rounded-xl text-xs font-bold hover:bg-slate-200 transition-colors flex items-center justify-center gap-1"
+                      >
+                        <XCircle size={14} /> 報告を却下
+                      </button>
+                      <button
+                        onClick={() => handleDeleteReportedAnswer(ra.id, ra.coach_id)}
+                        className="py-2 px-3 bg-red-100 text-red-700 rounded-xl text-xs font-bold hover:bg-red-200 transition-colors flex items-center justify-center gap-1"
+                      >
+                        <Trash2 size={14} /> 削除+コイン没収
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* Comment Reports Section */}
