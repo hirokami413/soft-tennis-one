@@ -251,29 +251,45 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
             )}
 
             {/* Instagram Section */}
-            {menu.instagramUrl && (
-              <div className="mt-2">
-                <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
-                  <span className="text-lg">📸</span>
-                  Instagram動画
-                </h3>
-                <a
-                  href={menu.instagramUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="block relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 shadow-lg hover:shadow-xl transition-all group"
-                >
-                  <div className="relative flex flex-col items-center justify-center py-12 px-6">
-                    {/* Play button */}
-                    <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                      <div className="w-0 h-0 border-t-[12px] border-t-transparent border-b-[12px] border-b-transparent border-l-[20px] border-l-white ml-1" />
+            {menu.instagramUrl && (() => {
+              const match = menu.instagramUrl.match(/instagram\.com\/(p|reel|tv)\/([A-Za-z0-9_-]+)/);
+              const embedUrl = match ? `https://www.instagram.com/${match[1]}/${match[2]}/embed/` : null;
+              return (
+                <div className="mt-2">
+                  <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                    <span className="text-lg">📸</span>
+                    Instagram動画
+                  </h3>
+                  <a
+                    href={menu.instagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block relative overflow-hidden rounded-2xl shadow-lg hover:shadow-xl transition-all group"
+                    style={{ height: '420px' }}
+                  >
+                    {/* iframeをサムネイルとして表示（クリック無効） */}
+                    {embedUrl ? (
+                      <iframe
+                        src={embedUrl}
+                        className="absolute inset-0 w-full h-full border-0"
+                        style={{ pointerEvents: 'none' }}
+                        loading="lazy"
+                        tabIndex={-1}
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400" />
+                    )}
+                    {/* オーバーレイ + 再生ボタン */}
+                    <div className="absolute inset-0 bg-black/30 flex flex-col items-center justify-center z-10">
+                      <div className="w-16 h-16 bg-white/25 backdrop-blur-sm rounded-full flex items-center justify-center mb-3 group-hover:scale-110 transition-transform shadow-lg">
+                        <div className="w-0 h-0 border-t-[12px] border-t-transparent border-b-[12px] border-b-transparent border-l-[20px] border-l-white ml-1" />
+                      </div>
+                      <p className="text-white font-bold text-sm drop-shadow-lg">Instagramで再生</p>
                     </div>
-                    <p className="text-white font-bold text-base">Instagramで動画を再生</p>
-                    <p className="text-white/70 text-xs mt-1">タップしてInstagramを開きます</p>
-                  </div>
-                </a>
-              </div>
-            )}
+                  </a>
+                </div>
+              );
+            })()}
 
             {/* Coach Advice */}
             {menu.advice && (
