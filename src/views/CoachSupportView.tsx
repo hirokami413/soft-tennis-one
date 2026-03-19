@@ -55,7 +55,7 @@ const coinPackages = [
 
 export const CoachSupportView: React.FC = () => {
   const { user, refreshProfile, addCoins } = useAuth();
-  const { consultations, loading: consultationsLoading, askQuestion, answerQuestion, selectBestAnswer, updateQuestionStatus, applyCoachApplication, reportQuestion } = useSupabaseCoach();
+  const { consultations, loading: consultationsLoading, askQuestion, answerQuestion, selectBestAnswer, updateQuestionStatus, applyCoachApplication, reportAnswer } = useSupabaseCoach();
   const [newQuestion, setNewQuestion] = useLocalStorage('coach_support_new_question', '');
   const [expandedId, setExpandedId] = useState<string | null>('c-1');
   const [activeTab, setActiveTab] = useLocalStorage<'list' | 'new' | 'coach'>('coach_support_active_tab', 'list');
@@ -188,15 +188,16 @@ export const CoachSupportView: React.FC = () => {
     await refreshProfile();
   };
 
-  // Report → 報告理由を入力してDBに保存
-  const handleReport = async (id: string) => {
+
+  // Report Answer → 各回答ごとの報告
+  const handleReportAnswer = async (answerId: string) => {
     const reason = window.prompt(
-      '→️ 報告理由を入力してください\n\n' +
+      '➡️ 報告理由を入力してください\n\n' +
       '• 不適切・不正確な回答に対してのみ使用してください\n' +
       '• 虚偽の報告を繰り返すとアカウントが制限される場合があります'
     );
     if (!reason || !reason.trim()) return;
-    await reportQuestion(id, reason.trim());
+    await reportAnswer(answerId, reason.trim());
     alert('報告を送信しました。管理者が確認し対応いたします。');
   };
 
@@ -693,6 +694,15 @@ export const CoachSupportView: React.FC = () => {
                               <Trophy size={14} /> この回答をベストアンサーに選ぶ
                             </button>
                           )}
+                          {/* 各回答ごとの報告ボタン */}
+                          {c.isMine && !a.isBestAnswer && (
+                            <button
+                              onClick={() => handleReportAnswer(a.id)}
+                              className="w-full flex items-center justify-center gap-1 py-1.5 text-[10px] font-medium text-slate-400 hover:text-red-500 transition-colors"
+                            >
+                              <Flag size={10} /> この回答を報告
+                            </button>
+                          )}
                         </div>
                       ))}
 
@@ -748,19 +758,6 @@ export const CoachSupportView: React.FC = () => {
                           ))}
                         </div>
                       )}
-                    </div>
-                  )}
-
-                  {/* Report */}
-                  {c.isMine && c.status !== 'resolved' && c.answers.length > 0 && (
-                    <div className="px-4 pb-3">
-                      <button
-                        onClick={() => handleReport(c.id)}
-                        className="w-full flex items-center justify-center gap-1.5 py-2 text-xs font-medium text-slate-400 hover:text-red-500 transition-colors"
-                      >
-                        <Flag size={12} />
-                        回答に問題がある場合（別のコーチに再振分）
-                      </button>
                     </div>
                   )}
                 </div>

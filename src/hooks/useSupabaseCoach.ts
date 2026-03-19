@@ -391,6 +391,22 @@ export function useSupabaseCoach() {
     }
   };
 
+  const reportAnswer = async (answerId: string, reason: string) => {
+    if (!useDB || !user) return;
+    const { error } = await supabase.from('coach_answers').update({
+      reported: true,
+      report_reason: reason,
+      reported_at: new Date().toISOString(),
+      reported_by: user.id
+    }).eq('id', answerId);
+    if (error) {
+      console.error('回答の報告に失敗:', error);
+      alert('報告の保存に失敗しました: ' + error.message);
+    } else {
+      await loadConsultations();
+    }
+  };
+
   return {
     consultations,
     loading,
@@ -400,6 +416,7 @@ export function useSupabaseCoach() {
     answerQuestion,
     selectBestAnswer,
     updateQuestionStatus,
-    reportQuestion
+    reportQuestion,
+    reportAnswer
   };
 }
