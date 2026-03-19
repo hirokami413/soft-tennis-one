@@ -607,23 +607,34 @@ export const TennisNoteView: React.FC = () => {
               </div>
               {/* URL入力はプラン限定 */}
               {advicePlan !== 'none' ? (
-                <div className="flex gap-2">
-                  <input
-                    value={newUrlInput}
-                    onChange={e => setNewUrlInput(e.target.value)}
-                    placeholder="YouTubeやInstagramのURLを貼り付け"
-                    className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-400"
-                  />
-                  <button
-                    onClick={() => {
-                      if (!newUrlInput.trim()) return;
-                      setNewMedia(prev => [...prev, { type: 'url', name: newUrlInput.trim(), url: newUrlInput.trim() }]);
-                      setNewUrlInput('');
-                    }}
-                    className="px-3 py-2 bg-indigo-500 text-white rounded-xl text-xs font-bold hover:bg-indigo-600 transition-colors flex items-center gap-1"
-                  >
-                    <Link size={12} /> 追加
-                  </button>
+                <div className="space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      value={newUrlInput}
+                      onChange={e => setNewUrlInput(e.target.value)}
+                      placeholder="YouTubeやInstagramのURLを貼り付け"
+                      className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-indigo-400"
+                    />
+                    <button
+                      onClick={() => {
+                        if (!newUrlInput.trim()) return;
+                        setNewMedia(prev => [...prev, { type: 'url', name: newUrlInput.trim(), url: newUrlInput.trim() }]);
+                        setNewUrlInput('');
+                      }}
+                      className="px-3 py-2 bg-indigo-500 text-white rounded-xl text-xs font-bold hover:bg-indigo-600 transition-colors flex items-center gap-1"
+                    >
+                      <Link size={12} /> 追加
+                    </button>
+                  </div>
+                  <div className="bg-indigo-50 rounded-xl p-3 border border-indigo-100">
+                    <p className="text-[10px] font-bold text-indigo-600 mb-1.5">📱 動画の共有方法</p>
+                    <ol className="text-[10px] text-slate-500 space-y-1 list-decimal pl-3.5 leading-relaxed">
+                      <li>スマホで撮影した動画を <b>YouTube</b>（限定公開）や <b>Instagram</b>（リール）にアップロード</li>
+                      <li>投稿したURLをコピーして上の欄に貼り付け</li>
+                      <li>コーチが動画を見てアドバイスします</li>
+                    </ol>
+                    <p className="text-[9px] text-slate-400 mt-1.5">💡 YouTube限定公開なら自分とリンクを知っている人だけが見れます</p>
+                  </div>
                 </div>
               ) : (
                 <p className="text-[10px] text-slate-400 text-center py-1">動画・URL添付はアドバイスプラン加入で利用可能</p>
@@ -1563,20 +1574,26 @@ export const TennisNoteView: React.FC = () => {
                     }} />
                   </label>
                   {advicePlan !== 'none' ? (
-                    <div className="flex items-center gap-1">
-                      <input
-                        type="text" value={editUrlInput} onChange={e => setEditUrlInput(e.target.value)}
-                        placeholder="動画URL..."
-                        className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs w-32 focus:outline-none focus:border-indigo-400"
-                      />
-                      <button
-                        onClick={() => { if (editUrlInput.trim()) { setEditMedia(prev => [...prev, { type: 'url', name: editUrlInput.trim(), url: editUrlInput.trim() }]); setEditUrlInput(''); } }}
-                        disabled={!editUrlInput.trim()}
-                        className="px-2 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-colors disabled:opacity-30"
-                      >
-                        <Link size={12} />
-                      </button>
-                    </div>
+                    <>
+                      <div className="flex items-center gap-1">
+                        <input
+                          type="text" value={editUrlInput} onChange={e => setEditUrlInput(e.target.value)}
+                          placeholder="動画URL..."
+                          className="bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs w-32 focus:outline-none focus:border-indigo-400"
+                        />
+                        <button
+                          onClick={() => { if (editUrlInput.trim()) { setEditMedia(prev => [...prev, { type: 'url', name: editUrlInput.trim(), url: editUrlInput.trim() }]); setEditUrlInput(''); } }}
+                          disabled={!editUrlInput.trim()}
+                          className="px-2 py-2 bg-indigo-50 text-indigo-600 rounded-xl text-xs font-bold hover:bg-indigo-100 transition-colors disabled:opacity-30"
+                        >
+                          <Link size={12} />
+                        </button>
+                      </div>
+                      <div className="bg-indigo-50 rounded-lg p-2 border border-indigo-100 mt-1">
+                        <p className="text-[9px] text-indigo-600 font-bold mb-0.5">📱 動画の共有方法</p>
+                        <p className="text-[9px] text-slate-400 leading-relaxed">YouTube（限定公開）やInstagram（リール）に動画をアップ → URLを貼り付け</p>
+                      </div>
+                    </>
                   ) : (
                     <p className="text-[10px] text-slate-400 py-1">動画URL添付はプラン加入で利用可能</p>
                   )}
