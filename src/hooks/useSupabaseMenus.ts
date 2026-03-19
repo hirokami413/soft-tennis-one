@@ -107,7 +107,7 @@ export function useSupabaseMenus() {
     }
 
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('menus')
         .insert({
           title: menuData.title,
@@ -122,16 +122,12 @@ export function useSupabaseMenus() {
           min_players: menuData.minPlayers || null,
           max_players: menuData.maxPlayers || null,
           author_id: user.id
-        })
-        .select()
-        .single();
+        });
 
       if (error) throw error;
 
       // 投稿後、バックグラウンドで一覧を再取得（silentモード：isLoadingを変更しない）
       fetchMenus(true).catch(console.error);
-      
-      return data;
     } catch (err) {
       console.error('Error submitting menu:', err);
       throw err;
