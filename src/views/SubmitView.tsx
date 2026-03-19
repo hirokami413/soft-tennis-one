@@ -14,7 +14,7 @@ export const SubmitView: React.FC = () => {
   const defaultForm = {
     title: '',
     category: 'フォアハンド',
-    level: '初級',
+    level: '全レベル',
     description: '',
     tags: [] as string[],
     youtubeUrl: '',
@@ -174,9 +174,13 @@ export const SubmitView: React.FC = () => {
         {/* Poster info */}
         {user && (
           <div className="flex items-center gap-3 bg-slate-50 px-4 py-3 rounded-xl border border-slate-100">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-xl shadow-inner">
-              {user.avatarEmoji}
-            </div>
+            {user.avatarUrl ? (
+              <img src={user.avatarUrl} alt="" className="w-10 h-10 rounded-full object-cover shadow-inner" />
+            ) : (
+              <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center text-xl shadow-inner">
+                {user.avatarEmoji}
+              </div>
+            )}
             <div>
               <p className="text-sm font-bold text-slate-800">{user.nickname}</p>
               <p className="text-[10px] text-slate-400">として投稿します</p>
@@ -264,6 +268,8 @@ export const SubmitView: React.FC = () => {
               onChange={(e) => setFormData({...formData, level: e.target.value})}
               className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-blue focus:ring-1 focus:ring-brand-blue appearance-none transition-all"
             >
+              <option>全レベル</option>
+              <option>初心者</option>
               <option>初級</option>
               <option>初級〜中級</option>
               <option>中級</option>
