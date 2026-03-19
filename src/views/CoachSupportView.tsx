@@ -246,7 +246,22 @@ export const CoachSupportView: React.FC = () => {
     goToNextQuestion();
   };
 
-  // 24時間経過で自動解決（サーバーサイドに任せるためフロントエンド実装は削除）
+  // 24時間経過で自動ベストアンサー（評価なし＝平均評価に影響しない）
+  React.useEffect(() => {
+    if (!consultations.length) return;
+    const now = Date.now();
+    consultations.forEach(c => {
+      if (c.isMine && c.status === 'answered' && c.answers.length > 0 && !c.answers.some(a => a.isBestAnswer)) {
+        // 最初の回答の日時から24時間経過しているかチェック
+        const firstAnswer = c.answers[0];
+        const answerTime = new Date(firstAnswer.createdAt).getTime();
+        if (now - answerTime >= 24 * 60 * 60 * 1000) {
+          // 自動で最初の回答をベストアンサーに（ratingなし）
+          selectBestAnswer(firstAnswer.id, c.id);
+        }
+      }
+    });
+  }, [consultations]);
 
   const statusConfig = {
     waiting: { label: '回答待ち', cls: 'bg-slate-100 text-slate-600 border-slate-200' },
