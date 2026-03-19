@@ -232,7 +232,7 @@ export const CoachSupportView: React.FC = () => {
 
   const handleCoachAnswerSubmit = (consultationId: string) => {
     if (!coachAnswerText.trim()) return;
-    if (coachAnswerText.trim().length < 100) {
+    if (coachAnswerText.trim().length < 50) {
       alert('回答は50文字以上で入力してください。');
       return;
     }
