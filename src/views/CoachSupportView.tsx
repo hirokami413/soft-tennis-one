@@ -814,13 +814,13 @@ export const CoachSupportView: React.FC = () => {
                 )}
               </div>
               <p className="text-[11px] text-slate-500">
-                「ナレッジプラン」に登録すると、すべてのQ&Aを閲覧できます。<br/>コーチの回答から学びを得ましょう！
+                「Q&Aプラン」に登録すると、すべてのQ&Aを閲覧できます。<br/>コーチの回答から学びを得ましょう！
               </p>
               <button
                 className="w-full py-2.5 bg-indigo-500 text-white rounded-xl text-xs font-bold hover:bg-indigo-600 transition-colors flex items-center justify-center gap-2 shadow-md"
-                onClick={() => alert('ナレッジプランの登録は準備中です。しばらくお待ちください。')}
+                onClick={() => alert('Q&Aプランの登録は準備中です。しばらくお待ちください。')}
               >
-                <Crown size={14} /> ナレッジプランに登録
+                <Crown size={14} /> Q&Aプランに登録
               </button>
             </div>
           )}
