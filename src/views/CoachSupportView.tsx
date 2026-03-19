@@ -62,6 +62,7 @@ export const CoachSupportView: React.FC = () => {
   const [expandedId, setExpandedId] = useState<string | null>('c-1');
   const [answerRatings, setAnswerRatings] = useState<Record<string, number>>({});
   const [activeTab, setActiveTab] = useLocalStorage<'list' | 'new' | 'coach'>('coach_support_active_tab', 'list');
+  const [listSubTab, setListSubTab] = useState<'all' | 'mine'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [questionMedia, setQuestionMedia] = useState<{ type: 'image' | 'url'; name: string; url?: string }[]>([]);
   const [questionUrlInput, setQuestionUrlInput] = useState('');
@@ -286,6 +287,11 @@ export const CoachSupportView: React.FC = () => {
     if (searchQuery.trim()) return c.question.toLowerCase().includes(searchQuery.toLowerCase());
     return true;
   });
+
+  // サブタブに応じた表示リスト
+  const listToShow = listSubTab === 'mine'
+    ? displayConsultations.filter(c => c.isMine)
+    : (canViewAllConsultations ? displayConsultations : displayConsultations.slice(0, 5));
 
   return (
     <div className="flex flex-col gap-6 py-2">
@@ -571,14 +577,29 @@ export const CoachSupportView: React.FC = () => {
             />
           </div>
 
+          {/* Sub Tabs: 全体 / 自分の相談 */}
+          <div className="flex gap-1 bg-slate-100 p-1 rounded-xl">
+            {([['all', '全体'], ['mine', '自分の相談']] as const).map(([key, label]) => (
+              <button
+                key={key}
+                onClick={() => setListSubTab(key)}
+                className={`flex-1 py-2 text-xs font-bold rounded-lg transition-all ${
+                  listSubTab === key ? 'bg-white text-slate-800 shadow-sm' : 'text-slate-500'
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
           <div className="space-y-3">
-            {displayConsultations.length === 0 ? (
+            {listToShow.length === 0 ? (
               <div className="text-center py-10 text-slate-400 bg-white rounded-2xl border border-slate-100">
                 <MessageCircle size={40} className="mx-auto mb-3 opacity-20" />
-                <p className="text-sm font-bold">相談が見つかりません</p>
+                <p className="text-sm font-bold">{listSubTab === 'mine' ? 'まだ相談していません' : '相談が見つかりません'}</p>
               </div>
             ) : (
-              (canViewAllConsultations ? displayConsultations : displayConsultations.slice(0, 5)).map(c => {
+              listToShow.map(c => {
                 const status = statusConfig[c.status];
                 const isExpanded = expandedId === c.id;
 
@@ -801,8 +822,8 @@ export const CoachSupportView: React.FC = () => {
           );
         })
       )}
-          {/* 無料ユーザーへのアップグレード案内 */}
-          {!canViewAllConsultations && (
+          {/* 無料ユーザーへのアップグレード案内（全体タブのみ） */}
+          {!canViewAllConsultations && listSubTab === 'all' && (
             <div className="bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-200 rounded-2xl p-5 text-center space-y-3">
               <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center mx-auto">
                 <Crown size={24} className="text-indigo-500" />
