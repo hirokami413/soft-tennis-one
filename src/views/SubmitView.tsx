@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { useLocalStorage } from '../hooks/useLocalStorage';
 import { Send, Info, CheckCircle2, Hash, X, Youtube, ImageIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useSupabaseMenus } from '../hooks/useSupabaseMenus';
@@ -12,7 +11,7 @@ export const SubmitView: React.FC = () => {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
-  const [formData, setFormData] = useLocalStorage('submit_view_form', {
+  const defaultForm = {
     title: '',
     category: 'フォアハンド',
     level: '初級',
@@ -23,8 +22,9 @@ export const SubmitView: React.FC = () => {
     duration: '' as string | number,
     minPlayers: '' as string | number,
     maxPlayers: '' as string | number,
-  });
-  const [tagInput, setTagInput] = useLocalStorage('submit_view_tag_input', '');
+  };
+  const [formData, setFormData] = useState(defaultForm);
+  const [tagInput, setTagInput] = useState('');
   const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
 
@@ -102,6 +102,14 @@ export const SubmitView: React.FC = () => {
       });
 
       setIsSubmitted(true);
+      // フォームを即座にリセット
+      setFormData(defaultForm);
+      setTagInput('');
+      setThumbnailFile(null);
+      setThumbnailPreview(null);
+      // LocalStorageの古いデータもクリア
+      localStorage.removeItem('submit_view_form');
+      localStorage.removeItem('submit_view_tag_input');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err: any) {
       console.error('Submit error:', err);
@@ -124,10 +132,6 @@ export const SubmitView: React.FC = () => {
         <button 
           onClick={() => {
             setIsSubmitted(false);
-            setFormData({ title: '', category: 'フォアハンド', level: '初級', description: '', tags: [], youtubeUrl: '', instagramUrl: '', duration: '', minPlayers: '', maxPlayers: '' });
-            setTagInput('');
-            setThumbnailFile(null);
-            setThumbnailPreview(null);
           }}
           className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-8 rounded-full transition-colors"
         >

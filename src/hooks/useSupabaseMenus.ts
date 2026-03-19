@@ -89,6 +89,17 @@ export function useSupabaseMenus() {
     fetchMenus();
   }, [fetchMenus]);
 
+  // ページ復帰時に再取得（タブ切替やアプリ復帰時に最新データを表示）
+  useEffect(() => {
+    const handleVisibility = () => {
+      if (document.visibilityState === 'visible') {
+        fetchMenus();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
+  }, [fetchMenus]);
+
   // 新規メニューを投稿する関数
   const submitMenu = async (menuData: Omit<MenuData, 'id' | 'createdAt' | 'author' | 'favoritesCount'>) => {
     if (!user || !user.id || !isSupabaseConfigured()) {
