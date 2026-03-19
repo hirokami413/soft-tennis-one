@@ -1608,6 +1608,8 @@ export const TennisNoteView: React.FC = () => {
                   <Check size={16} /> 保存する
                 </button>
               </div>
+              {/* ナビバーに隠れないようスペース確保 */}
+              <div className="h-20" />
             </div>
           </div>
         </div>
