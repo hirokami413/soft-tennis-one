@@ -251,62 +251,29 @@ export const MenuDetailModal: React.FC<MenuDetailModalProps> = ({
             )}
 
             {/* Instagram Section */}
-            {menu.instagramUrl && (() => {
-              // Instagram URLからpost IDを抽出
-              const getInstagramInfo = (url: string) => {
-                const match = url.match(/instagram\.com\/(p|reel|tv)\/([A-Za-z0-9_-]+)/);
-                if (match) return { type: match[1], id: match[2], embedUrl: `https://www.instagram.com/${match[1]}/${match[2]}/embed/captioned/` };
-                return null;
-              };
-              const info = getInstagramInfo(menu.instagramUrl);
-              return (
-                <div className="mt-2">
-                  <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
-                    <span className="text-lg">📸</span>
-                    Instagram動画
-                  </h3>
-                  {info ? (
-                    <div className="space-y-2">
-                      <div className="relative w-full overflow-hidden rounded-2xl bg-slate-100 shadow-sm border border-slate-100" style={{ minHeight: '500px' }}>
-                        <iframe
-                          src={info.embedUrl}
-                          className="w-full border-0"
-                          style={{ minHeight: '500px' }}
-                          allowFullScreen
-                          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-                          loading="lazy"
-                          referrerPolicy="no-referrer"
-                        />
-                      </div>
-                      <a
-                        href={menu.instagramUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center justify-center gap-2 p-2.5 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-xl hover:shadow-md transition-all text-sm font-bold text-purple-700"
-                      >
-                        📸 Instagramアプリで開く →
-                      </a>
+            {menu.instagramUrl && (
+              <div className="mt-2">
+                <h3 className="text-lg font-bold text-slate-900 mb-3 flex items-center gap-2">
+                  <span className="text-lg">📸</span>
+                  Instagram動画
+                </h3>
+                <a
+                  href={menu.instagramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block relative overflow-hidden rounded-2xl bg-gradient-to-br from-purple-600 via-pink-500 to-orange-400 shadow-lg hover:shadow-xl transition-all group"
+                >
+                  <div className="relative flex flex-col items-center justify-center py-12 px-6">
+                    {/* Play button */}
+                    <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                      <div className="w-0 h-0 border-t-[12px] border-t-transparent border-b-[12px] border-b-transparent border-l-[20px] border-l-white ml-1" />
                     </div>
-                  ) : (
-                    <a
-                      href={menu.instagramUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="flex items-center gap-3 p-4 bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-100 rounded-2xl hover:shadow-md transition-all group"
-                    >
-                      <div className="w-10 h-10 bg-gradient-to-br from-purple-500 via-pink-500 to-orange-400 rounded-xl flex items-center justify-center flex-shrink-0">
-                        <span className="text-white text-lg">📸</span>
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-slate-800 group-hover:text-purple-700 transition-colors">Instagramで見る</p>
-                        <p className="text-[10px] text-slate-400 truncate">{menu.instagramUrl}</p>
-                      </div>
-                      <span className="text-purple-400 group-hover:translate-x-1 transition-transform">→</span>
-                    </a>
-                  )}
-                </div>
-              );
-            })()}
+                    <p className="text-white font-bold text-base">Instagramで動画を再生</p>
+                    <p className="text-white/70 text-xs mt-1">タップしてInstagramを開きます</p>
+                  </div>
+                </a>
+              </div>
+            )}
 
             {/* Coach Advice */}
             {menu.advice && (
