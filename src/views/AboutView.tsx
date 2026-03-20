@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Award, ShieldCheck, HeartHandshake, Sparkles, Quote, Users, BookOpen, Crown, ExternalLink, Star } from 'lucide-react';
+import { MapPin, Award, ShieldCheck, HeartHandshake, Sparkles, Quote, BookOpen, Crown, ExternalLink } from 'lucide-react';
 
 export const AboutView: React.FC = () => {
 
@@ -84,19 +84,6 @@ export const AboutView: React.FC = () => {
             </div>
           </div>
 
-          {/* やってみたレポート */}
-          <div className="bg-rose-50 border border-rose-100 p-5 rounded-2xl flex flex-col items-start gap-3">
-            <div className="w-12 h-12 bg-rose-500 text-white rounded-xl flex items-center justify-center shadow-sm">
-              <Star size={24} />
-            </div>
-            <div>
-              <h4 className="font-bold text-slate-800 text-base mb-1">やってみたレポート ＆ レビュー</h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                練習メニューを実践したら「やってみた」レポートを投稿。星評価とコメントで他のユーザーの参考になります。お気に入り機能で気になるメニューを保存。
-              </p>
-            </div>
-          </div>
-
           {/* テニスノート */}
           <div className="bg-amber-50 border border-amber-100 p-5 rounded-2xl flex flex-col items-start gap-3">
             <div className="w-12 h-12 bg-amber-500 text-white rounded-xl flex items-center justify-center shadow-sm">
@@ -119,19 +106,6 @@ export const AboutView: React.FC = () => {
               <h4 className="font-bold text-slate-800 text-base mb-1">プロコーチ相談 ＆ 動画添削</h4>
               <p className="text-xs text-slate-600 leading-relaxed">
                 「このプレー、どうすれば？」にプロが答えます。動画を添付して送れば、認定コーチから的確なアドバイスを受けられます。コイン経済システムで報酬も。
-              </p>
-            </div>
-          </div>
-
-          {/* チーム管理 */}
-          <div className="bg-emerald-50 border border-emerald-100 p-5 rounded-2xl flex flex-col items-start gap-3">
-            <div className="w-12 h-12 bg-emerald-500 text-white rounded-xl flex items-center justify-center shadow-sm">
-              <Users size={24} />
-            </div>
-            <div>
-              <h4 className="font-bold text-slate-800 text-base mb-1">チーム連絡 ＆ スケジュール管理</h4>
-              <p className="text-xs text-slate-600 leading-relaxed">
-                複数チームの切り替えに対応。カレンダーでの予定共有や出欠管理、掲示板・チャット機能でチーム内の連絡がスムーズに完結します。
               </p>
             </div>
           </div>
