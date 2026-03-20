@@ -1478,7 +1478,7 @@ export const CoachSupportView: React.FC = () => {
                         return;
                       }
                       const res = await fetch(
-                        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
+                        `/api/create-checkout`,
                         {
                           method: 'POST',
                           headers: {
