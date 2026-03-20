@@ -22,7 +22,9 @@ interface AuthContextType {
   isLoggedIn: boolean;
   isLoading: boolean;
   login: (profile: Omit<UserProfile, 'id' | 'createdAt'>) => void;
-  loginWithOAuth: (provider: 'google' | 'apple') => Promise<void>;
+  loginWithOAuth: (provider: 'google') => Promise<void>;
+  signUpWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
+  signInWithEmail: (email: string, password: string) => Promise<{ error: string | null }>;
   logout: () => void;
   updateProfile: (updates: Partial<Pick<UserProfile, 'nickname' | 'avatarEmoji' | 'avatarUrl'>>) => void;
   addCoins: (amount: number) => void;
@@ -186,7 +188,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [user?.id]);
 
   // ── OAuth ログイン（Supabase Auth経由）──
-  const loginWithOAuth = async (provider: 'google' | 'apple') => {
+  const loginWithOAuth = async (provider: 'google') => {
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
       options: {
@@ -196,6 +198,33 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     if (error) {
       console.error('OAuth login error:', error);
     }
+  };
+
+  // ── メール新規登録 ──
+  const signUpWithEmail = async (email: string, password: string): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: window.location.origin,
+      },
+    });
+    if (error) {
+      return { error: error.message };
+    }
+    return { error: null };
+  };
+
+  // ── メールログイン ──
+  const signInWithEmail = async (email: string, password: string): Promise<{ error: string | null }> => {
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
+    if (error) {
+      return { error: error.message };
+    }
+    return { error: null };
   };
 
   // ── ダミーログイン（Supabase Authなし、フォールバック用）──
@@ -298,7 +327,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [user?.id]);
 
   return (
-    <AuthContext.Provider value={{ user, isLoggedIn: !!user, isLoading, login, loginWithOAuth, logout, updateProfile, addCoins, refreshProfile }}>
+    <AuthContext.Provider value={{ user, isLoggedIn: !!user, isLoading, login, loginWithOAuth, signUpWithEmail, signInWithEmail, logout, updateProfile, addCoins, refreshProfile }}>
       {children}
     </AuthContext.Provider>
   );
