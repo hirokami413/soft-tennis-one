@@ -22,7 +22,7 @@ interface AuthContextType {
   isLoggedIn: boolean;
   isLoading: boolean;
   login: (profile: Omit<UserProfile, 'id' | 'createdAt'>) => void;
-  loginWithOAuth: (provider: 'google' | 'apple') => Promise<void>;
+  loginWithOAuth: (provider: 'google' | 'apple' | 'line') => Promise<void>;
   logout: () => void;
   updateProfile: (updates: Partial<Pick<UserProfile, 'nickname' | 'avatarEmoji' | 'avatarUrl'>>) => void;
   addCoins: (amount: number) => void;
@@ -186,9 +186,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   }, [user?.id]);
 
   // ── OAuth ログイン（Supabase Auth経由）──
-  const loginWithOAuth = async (provider: 'google' | 'apple') => {
+  const loginWithOAuth = async (provider: 'google' | 'apple' | 'line') => {
     const { error } = await supabase.auth.signInWithOAuth({
-      provider,
+      provider: provider as any,
       options: {
         redirectTo: window.location.origin,
       },
