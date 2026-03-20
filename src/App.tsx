@@ -29,6 +29,24 @@ function AppContent() {
     }
   }, [user, activeTab, setActiveTab]);
 
+  // Stripe決済成功後のリダイレクト処理
+  const { refreshProfile } = useAuth();
+  useEffect(() => {
+    const hash = window.location.hash;
+    if (hash === '#payment-success') {
+      // コイン残高をリフレッシュ
+      refreshProfile();
+      setActiveTab('coach');
+      // ハッシュをクリア
+      window.history.replaceState(null, '', window.location.pathname);
+      alert('✅ コインの購入が完了しました！');
+    } else if (hash === '#payment-cancel') {
+      setActiveTab('coach');
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   if (!isLoggedIn) {
     return <LoginView />;
   }

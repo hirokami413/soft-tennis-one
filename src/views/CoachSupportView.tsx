@@ -47,9 +47,9 @@ const rankUpConditions: Record<string, { answers: number; rating: number; next: 
 
 // ── Coin Purchase Packages ──
 const coinPackages = [
-  { coins: 5000, price: 500, label: '5,000コイン', popular: false },
-  { coins: 10000, price: 1000, label: '10,000コイン', popular: true },
-  { coins: 30000, price: 2800, label: '30,000コイン', popular: false, bonus: 'お得！' },
+  { id: 'coins_5000', coins: 5000, price: 500, label: '5,000コイン', popular: false },
+  { id: 'coins_10000', coins: 10000, price: 1000, label: '10,000コイン', popular: true },
+  { id: 'coins_30000', coins: 30000, price: 2800, label: '30,000コイン', popular: false, bonus: 'お得！' },
 ];
 
 // ── Main Component ──
@@ -94,6 +94,8 @@ export const CoachSupportView: React.FC = () => {
   const [questionType, setQuestionType] = useState<'text' | 'video'>('text');
   const [questionCategory, setQuestionCategory] = useState('');
   const [showCoinPurchaseModal, setShowCoinPurchaseModal] = useState(false);
+  const [coinPurchaseLoading, setCoinPurchaseLoading] = useState<string | null>(null);
+  const [coinPurchaseError, setCoinPurchaseError] = useState('');
   const [showCoinExchangeModal, setShowCoinExchangeModal] = useState(false);
   const [exchangeAmount, setExchangeAmount] = useState(1000);
   const [exchangeDirection, setExchangeDirection] = useState<'toCash' | 'toCoins'>('toCash');
@@ -1459,14 +1461,46 @@ export const CoachSupportView: React.FC = () => {
             </div>
             <div className="p-5 space-y-3">
               <p className="text-xs text-slate-500 text-center">コインを購入してコーチに質問しよう（5,000コイン = ¥500）</p>
+              {coinPurchaseError && (
+                <p className="text-xs text-red-600 font-medium bg-red-50 px-3 py-2 rounded-lg text-center">{coinPurchaseError}</p>
+              )}
               {coinPackages.map(pkg => (
                 <button
-                  key={pkg.coins}
+                  key={pkg.id}
+                  disabled={!!coinPurchaseLoading}
                   onClick={async () => {
-                    await addCoins(pkg.coins);
-                    setShowCoinPurchaseModal(false);
+                    setCoinPurchaseLoading(pkg.id);
+                    setCoinPurchaseError('');
+                    try {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (!session) {
+                        setCoinPurchaseError('ログインが必要です');
+                        return;
+                      }
+                      const res = await fetch(
+                        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-checkout`,
+                        {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${session.access_token}`,
+                          },
+                          body: JSON.stringify({ packageId: pkg.id }),
+                        }
+                      );
+                      const data = await res.json();
+                      if (data.url) {
+                        window.location.href = data.url;
+                      } else {
+                        setCoinPurchaseError(data.error || '決済ページの作成に失敗しました');
+                      }
+                    } catch {
+                      setCoinPurchaseError('エラーが発生しました。もう一度お試しください。');
+                    } finally {
+                      setCoinPurchaseLoading(null);
+                    }
                   }}
-                  className={`w-full p-4 rounded-2xl border-2 flex items-center justify-between transition-all hover:shadow-md ${
+                  className={`w-full p-4 rounded-2xl border-2 flex items-center justify-between transition-all hover:shadow-md disabled:opacity-60 ${
                     pkg.popular ? 'border-yellow-400 bg-yellow-50' : 'border-slate-200 bg-white hover:bg-slate-50'
                   }`}
                 >
@@ -1478,14 +1512,20 @@ export const CoachSupportView: React.FC = () => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="font-black text-slate-800">¥{pkg.price.toLocaleString()}</p>
-                    {pkg.popular && <span className="text-[10px] text-yellow-600 font-bold">人気</span>}
+                    {coinPurchaseLoading === pkg.id ? (
+                      <p className="text-sm text-slate-500 animate-pulse">処理中...</p>
+                    ) : (
+                      <>
+                        <p className="font-black text-slate-800">¥{pkg.price.toLocaleString()}</p>
+                        {pkg.popular && <span className="text-[10px] text-yellow-600 font-bold">人気</span>}
+                      </>
+                    )}
                   </div>
                 </button>
               ))}
             </div>
             <div className="p-4 bg-slate-50 border-t border-slate-100">
-              <p className="text-[10px] text-slate-400 text-center">※ モック実装です。実際の決済は発生しません。</p>
+              <p className="text-[10px] text-slate-400 text-center">※ Stripeで安全に決済されます。カード情報は当アプリでは保存しません。</p>
             </div>
           </div>
         </div>
