@@ -1,5 +1,5 @@
 import React from 'react';
-import { MapPin, Award, ShieldCheck, HeartHandshake, Sparkles, Quote, BookOpen, Crown, ExternalLink } from 'lucide-react';
+import { MapPin, ShieldCheck, HeartHandshake, Sparkles, Quote, BookOpen, Crown, ExternalLink } from 'lucide-react';
 
 export const AboutView: React.FC = () => {
 
@@ -140,20 +140,13 @@ export const AboutView: React.FC = () => {
           うまくいかない日も、楽しかった日も、全部が大事な経験。スポーツに詰まった"成長のタネ"をそばで見守り、応援していきます。ここは、子どもたちが自分らしく、本気になれる場所です。
         </p>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center text-center">
+        <div className="flex justify-center">
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center text-center px-8">
             <div className="w-10 h-10 bg-blue-100 text-brand-blue rounded-full flex items-center justify-center mb-2">
               <MapPin size={20} />
             </div>
             <span className="text-xs font-bold text-slate-500 mb-1">拠点</span>
             <span className="text-sm font-bold text-slate-800">茨城県 つくば市</span>
-          </div>
-          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center text-center">
-            <div className="w-10 h-10 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-2">
-              <Award size={20} />
-            </div>
-            <span className="text-xs font-bold text-slate-500 mb-1">対象</span>
-            <span className="text-sm font-bold text-slate-800">小学3年生〜中学生</span>
           </div>
         </div>
       </div>
